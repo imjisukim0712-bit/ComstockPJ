@@ -1,2 +1,28 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Unity YAML : 텍스트로 두고 스마트 병합기를 붙임
+*.cs               text diff=csharp  
+*.meta             merge=unityyamlmerge eol=lf  
+*.unity            merge=unityyamlmerge eol=lf  
+*.asset            merge=unityyamlmerge eol=lf  
+*.prefab           merge=unityyamlmerge eol=lf  
+*.mat              merge=unityyamlmerge eol=lf  
+*.anim             merge=unityyamlmerge eol=lf  
+*.controller       merge=unityyamlmerge eol=lf
+
+# 라이팅 데이터는 병합하면 깨지므로 LFS 바이너리로
+LightingData.asset filter=lfs diff=lfs merge=lfs -text
+
+# 3D 모델
+*.fbx    filter=lfs diff=lfs merge=lfs -text  
+*.obj    filter=lfs diff=lfs merge=lfs -text  
+*.blend  filter=lfs diff=lfs merge=lfs -text
+
+# 텍스처 와 이미지
+*.png    filter=lfs diff=lfs merge=lfs -text  
+*.jpg    filter=lfs diff=lfs merge=lfs -text  
+*.psd    filter=lfs diff=lfs merge=lfs -text  
+*.tga    filter=lfs diff=lfs merge=lfs -text
+
+# 오디오
+*.wav    filter=lfs diff=lfs merge=lfs -text  
+*.mp3    filter=lfs diff=lfs merge=lfs -text  
+*.ogg    filter=lfs diff=lfs merge=lfs -text
