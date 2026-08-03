@@ -57,7 +57,19 @@ public class GameDataManager : MonoBehaviour
             else
             {
                 var rows = CsvParser.ParseDataRows(req.downloadHandler.text);
-                foreach (var row in rows) rowParser(row);
+                foreach (var row in rows)
+                {
+                    try
+                    {
+                        rowParser(row);
+                    }
+                    catch (Exception e)
+                    {
+                        // 컬럼 개수가 부족하거나 형식이 안 맞는 행이 있어도
+                        // 그 행만 스킵하고 나머지 데이터는 정상적으로 로드되도록 처리
+                        Debug.LogError($"행 파싱 실패 (url: {url}) / row: {string.Join(",", row)} / {e.Message}");
+                    }
+                }
             }
 
             loadedCount++;
@@ -71,6 +83,15 @@ public class GameDataManager : MonoBehaviour
 
     private static float F(string s) => string.IsNullOrEmpty(s) ? 0f : float.Parse(s, CultureInfo.InvariantCulture);
     private static int I(string s) => string.IsNullOrEmpty(s) ? 0 : int.Parse(s, CultureInfo.InvariantCulture);
+
+    // 시트에 아직 추가되지 않은 컬럼(인덱스 범위 밖)에 접근해도 예외 대신 null(→기본값 0)을 반환
+    private static string Col(string[] c, int index) => index < c.Length ? c[index] : null;
+
+    // "TRUE"/"FALSE" 문자열(대소문자 무관)을 bool로 변환. 값이 없거나 형식이 다르면 false
+    private static bool B(string s) => !string.IsNullOrEmpty(s) && bool.TryParse(s, out bool result) && result;
+
+    // 문자열 컬럼. 앞뒤 공백/개행(\r)을 제거해서 프리팹 이름 비교가 어긋나지 않도록 한다
+    private static string S(string s) => string.IsNullOrEmpty(s) ? string.Empty : s.Trim();
 
     private void ParseMonsterRow(string[] c)
     {
@@ -99,10 +120,11 @@ public class GameDataManager : MonoBehaviour
     {
         var d = new WeaponData
         {
-            weapon_id = I(c[0]), weapon_name = c[1], weapon_atk = I(c[2]), weapon_atsp = F(c[3]),
-            weapon_range = I(c[4]), weapon_atsize = F(c[5]), weapon_aim = F(c[6]),
-            weapon_rebound = F(c[7]), weapon_projectiles = I(c[8]), weapon_capacity = I(c[9]),
-            weapon_reload = I(c[10])
+            weapon_id = I(Col(c, 0)), weapon_name = Col(c, 1), weapon_atk = I(Col(c, 2)), weapon_atsp = F(Col(c, 3)),
+            weapon_range = I(Col(c, 4)), weapon_atsize = F(Col(c, 5)), weapon_aim = F(Col(c, 6)),
+            weapon_rebound = F(Col(c, 7)), weapon_projectiles = I(Col(c, 8)), weapon_capacity = I(Col(c, 9)),
+            weapon_reload = I(Col(c, 10)), weapon_penetration = B(Col(c, 11)),
+            weapon_tanhwan = S(Col(c, 12)) // 무기 발사 탄환 = 투사체 프리팹 이름
         };
         Weapons[d.weapon_id] = d;
     }

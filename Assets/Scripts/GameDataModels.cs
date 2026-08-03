@@ -46,6 +46,8 @@ public struct WeaponData
     public int weapon_projectiles;
     public int weapon_capacity;
     public int weapon_reload;
+    public bool weapon_penetration; // 관통 여부 (시트 필드명: weapon_wallbang, 값: TRUE/FALSE)
+    public string weapon_tanhwan;   // 발사할 투사체 프리팹 이름 (Assets/Prefebs 안의 프리팹명)
 }
 
 [Serializable]
