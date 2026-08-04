@@ -111,7 +111,7 @@ public class GameDataManager : MonoBehaviour
             robot_id = I(c[0]), robot_name = c[1], robot_hp = I(c[2]), robot_atk = I(c[3]),
             robot_def = I(c[4]), robot_cc = F(c[5]), robot_cd = F(c[6]), robot_speed = F(c[7]),
             robot_capacity = F(c[8]), robot_reload = F(c[9]), robot_avoid = F(c[10]),
-            robot_luck = F(c[11]), robot_mess = F(c[12])
+            robot_luck = F(c[11]), robot_mess = F(c[12]), robot_special = I(Col(c, 13))
         };
         Robots[d.robot_id] = d;
     }
@@ -124,7 +124,9 @@ public class GameDataManager : MonoBehaviour
             weapon_range = I(Col(c, 4)), weapon_atsize = F(Col(c, 5)), weapon_aim = F(Col(c, 6)),
             weapon_rebound = F(Col(c, 7)), weapon_projectiles = I(Col(c, 8)), weapon_capacity = I(Col(c, 9)),
             weapon_reload = I(Col(c, 10)), weapon_penetration = B(Col(c, 11)),
-            weapon_tanhwan = S(Col(c, 12)) // 무기 발사 탄환 = 투사체 프리팹 이름
+            weapon_tanhwan = S(Col(c, 12)), // 무기 발사 탄환 = 투사체 프리팹 이름
+            weapon_lfwpimg = S(Col(c, 13)), // 무기 왼손 이미지
+            weapon_rgwpimg = S(Col(c, 14))  // 무기 오른손 이미지
         };
         Weapons[d.weapon_id] = d;
     }

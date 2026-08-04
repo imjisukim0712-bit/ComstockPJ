@@ -30,6 +30,7 @@ public struct RobotData
     public float robot_avoid;
     public float robot_luck;
     public float robot_mess;
+    public int robot_special; // 필살기 ID (시트 필드명: robot_special)
 }
 
 [Serializable]
@@ -48,6 +49,8 @@ public struct WeaponData
     public int weapon_reload;
     public bool weapon_penetration; // 관통 여부 (시트 필드명: weapon_wallbang, 값: TRUE/FALSE)
     public string weapon_tanhwan;   // 발사할 투사체 프리팹 이름 (Assets/Prefebs 안의 프리팹명)
+    public string weapon_lfwpimg;   // 왼손에 들었을 때 보여줄 이미지 이름 (Resources 폴더의 스프라이트명)
+    public string weapon_rgwpimg;   // 오른손에 들었을 때 보여줄 이미지 이름 (Resources 폴더의 스프라이트명)
 }
 
 [Serializable]

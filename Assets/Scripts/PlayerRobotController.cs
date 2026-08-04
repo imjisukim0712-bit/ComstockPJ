@@ -12,6 +12,14 @@ public class PlayerRobotController : MonoBehaviour
     public float MoveSpeed { get; private set; }
     public float Avoid { get; private set; }
     public float Luck { get; private set; }
+    public float Cc { get; private set; }       // robot_cc: 치명타 확률 (0~100)
+    public float Cd { get; private set; }       // robot_cd: 치명타 데미지 배율 (예: 0.5 = +50%)
+    public float Capacity { get; private set; } // robot_capacity: 무기 장탄수 증감 비율
+    public float Reload { get; private set; }   // robot_reload: 무기 장전속도 증감 비율 (시트에 있지만 아직 사용처 없음)
+    public float Mess { get; private set; }     // robot_mess: 로봇 질량 → Rigidbody.mass에 적용
+    public int SpecialId { get; private set; }  // robot_special: 필살기 ID (실제 필살기 동작은 별도 시스템 필요)
+
+    public bool IsDead { get; private set; }
 
     [Header("테스트용 설정 (로봇 선택 씬 없이 이 씬만 실행할 때 사용)")]
     [Tooltip("PlayerSession.SelectedRobotId가 -1(미선택)일 때 대신 사용할 로봇 ID")]
@@ -23,19 +31,27 @@ public class PlayerRobotController : MonoBehaviour
     [Tooltip("Animator Controller의 Bool 파라미터 이름")]
     [SerializeField] private string isMovingParam = "IsMoving";
     [Header("좌우 반전")]
-    [Tooltip("좌우 이동 입력에 따라 Transform Scale.x 부호를 바꿔 이미지를 뒤집는다")]
-    [SerializeField] private bool flipByScale = true;
-    [Tooltip("오른쪽 이동일 때 Scale.x를 음수로 만든다. 끄면 왼쪽 이동일 때 음수가 된다")]
-    [SerializeField] private bool negativeScaleOnRight = true;
+    [Tooltip("좌우 이동 입력에 따라 SpriteRenderer.flipX로 이미지를 뒤집는다.\n" +
+             "* Transform Scale은 절대 건드리지 않는다 - Player 자신의 BoxCollider나 자식(무기 앵커)들의 " +
+             "Collider가 음수 스케일이 되어 'BoxCollider does not support negative scale' 경고가 나는 문제를 " +
+             "근본적으로 없앤다. 자식 위치도 전혀 흔들리지 않는다.")]
+    [SerializeField] private bool flipSprite = true;
+    [Tooltip("오른쪽 이동일 때 flipX를 켠다(뒤집는다). 끄면 왼쪽 이동일 때 켜진다")]
+    [SerializeField] private bool flipXOnRight = true;
+    [Tooltip("뒤집을 SpriteRenderer. 비어 있으면 자신/자식에서 자동 탐색")]
+    [SerializeField] private SpriteRenderer spriteRenderer;
 
     private Rigidbody rb;
     private Vector3 moveInput;
     private bool hasIsMovingParam;
     private bool wasMoving;
-    private float baseScaleX = 1f;
 
     private void Awake()
     {
+        // 씬을 재시작해서 새 Player가 만들어질 때 이전 판의 게임오버/인벤토리 상태가 남아있지 않도록 초기화
+        GameOverManager.Reset();
+        PlayerInventory.Reset();
+
         rb = GetComponent<Rigidbody>();
 
         if (animator == null) animator = GetComponent<Animator>();
@@ -51,8 +67,12 @@ public class PlayerRobotController : MonoBehaviour
                 Debug.LogWarning($"Animator Controller에 Bool 파라미터 '{isMovingParam}'이(가) 없습니다.");
         }
 
-        // 반전은 부호만 바꾸므로 원래 크기를 절댓값으로 기억
-        baseScaleX = Mathf.Abs(transform.localScale.x);
+        if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null) spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        if (spriteRenderer == null)
+        {
+            Debug.LogWarning("SpriteRenderer를 찾을 수 없어 좌우 반전이 동작하지 않습니다.");
+        }
 
         rb.isKinematic = false; // 물리 충돌이 필요하므로 false로
         rb.useGravity = false;
@@ -95,6 +115,45 @@ public class PlayerRobotController : MonoBehaviour
         MoveSpeed = data.robot_speed;
         Avoid = data.robot_avoid;
         Luck = data.robot_luck;
+        Cc = data.robot_cc;
+        Cd = data.robot_cd;
+        Capacity = data.robot_capacity;
+        Reload = data.robot_reload;
+        Mess = data.robot_mess;
+        SpecialId = data.robot_special;
+
+        // 로봇 질량(robot_mess)을 Rigidbody에 반영. 0/미설정이면 물리 계산이 깨지므로 기존 값 유지
+        if (rb != null && Mess > 0f) rb.mass = Mess;
+    }
+
+    /// <summary>
+    /// 적의 공격력(enemyAtk)을 받아 피격 처리한다.
+    /// 1) robot_avoid(회피 확률) 판정: 0~100 랜덤값이 회피 확률 이하면 데미지 계산 자체를 하지 않는다.
+    /// 2) 회피 실패 시 받는 데미지 = 적의 공격력 - robot_def(방어력) (0 미만으로는 내려가지 않음)
+    /// 체력이 0 이하가 되면 1회차 게임오버 처리를 한다.
+    /// </summary>
+    public void TakeDamage(int enemyAtk)
+    {
+        if (IsDead) return;
+
+        float avoid_roll = Random.Range(0f, 100f);
+        if (avoid_roll <= Avoid) return; // 회피 성공 - 데미지 계산식 자체가 발동하지 않음
+
+        int dmg = Mathf.Max(0, enemyAtk - Def);
+        CurrentHp = Mathf.Max(0, CurrentHp - dmg);
+
+        if (CurrentHp <= 0) Die();
+    }
+
+    private void Die()
+    {
+        if (IsDead) return;
+        IsDead = true;
+
+        if (rb != null) rb.linearVelocity = Vector3.zero;
+        GameOverManager.TriggerGameOver();
+
+        enabled = false; // 이동/애니메이션 처리(Update, FixedUpdate) 중단
     }
 
     private void Update()
@@ -130,21 +189,14 @@ public class PlayerRobotController : MonoBehaviour
         UpdateFacing(horizontal);
     }
 
-    /// <summary>좌우 입력에 따라 Scale.x 부호를 바꿔 캐릭터 이미지를 뒤집는다.</summary>
+    /// <summary>좌우 입력에 따라 SpriteRenderer.flipX로 캐릭터 이미지를 뒤집는다. Transform은 건드리지 않는다.</summary>
     private void UpdateFacing(float horizontal)
     {
         // 입력이 없으면 마지막으로 보던 방향을 유지
-        if (!flipByScale || Mathf.Abs(horizontal) < 0.0001f) return;
+        if (!flipSprite || spriteRenderer == null || Mathf.Abs(horizontal) < 0.0001f) return;
 
         bool movingRight = horizontal > 0f;
-        float sign = (movingRight == negativeScaleOnRight) ? -1f : 1f;
-        float targetX = baseScaleX * sign;
-
-        Vector3 s = transform.localScale;
-        if (Mathf.Approximately(s.x, targetX)) return; // Y축만 눌렀을 때 등 불필요한 대입 방지
-
-        s.x = targetX;
-        transform.localScale = s;
+        spriteRenderer.flipX = (movingRight == flipXOnRight);
     }
 
     private static bool HasParameter(Animator anim, string paramName)

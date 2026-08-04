@@ -28,7 +28,8 @@ public static class DropTableManager
         return candidates[candidates.Count - 1].item_id; // 부동소수점 오차 방지 폴백
     }
 
-    // item_id 자릿수로 무기(300000번대)/방어구(400000번대) 구분
+    // item_id 자릿수로 무기(300000번대)/방어구(400000번대)/골드(700000번대) 구분
     public static bool IsWeapon(int itemId) => itemId >= 300000 && itemId < 400000;
     public static bool IsArmor(int itemId) => itemId >= 400000 && itemId < 500000;
+    public static bool IsGold(int itemId) => itemId >= 700000 && itemId < 800000;
 }
