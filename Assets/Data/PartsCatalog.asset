@@ -225,4 +225,4 @@ MonoBehaviour:
   - grade: 4
     weight: 3
     minWave: 7
-  partBoxDropChance: 0.05
+  partBoxDropChance: 0.015

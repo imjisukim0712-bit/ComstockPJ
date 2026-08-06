@@ -40,7 +40,35 @@ public class GameFlowManager : MonoBehaviour
     [Header("상점 화면 (웨이브 종료 후 항상 노출)")]
     [SerializeField] private ShopPanelUI shopPanel;
 
+    [Header("정비 화면 진입 시 처리")]
+    [Tooltip("정비 화면이 열려 있는 동안 Time.timeScale을 0으로 만들어 인게임을 완전히 정지시킨다")]
+    [SerializeField] private bool freezeTimeDuringIntermission = true;
+    [Tooltip("정비 화면에 들어갈 때 필드에 남은 보상 픽업을 자동 수령 처리하고, 투사체를 정리하며, 플레이어를 시작 위치로 되돌린다")]
+    [SerializeField] private bool resetFieldOnIntermission = true;
+
+    [Tooltip("정비 화면이 열려 있는 동안 숨길 전투 전용 HUD(HP, 상단 웨이브/골드/경험치 바 등).\n" +
+             "예전에는 ShopPanelUI/ModdingPanelUI가 각자 숨겼는데, AI 코어 업그레이드 화면에는 그 처리가\n" +
+             "없어서 HUD가 비쳐 보였다. 정비 단계 전체를 아는 여기서 한 번만 처리한다")]
+    [SerializeField] private GameObject[] combatHudObjects = new GameObject[0];
+
     public State CurrentState { get; private set; } = State.Combat;
+
+    /// <summary>
+    /// 정비 화면(AI 코어 업그레이드/로봇 정비/상점)이 열려 있는지. 플레이어 조작·자동공격 등
+    /// 인게임 로직이 이 값을 보고 스스로 멈춘다. GameOverManager.IsGameOver와 같은 용도로 쓰는
+    /// 전역 플래그라 static으로 둔다.
+    /// </summary>
+    public static bool IsIntermission { get; private set; }
+
+    /// <summary>
+    /// 씬을 다시 시작할 때 이전 판의 값이 남지 않도록 PlayerRobotController.Awake()가 호출한다
+    /// (EnemyUnit.ResetStaticCaches()와 같은 이유).
+    /// </summary>
+    public static void ResetStaticState()
+    {
+        IsIntermission = false;
+        Time.timeScale = 1f; // 정비 중에 플레이모드를 껐다 켠 경우 0으로 굳어있지 않도록
+    }
 
     private int lastEndedWaveNumber;
 
@@ -70,9 +98,69 @@ public class GameFlowManager : MonoBehaviour
         if (GameOverManager.IsGameOver) return;
 
         CurrentState = State.Intermission;
+        IsIntermission = true;
         lastEndedWaveNumber = waveNumber;
+
+        // 정비는 "전체 화면 UI + 인게임 완전 정지" 상태여야 한다(사용자 확정 사항).
+        // 필드 정리를 먼저 하고 나서 시간을 멈춘다 - timeScale=0 상태에서 물리 이동을 시키면
+        // Rigidbody가 그대로 반영되지 않을 수 있기 때문.
+        if (resetFieldOnIntermission) ResetFieldForIntermission();
+        if (freezeTimeDuringIntermission) Time.timeScale = 0f;
+
         CloseAllIntermissionPanels(); // 이전 단계에서 열린 패널이 남아있지 않도록 항상 깨끗하게 시작
+        SetCombatHudVisible(false);   // CloseAll보다 뒤에 와야 한다 - 패널의 Close()가 HUD를 다시 켤 수 있으므로
         ShowNextIntermissionStep();
+    }
+
+    // 정비 단계 내내 전투 HUD를 숨긴다. 각 Show*() 단계에서도 CloseAllIntermissionPanels() 뒤에
+    // 다시 호출해, 패널이 닫히며 HUD를 되살리는 일이 없도록 한다.
+    private void SetCombatHudVisible(bool visible)
+    {
+        foreach (GameObject hud in combatHudObjects)
+        {
+            if (hud != null) hud.SetActive(visible);
+        }
+    }
+
+    /// <summary>
+    /// 정비 화면에 들어가기 전 필드를 깨끗하게 만든다.
+    /// 남은 보상 픽업은 그냥 지우면 플레이어가 못 주운 골드/경험치가 증발해 손해이므로,
+    /// 지우기 전에 자동으로 수령 처리한다(기획서 p.12 "레벨업, 로봇 파츠 획득 일괄 처리").
+    /// </summary>
+    private void ResetFieldForIntermission()
+    {
+        int collectedRewards = 0;
+        foreach (RewardPickup pickup in FindObjectsByType<RewardPickup>(FindObjectsSortMode.None))
+        {
+            if (pickup == null) continue;
+            pickup.CollectImmediately();
+            collectedRewards++;
+        }
+
+        int collectedItems = 0;
+        foreach (ItemPickup pickup in FindObjectsByType<ItemPickup>(FindObjectsSortMode.None))
+        {
+            if (pickup == null) continue;
+            pickup.CollectImmediately();
+            collectedItems++;
+        }
+
+        int clearedProjectiles = 0;
+        foreach (Projectile projectile in FindObjectsByType<Projectile>(FindObjectsSortMode.None))
+        {
+            if (projectile == null) continue;
+            Destroy(projectile.gameObject);
+            clearedProjectiles++;
+        }
+
+        PlayerRobotController player = FindFirstObjectByType<PlayerRobotController>();
+        if (player != null) player.ReturnToStartPosition();
+
+        if (collectedRewards > 0 || collectedItems > 0 || clearedProjectiles > 0)
+        {
+            Debug.Log($"정비 진입 - 필드 초기화 (보상 픽업 {collectedRewards}개 자동 수령, " +
+                      $"아이템 {collectedItems}개 자동 수령, 투사체 {clearedProjectiles}개 정리)");
+        }
     }
 
     // 정비 단계는 세 화면(AI 코어/로봇 정비/상점)이 순서대로 하나씩만 보여야 하므로,
@@ -105,6 +193,7 @@ public class GameFlowManager : MonoBehaviour
     private void ShowAiCoreUpgradeStep()
     {
         CloseAllIntermissionPanels();
+        SetCombatHudVisible(false);
 
         Button[] buttons = { option1Button, option2Button, option3Button };
         TextMeshProUGUI[] texts = { option1Text, option2Text, option3Text };
@@ -145,6 +234,7 @@ public class GameFlowManager : MonoBehaviour
     private void ShowModdingStep()
     {
         CloseAllIntermissionPanels();
+        SetCombatHudVisible(false);
         moddingPanel.Open();
     }
 
@@ -161,12 +251,16 @@ public class GameFlowManager : MonoBehaviour
         }
 
         CloseAllIntermissionPanels();
+        SetCombatHudVisible(false);
         shopPanel.Open();
     }
 
     private void HandleNextWaveRequested()
     {
         CurrentState = State.Combat;
+        IsIntermission = false;
+        SetCombatHudVisible(true);
+        Time.timeScale = 1f; // 정지 해제 - freezeTimeDuringIntermission이 꺼져 있어도 안전한 값
 
         if (waveManager != null) waveManager.StartNextWave();
     }

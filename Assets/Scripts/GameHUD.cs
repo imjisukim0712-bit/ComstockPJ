@@ -37,6 +37,11 @@ public class GameHUD : MonoBehaviour
     [Tooltip("골드를 표시할 텍스트")]
     [SerializeField] private TextMeshProUGUI goldText;
 
+    [Tooltip("웨이브 남은 시간을 표시할 텍스트 (비워두면 표시 생략)")]
+    [SerializeField] private TextMeshProUGUI waveTimeText;
+    [Tooltip("남은 시간을 조회할 웨이브 매니저")]
+    [SerializeField] private WaveManager waveManager;
+
     [Header("AI 코어 경험치 바")]
     [Tooltip("AI 코어 레벨/경험치를 조회할 매니저 (다음 레벨 필요 경험치 계산에 사용)")]
     [SerializeField] private AiCoreManager aiCoreManager;
@@ -95,7 +100,24 @@ public class GameHUD : MonoBehaviour
         if (waveText != null) waveText.text = $"웨이브 {RunState.WaveNumber}";
         if (goldText != null) goldText.text = $"골드 {RunState.Gold}";
 
+        UpdateWaveTime();
         UpdateExpBar();
+    }
+
+    // 웨이브 남은 초. 제한시간이 끝난 뒤에는 남은 적을 다 잡아야 웨이브가 끝나므로,
+    // 그 구간에서는 초 대신 "잔적 처치"를 보여준다(0초에서 멈춰 있으면 멈춘 것처럼 보인다).
+    private void UpdateWaveTime()
+    {
+        if (waveTimeText == null || waveManager == null) return;
+
+        if (waveManager.IsClearingRemainingEnemies)
+        {
+            waveTimeText.text = "잔적 처치";
+            return;
+        }
+
+        int seconds = Mathf.CeilToInt(waveManager.RemainingSeconds);
+        waveTimeText.text = $"{seconds / 60}:{seconds % 60:00}";
     }
 
     // 기획서 p.10 표시 예시(레벨 5(+2) 80/100)를 따라 "레벨 N  현재/필요" 형식으로 보여준다.

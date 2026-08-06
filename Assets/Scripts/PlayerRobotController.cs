@@ -21,6 +21,17 @@ public class PlayerRobotController : MonoBehaviour
 
     public bool IsDead { get; private set; }
 
+    /// <summary>구르기(대시) 중인지. 이 동안에는 무적이라 TakeDamage가 통째로 무시된다.</summary>
+    public bool IsDashing { get; private set; }
+
+    [Header("구르기 (Space) - 전부 밸런스 미확정 임시값")]
+    [Tooltip("한 번 구를 때 이동하는 거리(유닛)")]
+    [SerializeField] private float dashDistance = 3.5f;
+    [Tooltip("구르기가 지속되는 시간(초). 이 시간 동안 무적이다")]
+    [SerializeField] private float dashDuration = 0.18f;
+    [Tooltip("구르기 재사용 대기시간(초)")]
+    [SerializeField] private float dashCooldown = 1.2f;
+
     [Header("테스트용 설정 (로봇 선택 씬 없이 이 씬만 실행할 때 사용)")]
     [Tooltip("PlayerSession.SelectedRobotId가 -1(미선택)일 때 대신 사용할 로봇 ID")]
     [SerializeField] private int fallbackRobotIdForTesting = 0;
@@ -48,6 +59,15 @@ public class PlayerRobotController : MonoBehaviour
     private RobotData baseRobotData;
     private bool statsInitialized;
 
+    // 마지막으로 향한 이동 방향. 제자리에서 Space를 눌렀을 때 구를 방향으로 쓴다.
+    private Vector3 lastMoveDirection = Vector3.right;
+    private Vector3 dashDirection;
+    private float dashTimeLeft;
+    private float dashCooldownLeft;
+
+    // 정비 화면에서 필드를 초기화할 때 되돌아갈 시작 위치(Awake 시점의 위치).
+    private Vector3 startPosition;
+
     private void Awake()
     {
         // 씬을 재시작해서 새 Player가 만들어질 때 이전 판의 게임오버/인벤토리/런 상태가 남아있지 않도록 초기화
@@ -57,6 +77,9 @@ public class PlayerRobotController : MonoBehaviour
         RunState.Reset();
         EnemyUnit.Alive.Clear();
         EnemyUnit.ResetStaticCaches();
+        GameFlowManager.ResetStaticState();
+
+        startPosition = transform.position;
 
         rb = GetComponent<Rigidbody>();
 
@@ -164,6 +187,7 @@ public class PlayerRobotController : MonoBehaviour
     public void TakeDamage(int enemyAtk)
     {
         if (IsDead) return;
+        if (IsDashing) return; // 구르기 중에는 무적 - 회피 판정조차 하지 않는다
 
         float avoid_roll = Random.Range(0f, 100f);
         if (avoid_roll <= Avoid) return; // 회피 성공 - 데미지 계산식 자체가 발동하지 않음
@@ -187,7 +211,19 @@ public class PlayerRobotController : MonoBehaviour
 
     private void Update()
     {
+        // 정비(AI 코어/로봇 정비/상점) 화면이 열려 있는 동안에는 조작을 완전히 막는다.
+        // Time.timeScale=0으로도 이동은 멈추지만, 입력 폴링과 애니메이션까지 확실히 정지시켜
+        // "인게임이 뒤에서 계속 진행되는 것처럼 보이는" 상태를 없앤다.
+        if (GameFlowManager.IsIntermission || GameOverManager.IsGameOver || GameWinManager.IsGameWon)
+        {
+            moveInput = Vector3.zero;
+            UpdateAnimation(0f);
+            return;
+        }
+
         if (Keyboard.current == null) return; // 키보드 미인식 등 예외 방지
+
+        UpdateDashTimers();
 
         float h = 0f;
         float v = 0f;
@@ -201,7 +237,54 @@ public class PlayerRobotController : MonoBehaviour
         moveInput = new Vector3(h, v, 0f);
         moveInput.Normalize();
 
+        if (moveInput.sqrMagnitude > 0.0001f) lastMoveDirection = moveInput;
+
+        if (Keyboard.current.spaceKey.wasPressedThisFrame) TryStartDash();
+
         UpdateAnimation(h);
+    }
+
+    // 구르기 지속시간/쿨다운을 흘려보낸다. 지속시간이 끝나면 무적도 함께 풀린다.
+    private void UpdateDashTimers()
+    {
+        if (dashCooldownLeft > 0f) dashCooldownLeft -= Time.deltaTime;
+
+        if (!IsDashing) return;
+
+        dashTimeLeft -= Time.deltaTime;
+        if (dashTimeLeft <= 0f) IsDashing = false;
+    }
+
+    /// <summary>
+    /// 기획서의 "Space → 구르기". 이동 입력 방향으로(제자리면 마지막으로 향하던 방향으로)
+    /// 짧고 빠르게 이동하며, 구르는 동안은 무적이다.
+    /// </summary>
+    private void TryStartDash()
+    {
+        if (IsDashing || dashCooldownLeft > 0f || dashDuration <= 0f) return;
+
+        dashDirection = moveInput.sqrMagnitude > 0.0001f ? moveInput : lastMoveDirection;
+        IsDashing = true;
+        dashTimeLeft = dashDuration;
+        dashCooldownLeft = dashCooldown;
+    }
+
+    /// <summary>
+    /// 정비 화면에 들어갈 때 플레이어를 시작 위치로 되돌린다(필드 초기화).
+    /// GameFlowManager가 호출한다.
+    /// </summary>
+    public void ReturnToStartPosition()
+    {
+        IsDashing = false;
+        dashTimeLeft = 0f;
+        moveInput = Vector3.zero;
+
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.position = startPosition;
+        }
+        transform.position = startPosition;
     }
 
     private void UpdateAnimation(float horizontal)
@@ -241,6 +324,13 @@ public class PlayerRobotController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        // 구르기 중에는 입력과 무관하게 정해진 방향으로 고정 속도(거리/지속시간)로 밀려난다.
+        if (IsDashing && dashDuration > 0f)
+        {
+            rb.linearVelocity = dashDirection * (dashDistance / dashDuration);
+            return;
+        }
+
         rb.linearVelocity = moveInput * MoveSpeed; // MovePosition 대신 이걸로 교체
     }
 }

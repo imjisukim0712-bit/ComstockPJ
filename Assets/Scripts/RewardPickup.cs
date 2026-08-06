@@ -35,6 +35,17 @@ public class RewardPickup : MonoBehaviour
         if (player == null) player = other.GetComponentInParent<PlayerRobotController>();
         if (player == null) return; // 플레이어 외의 다른 콜라이더(투사체 등)와는 반응하지 않음
 
+        CollectImmediately();
+    }
+
+    /// <summary>
+    /// 플레이어가 닿지 않았어도 즉시 수령 처리한다. 웨이브가 끝나 정비 화면으로 넘어갈 때
+    /// GameFlowManager가 필드에 남은 픽업을 정리하면서 호출한다 - 그냥 지우면 못 주운 보상이
+    /// 사라져 플레이어가 손해를 보기 때문.
+    /// </summary>
+    public void CollectImmediately()
+    {
+        if (collected) return;
         collected = true;
 
         switch (Type)

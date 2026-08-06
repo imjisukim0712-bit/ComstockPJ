@@ -4,18 +4,19 @@ using UnityEngine;
 
 /// <summary>
 /// 게임 데이터 테이블(몬스터/로봇/무기/방어구/드랍)을 제공하는 싱글톤.
-/// 이전에는 Google Sheets CSV를 런타임에 다운로드했으나, 네트워크 의존을 없애기 위해
-/// localData(GameDataAsset)에 미리 저장된 값을 Awake에서 동기적으로 읽어온다.
+/// localData(GameDataAsset)에 저장된 값을 Awake에서 동기적으로 읽어온다.
 /// IsLoaded/OnLoaded는 기존 호출부(EnemySpawner, PlayerRobotController 등)를 그대로
 /// 두기 위해 API 형태만 유지한다 - 로컬 로드는 항상 즉시 끝나므로 사실상 동기 동작이다.
-/// 시트 값을 갱신할 때는 GameDataCsvImporter(Editor 전용) 도구로 localData를 다시 채운다.
+///
+/// 데이터는 전부 로컬 에셋이 유일한 출처다(사용자 지시로 구글 시트 연동을 완전히 제거함).
+/// 값을 바꾸려면 Unity 인스펙터에서 Assets/Data/GameDataAsset.asset을 직접 편집한다.
 /// </summary>
 public class GameDataManager : MonoBehaviour
 {
     public static GameDataManager Instance { get; private set; }
 
     [Header("로컬 데이터 에셋")]
-    [Tooltip("GameDataCsvImporter로 채워진 GameDataAsset. Assets/Data 아래에 생성해서 연결한다")]
+    [Tooltip("게임 데이터의 유일한 출처인 GameDataAsset. Assets/Data 아래에 생성해서 연결한다")]
     [SerializeField] private GameDataAsset localData;
 
     public Dictionary<int, MonsterData> Monsters { get; private set; } = new Dictionary<int, MonsterData>();

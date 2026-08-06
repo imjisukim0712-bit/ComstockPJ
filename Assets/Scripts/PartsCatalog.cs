@@ -5,12 +5,11 @@ using UnityEngine;
 /// <summary>
 /// 로봇 모딩(팔/다리 파츠)이 사용하는 모든 로컬 데이터를 담는 에셋.
 ///
-/// 무기의 "타입"과 "무게"는 시트 기반 WeaponData(무기 테이블)에 컬럼이 없어서 여기 별도
-/// 매핑으로 관리한다(ShopCatalog가 무기 등급·가격을 시트 밖에서 관리하는 것과 같은 이유 -
-/// GameDataCsvImporter가 컬럼을 순서로 읽어서 중간에 컬럼을 끼워 넣으면 기존 파싱이 깨진다).
+/// 무기의 "타입"과 "무게"는 WeaponData(무기 테이블)에 컬럼이 없어서 여기 별도 매핑으로
+/// 관리한다(ShopCatalog가 무기 등급·가격을 따로 관리하는 것과 같은 이유).
 ///
 /// 무기 소켓 개수·디스크 슬롯 개수도 원래 머리(로봇) 파츠 데이터가 정해야 하는 값인데
-/// RobotData(시트)에 그 필드가 없으므로 headModdingInfos에서 로봇ID로 조회한다.
+/// RobotData에 그 필드가 없으므로 headModdingInfos에서 로봇ID로 조회한다.
 /// 이 에셋 전체가 로컬 전용이며, 어떤 필드도 프로젝트 밖 리소스를 참조하지 않는다.
 /// </summary>
 [CreateAssetMenu(fileName = "PartsCatalog", menuName = "Comstock/파츠 카탈로그")]

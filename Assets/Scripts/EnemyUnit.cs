@@ -43,6 +43,11 @@ public class EnemyUnit : MonoBehaviour
 
     public static void ResetStaticCaches() => modding_manager_cache = null;
 
+    // 처치 시 보상이 나올 확률(사용자 지정). 부품 상자 확률만 PartsCatalog 에셋에 있고
+    // 경험치/골드는 데이터로 뺄 자리가 아직 없어 여기 상수로 둔다 - 밸런스 미확정 임시값.
+    private const float ExpDropChance = 0.5f;   // 1/2
+    private const float GoldDropChance = 1f / 3f; // 1/3
+
     public void Init(MonsterData data)
     {
         MonsterId = data.monster_id;
@@ -233,11 +238,17 @@ public class EnemyUnit : MonoBehaviour
     // MaxHp 비례 임시 공식을 사용한다. 실제 값 컬럼이 시트에 추가되면 이 공식을 그 값으로 교체한다.
     private void GrantKillRewards()
     {
-        int expReward = Mathf.Max(1, MaxHp / 10);
-        int goldReward = Mathf.Max(1, MaxHp / 20);
+        // 예전에는 처치할 때마다 경험치와 골드가 항상 하나씩 나와서, 60초 웨이브 한 번에
+        // 픽업이 수백 개씩 쌓였다. 이제는 확률 드랍이다(사용자 지정: 경험치 1/2, 골드 1/3).
+        if (Random.value < ExpDropChance)
+        {
+            RewardPickupManager.SpawnReward(RewardType.Exp, Mathf.Max(1, MaxHp / 10), transform.position);
+        }
 
-        RewardPickupManager.SpawnReward(RewardType.Exp, expReward, transform.position);
-        RewardPickupManager.SpawnReward(RewardType.Gold, goldReward, transform.position);
+        if (Random.value < GoldDropChance)
+        {
+            RewardPickupManager.SpawnReward(RewardType.Gold, Mathf.Max(1, MaxHp / 20), transform.position);
+        }
 
         TryDropPartBox();
     }

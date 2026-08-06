@@ -82,6 +82,15 @@ public class PlayerShootManager : MonoBehaviour
 
         [Tooltip("반전(FlipY)될 때 이미지에 추가로 더해줄 Z축 회전각(도). 슬롯(왼손/오른손)마다 따로 지정")]
         public float flip_extra_rotation_degrees;
+
+        // WeaponSlot은 struct라 필드 초기화식을 쓸 수 없다(C# 9). 기본값은 인스펙터에서 넣는다.
+        [Tooltip("무기가 조준 방향으로 돌아가는 속도(초당 도). 즉시 홱 돌지 않고 이 속도로 서서히 돌린다. " +
+                 "권장 540. 0 이하로 두면 예전처럼 즉시 회전한다")]
+        public float rotation_speed_degrees_per_second;
+
+        [Tooltip("조준이 타겟 방향과 이 각도(도) 안으로 들어와야 발사한다. 회전이 느린 무기가 " +
+                 "엉뚱한 방향으로 쏘는 것을 막는다. 권장 25. 0 이하로 두면 각도와 무관하게 항상 발사한다")]
+        public float fire_angle_tolerance_degrees;
     }
 
     [Serializable]
@@ -417,7 +426,9 @@ public class PlayerShootManager : MonoBehaviour
 
     private void Update()
     {
-        if (GameOverManager.IsGameOver || GameWinManager.IsGameWon) return; // 게임오버/승리 이후에는 조준/발사 모두 정지
+        // 게임오버/승리 이후, 그리고 정비 화면(AI 코어/로봇 정비/상점)이 열려 있는 동안에는
+        // 조준/발사 모두 정지 - 정비 중에는 인게임이 완전히 멈춰 있어야 한다(사용자 확정 사항).
+        if (GameOverManager.IsGameOver || GameWinManager.IsGameWon || GameFlowManager.IsIntermission) return;
 
         for (int i = 0; i < weapon_slots.Count; i++)
         {
@@ -442,8 +453,8 @@ public class PlayerShootManager : MonoBehaviour
 
         if (target == null)
         {
-            pivot.rotation = Quaternion.Euler(0f, 0f, slot.rest_rotation_degrees);
-            ApplyAngleFlip(slot, slot.rest_rotation_degrees, false);
+            float rest_angle = RotatePivotTowards(slot, pivot, slot.rest_rotation_degrees);
+            ApplyAngleFlip(slot, rest_angle, false);
             return;
         }
 
@@ -452,12 +463,44 @@ public class PlayerShootManager : MonoBehaviour
 
         if (direction.sqrMagnitude > 0.0001f)
         {
-            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg + slot.rotation_offset_degrees;
-            pivot.rotation = Quaternion.Euler(0f, 0f, angle);
-            ApplyAngleFlip(slot, angle, true);
+            float target_angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg + slot.rotation_offset_degrees;
+            float current_angle = RotatePivotTowards(slot, pivot, target_angle);
+            ApplyAngleFlip(slot, current_angle, true);
+
+            // 아직 타겟 쪽으로 다 돌지 못했으면 발사를 미룬다 - 그래야 "무기가 돌아가는 시간"이
+            // 눈속임이 아니라 실제 사격 타이밍에도 반영된다.
+            if (slot.fire_angle_tolerance_degrees > 0f &&
+                Mathf.Abs(Mathf.DeltaAngle(current_angle, target_angle)) > slot.fire_angle_tolerance_degrees)
+            {
+                return;
+            }
         }
 
         TryFireSlot(slot_index, slot, weapon, target);
+    }
+
+    /// <summary>
+    /// 무기 피벗을 목표 각도 쪽으로 rotation_speed_degrees_per_second 속도만큼만 돌리고,
+    /// 이번 프레임에 실제로 적용된 각도를 돌려준다.
+    /// 속도가 0 이하면 예전처럼 즉시 목표 각도로 스냅한다.
+    /// </summary>
+    private static float RotatePivotTowards(WeaponSlot slot, Transform pivot, float target_angle)
+    {
+        float applied_angle;
+
+        if (slot.rotation_speed_degrees_per_second <= 0f)
+        {
+            applied_angle = target_angle;
+        }
+        else
+        {
+            float current_angle = pivot.eulerAngles.z;
+            applied_angle = Mathf.MoveTowardsAngle(current_angle, target_angle,
+                                                   slot.rotation_speed_degrees_per_second * Time.deltaTime);
+        }
+
+        pivot.rotation = Quaternion.Euler(0f, 0f, applied_angle);
+        return applied_angle;
     }
 
     // weapon_slots.Count가 커져도(최대 6소켓 예정, Phase 4에서 머리 파츠가 실제 개수를 정함)

@@ -18,7 +18,7 @@ MonoBehaviour:
     monster_hp: 20
     monster_atk: 15
     monster_def: 0
-    monster_speed: 2
+    monster_speed: 3.2
     monster_range: 1
     monster_type: 1
     monster_atsp: 1
@@ -27,7 +27,7 @@ MonoBehaviour:
     monster_hp: 40
     monster_atk: 10
     monster_def: 0
-    monster_speed: 1
+    monster_speed: 2.4
     monster_range: 1
     monster_type: 1
     monster_atsp: 1.2
@@ -39,7 +39,7 @@ MonoBehaviour:
     robot_def: 5
     robot_cc: 10
     robot_cd: 0.5
-    robot_speed: 3
+    robot_speed: 5
     robot_capacity: 0.2
     robot_reload: 0
     robot_avoid: 5
@@ -65,7 +65,7 @@ MonoBehaviour:
     weapon_name: "\uAE30\uAD00\uB2E8\uCD1D"
     weapon_atk: 3
     weapon_atsp: 15
-    weapon_range: 15
+    weapon_range: 6
     weapon_atsize: 0.3
     weapon_aim: 4
     weapon_rebound: 2
@@ -80,7 +80,7 @@ MonoBehaviour:
     weapon_name: "\uB77C\uC774\uD50C"
     weapon_atk: 5
     weapon_atsp: 5
-    weapon_range: 20
+    weapon_range: 7
     weapon_atsize: 0.2
     weapon_aim: 5
     weapon_rebound: 2
@@ -95,7 +95,7 @@ MonoBehaviour:
     weapon_name: "\uC0F7\uAC74"
     weapon_atk: 3
     weapon_atsp: 3
-    weapon_range: 10
+    weapon_range: 4
     weapon_atsize: 0.2
     weapon_aim: 3
     weapon_rebound: 2
@@ -110,7 +110,7 @@ MonoBehaviour:
     weapon_name: "\uC2A4\uB098\uC774\uD37C"
     weapon_atk: 10
     weapon_atsp: 1
-    weapon_range: 20
+    weapon_range: 8
     weapon_atsize: 0.5
     weapon_aim: 1
     weapon_rebound: 2
@@ -125,7 +125,7 @@ MonoBehaviour:
     weapon_name: "\uC218\uB958\uD0C4"
     weapon_atk: 25
     weapon_atsp: 1
-    weapon_range: 15
+    weapon_range: 6
     weapon_atsize: 1
     weapon_aim: 5
     weapon_rebound: 1
@@ -140,7 +140,7 @@ MonoBehaviour:
     weapon_name: "\uC5D0\uB108\uC9C0 \uBB34\uAE30"
     weapon_atk: 10
     weapon_atsp: 1
-    weapon_range: 10
+    weapon_range: 5
     weapon_atsize: 0.5
     weapon_aim: 3
     weapon_rebound: 3

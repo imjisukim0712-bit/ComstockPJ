@@ -24,6 +24,17 @@ public class ItemPickup : MonoBehaviour
         if (player == null) player = other.GetComponentInParent<PlayerRobotController>();
         if (player == null) return; // 플레이어 외의 다른 콜라이더(투사체 등)와는 반응하지 않음
 
+        CollectImmediately();
+    }
+
+    /// <summary>
+    /// 플레이어가 닿지 않았어도 즉시 습득 처리한다. RewardPickup과 같은 이유로,
+    /// 정비 화면 진입 시 GameFlowManager가 필드를 정리하면서 호출한다.
+    /// </summary>
+    public void CollectImmediately()
+    {
+        if (collected) return;
+
         collected = true;
         PlayerInventory.AddItem(ItemId, 1);
         Destroy(gameObject);

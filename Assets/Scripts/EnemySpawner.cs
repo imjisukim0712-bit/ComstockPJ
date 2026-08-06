@@ -26,18 +26,25 @@ public class EnemySpawner : MonoBehaviour
     [Tooltip("스폰할 몬스터ID 목록. 매 스폰마다 이 중 하나를 무작위로 골라 소환한다")]
     [SerializeField] private List<int> spawnMonsterIds = new List<int> { 200001 }; // 기본: 좀비
 
-    [Tooltip("몇 초마다 한 마리씩 스폰할지")]
-    [SerializeField] private float spawnInterval = 3f;
+    [Tooltip("한 번에 몇 마리씩 스폰할지. 뱀서라이크 문법상 화면이 적으로 가득 차야 하므로 1보다 크게 둔다")]
+    [SerializeField] private int spawnBatchSize = 3;
+
+    [Tooltip("몇 초마다 한 묶음씩 스폰할지")]
+    [SerializeField] private float spawnInterval = 0.8f;
 
     [Tooltip("스폰 기준점. 비어 있으면 Player를 자동으로 찾고, 그것도 없으면 이 스포너 자신의 위치를 기준으로 삼는다")]
     [SerializeField] private Transform spawnCenter;
 
-    [Tooltip("기준점으로부터 이 거리~이 거리 사이(원 둘레)에 무작위로 스폰된다")]
-    [SerializeField] private float minSpawnRadius = 18f;
-    [SerializeField] private float maxSpawnRadius = 26f;
+    [Header("스폰 위치 (카메라 화면 바깥 테두리 기준)")]
+    [Tooltip("화면(카메라 가시 영역) 테두리에서 이만큼 바깥에 스폰한다. 값이 크면 적이 화면에 들어오기까지 오래 걸린다")]
+    [SerializeField] private float offScreenMargin = 1.5f;
+    [Tooltip("offScreenMargin에 더해지는 무작위 여유 폭. 적들이 한 줄로 딱 맞춰 나타나지 않도록 흩뜨린다")]
+    [SerializeField] private float offScreenMarginJitter = 2.5f;
+    [Tooltip("카메라를 못 찾았을 때 쓰는 폴백 스폰 반경(원형)")]
+    [SerializeField] private float fallbackSpawnRadius = 12f;
 
     [Tooltip("동시에 살아있을 수 있는 최대 몬스터 수 (0이면 제한 없음)")]
-    [SerializeField] private int maxAliveEnemies = 15;
+    [SerializeField] private int maxAliveEnemies = 30;
 
     private Dictionary<int, GameObject> prefabMap;
     private readonly List<EnemyUnit> alive_enemies = new List<EnemyUnit>();
@@ -101,30 +108,98 @@ public class EnemySpawner : MonoBehaviour
             if (!IsSpawningEnabled) continue; // 웨이브 사이(정비/상점)에는 스폰하지 않음
 
             alive_enemies.RemoveAll(e => e == null); // 죽어서 파괴된 개체는 목록에서 정리
-            if (maxAliveEnemies > 0 && alive_enemies.Count >= maxAliveEnemies) continue;
-
             if (spawnMonsterIds.Count == 0) continue;
 
-            int monsterId = spawnMonsterIds[UnityEngine.Random.Range(0, spawnMonsterIds.Count)];
-            Vector3 position = GetRandomSpawnPosition();
+            for (int i = 0; i < Mathf.Max(1, spawnBatchSize); i++)
+            {
+                if (maxAliveEnemies > 0 && alive_enemies.Count >= maxAliveEnemies) break;
 
-            EnemyUnit unit = SpawnMonster(monsterId, position);
-            if (unit != null) alive_enemies.Add(unit);
+                int monsterId = spawnMonsterIds[UnityEngine.Random.Range(0, spawnMonsterIds.Count)];
+                Vector3 position = GetRandomSpawnPosition();
+
+                EnemyUnit unit = SpawnMonster(monsterId, position);
+                if (unit != null) alive_enemies.Add(unit);
+            }
         }
     }
 
-    // 기준점을 중심으로 minSpawnRadius~maxSpawnRadius 사이의 원 둘레 위 무작위 지점을 고른다.
+    /// <summary>
+    /// 카메라 가시 영역(사각형)의 바깥 테두리 위 무작위 지점을 고른다.
+    ///
+    /// 예전에는 기준점 중심의 "원" 둘레에 스폰했는데, 화면은 원이 아니라 16:9 사각형이라
+    /// 같은 반경이라도 세로 방향은 화면에서 한참 멀고 가로 방향은 화면 안쪽이 되는 문제가 있었다.
+    /// (실측: 원근 카메라 FOV 60 / z=-15 기준 가시 범위가 세로 ±8.7, 가로 ±15.4유닛인데
+    ///  스폰 반경은 18~26유닛이라 적이 화면에 들어오기 훨씬 전에 사거리 안에 걸려 죽었다.)
+    /// 이제는 어느 방향에서 오든 "화면 밖에서 걸어 들어오는" 체감이 일정하다.
+    /// </summary>
     private Vector3 GetRandomSpawnPosition()
     {
         Transform center = ResolveSpawnCenter();
+        Vector3 origin = center.position;
 
-        float radius = UnityEngine.Random.Range(minSpawnRadius, maxSpawnRadius);
-        float angle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
-        Vector3 offset = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * radius;
+        if (!TryGetCameraHalfExtents(out float halfWidth, out float halfHeight))
+        {
+            // 카메라를 못 찾은 경우에만 예전 방식(원형)으로 폴백
+            float angle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+            Vector3 fallback = origin + new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * fallbackSpawnRadius;
+            fallback.z = 0f;
+            return fallback;
+        }
 
-        Vector3 position = center.position + offset;
+        float margin = offScreenMargin + UnityEngine.Random.Range(0f, Mathf.Max(0f, offScreenMarginJitter));
+        float outerWidth = halfWidth + margin;
+        float outerHeight = halfHeight + margin;
+
+        // 네 변 중 하나를 고르되, 변의 길이에 비례한 확률로 골라야 테두리 전체에 고르게 퍼진다
+        // (그냥 4등분하면 짧은 좌우 변에 적이 몰린다).
+        float horizontalWeight = outerWidth;   // 위/아래 변의 길이 비중
+        float verticalWeight = outerHeight;    // 좌/우 변의 길이 비중
+        bool onHorizontalEdge = UnityEngine.Random.value < horizontalWeight / (horizontalWeight + verticalWeight);
+
+        Vector3 offset;
+        if (onHorizontalEdge)
+        {
+            float x = UnityEngine.Random.Range(-outerWidth, outerWidth);
+            float y = UnityEngine.Random.value < 0.5f ? -outerHeight : outerHeight;
+            offset = new Vector3(x, y, 0f);
+        }
+        else
+        {
+            float x = UnityEngine.Random.value < 0.5f ? -outerWidth : outerWidth;
+            float y = UnityEngine.Random.Range(-outerHeight, outerHeight);
+            offset = new Vector3(x, y, 0f);
+        }
+
+        Vector3 position = origin + offset;
         position.z = 0f; // X-Y 평면만 사용
         return position;
+    }
+
+    /// <summary>
+    /// 카메라가 z=0 평면에서 실제로 보여주는 범위의 절반 크기(가로/세로)를 구한다.
+    /// 원근 카메라면 카메라~평면 거리와 FOV로, 직교 카메라면 orthographicSize로 계산한다.
+    /// </summary>
+    private static bool TryGetCameraHalfExtents(out float halfWidth, out float halfHeight)
+    {
+        halfWidth = 0f;
+        halfHeight = 0f;
+
+        Camera cam = Camera.main;
+        if (cam == null) return false;
+
+        if (cam.orthographic)
+        {
+            halfHeight = cam.orthographicSize;
+        }
+        else
+        {
+            float distanceToPlane = Mathf.Abs(cam.transform.position.z); // 게임 평면은 z=0
+            if (distanceToPlane <= 0.01f) return false;
+            halfHeight = distanceToPlane * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+        }
+
+        halfWidth = halfHeight * cam.aspect;
+        return halfHeight > 0.01f;
     }
 
     private Transform ResolveSpawnCenter()

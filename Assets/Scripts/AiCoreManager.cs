@@ -15,8 +15,9 @@ public class AiCoreManager : MonoBehaviour
              "실제 값은 로봇 모딩(Phase 4)에서 머리 파츠 데이터로 대체된다")]
     [SerializeField] private int coreMaxLevelPlaceholder = 20;
 
-    [Tooltip("레벨 N -> N+1에 필요한 경험치 = expPerLevel * N (임시 선형 공식, 실제 밸런스 미확정)")]
-    [SerializeField] private int expPerLevel = 10;
+    [Tooltip("레벨 N -> N+1에 필요한 경험치 = expBase + expPerLevel * N (사용자 지정: 50 + 20*레벨)")]
+    [SerializeField] private int expBase = 50;
+    [SerializeField] private int expPerLevel = 20;
 
     private void OnEnable() => RunState.OnChanged += HandleRunStateChanged;
     private void OnDisable() => RunState.OnChanged -= HandleRunStateChanged;
@@ -35,7 +36,7 @@ public class AiCoreManager : MonoBehaviour
         }
     }
 
-    private int RequiredExpForNextLevel() => expPerLevel * RunState.CoreLevel;
+    private int RequiredExpForNextLevel() => expBase + expPerLevel * RunState.CoreLevel;
 
     /// <summary>HUD의 경험치 바 표시용. 최대 레벨이면 다음 레벨이 없다는 뜻으로 -1을 돌려준다.</summary>
     public int GetRequiredExpForNextLevel()
