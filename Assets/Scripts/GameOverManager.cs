@@ -26,9 +26,13 @@ public static class GameOverManager
 
     // 씬을 재시작(재시도)할 때 이 상태를 초기화하기 위해 사용.
     // static 이라 씬을 다시 로드해도 값이 남아있기 때문에, Player가 새로 생성될 때(Awake) 호출해준다.
+    // OnGameOver는 여기서 null로 비우지 않는다 - RunState.Reset()과 같은 이유(작업.md Phase 2
+    // "RunState.OnChanged 초기화 순서 버그" 참고, GameWinManager.Reset()에서 실제로 재현되어
+    // 함께 수정함): Unity의 Awake 호출 순서가 오브젝트별로 보장되지 않아, 구독자(GameHUD 등)의
+    // Awake가 이 Reset()보다 먼저 실행되면 그 구독이 여기서 지워져 버릴 수 있다. 각 구독자는
+    // 자신의 OnDestroy에서 스스로 구독 해제하므로 여기서 강제로 비울 필요가 없다.
     public static void Reset()
     {
         IsGameOver = false;
-        OnGameOver = null;
     }
 }

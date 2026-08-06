@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -14,6 +15,11 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public class EnemyUnit : MonoBehaviour
 {
+    // 자동공격(PlayerShootManager)이 "사거리 내 최근접 적"을 찾을 때 순회하는 전역 생존 목록.
+    // Physics.OverlapSphere를 무기 슬롯마다 매 프레임 돌리는 대신, 스폰/사망 시점에만 갱신되는
+    // 이 목록을 순회하는 쪽이 더 저렴하다.
+    public static readonly List<EnemyUnit> Alive = new List<EnemyUnit>();
+
     public int MonsterId { get; private set; }
     public int MaxHp { get; private set; }
     public int CurrentHp { get; private set; }
@@ -31,6 +37,12 @@ public class EnemyUnit : MonoBehaviour
     private Transform player_transform;
     private PlayerRobotController player;
 
+    // 부품 상자 드랍 확률 조회용. 몬스터마다 새로 찾지 않도록 클래스 전체가 공유하는 캐시.
+    // PlayerRobotController.Awake()가 Alive.Clear()와 함께 매 런 시작마다 비워준다(재시도 시 이전 판의 참조가 남지 않도록).
+    private static ModdingManager modding_manager_cache;
+
+    public static void ResetStaticCaches() => modding_manager_cache = null;
+
     public void Init(MonsterData data)
     {
         MonsterId = data.monster_id;
@@ -43,7 +55,10 @@ public class EnemyUnit : MonoBehaviour
         AtSp = data.monster_atsp;
     }
 
-    private void Awake()
+    // protected virtual로 열어둔 이유: BossUnit이 이 클래스를 상속해서 광역 공격 패턴을 얹는다.
+    // Awake를 override해서 base.Awake()를 호출해야 Alive 리스트 등록/물리 설정이 그대로 적용된다
+    // (override 없이 새 Awake를 정의하면 Unity가 이 메서드를 아예 호출하지 않아 조용히 깨진다).
+    protected virtual void Awake()
     {
         rb = GetComponent<Rigidbody>();
 
@@ -53,6 +68,13 @@ public class EnemyUnit : MonoBehaviour
         rb.constraints |= RigidbodyConstraints.FreezePositionZ;
 
         FindPlayer();
+
+        Alive.Add(this);
+    }
+
+    private void OnDestroy()
+    {
+        Alive.Remove(this);
     }
 
     private void FindPlayer()
@@ -64,9 +86,9 @@ public class EnemyUnit : MonoBehaviour
         player = player_obj.GetComponent<PlayerRobotController>();
     }
 
-    private void Update()
+    protected virtual void Update()
     {
-        if (IsDead || GameOverManager.IsGameOver) return;
+        if (IsDead || GameOverManager.IsGameOver || GameWinManager.IsGameWon) return;
 
         if (player_transform == null)
         {
@@ -132,9 +154,9 @@ public class EnemyUnit : MonoBehaviour
     private const float SeparationRadius = 1.3f;
     private const float SeparationWeight = 1.4f;
 
-    private void FixedUpdate()
+    protected virtual void FixedUpdate()
     {
-        if (IsDead || GameOverManager.IsGameOver)
+        if (IsDead || GameOverManager.IsGameOver || GameWinManager.IsGameWon)
         {
             rb.linearVelocity = Vector3.zero;
             return;
@@ -187,7 +209,7 @@ public class EnemyUnit : MonoBehaviour
         if (CurrentHp <= 0) Die();
     }
 
-    private void Die()
+    protected virtual void Die()
     {
         if (IsDead) return;
         IsDead = true;
@@ -201,6 +223,34 @@ public class EnemyUnit : MonoBehaviour
             DropItemManager.SpawnDrop(droppedItemId.Value, transform.position);
         }
 
+        GrantKillRewards();
+
         Destroy(gameObject);
+    }
+
+    // AI 코어 경험치 + 골드를 필드 위의 픽업 오브젝트로 생성한다(플레이어가 다가가면 자동 흡수 -
+    // RewardPickup 참고). 데이터테이블에 아직 몬스터별 경험치/골드 컬럼이 없어서(기획 확정 전)
+    // MaxHp 비례 임시 공식을 사용한다. 실제 값 컬럼이 시트에 추가되면 이 공식을 그 값으로 교체한다.
+    private void GrantKillRewards()
+    {
+        int expReward = Mathf.Max(1, MaxHp / 10);
+        int goldReward = Mathf.Max(1, MaxHp / 20);
+
+        RewardPickupManager.SpawnReward(RewardType.Exp, expReward, transform.position);
+        RewardPickupManager.SpawnReward(RewardType.Gold, goldReward, transform.position);
+
+        TryDropPartBox();
+    }
+
+    // 골드/경험치와 별개로, PartsCatalog.PartBoxDropChance 확률로 부품 상자를 추가로 드랍한다.
+    private void TryDropPartBox()
+    {
+        if (modding_manager_cache == null) modding_manager_cache = FindFirstObjectByType<ModdingManager>();
+        if (modding_manager_cache == null || modding_manager_cache.Catalog == null) return;
+
+        if (Random.value <= modding_manager_cache.Catalog.PartBoxDropChance)
+        {
+            RewardPickupManager.SpawnReward(RewardType.PartBox, 1, transform.position);
+        }
     }
 }

@@ -1,37 +1,36 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
-/// 플레이어가 보유한 2개의 무기 슬롯을 관리하고,
-/// 마우스 클릭 시 현재 선택된 무기의 muzzle_point 위치에서
-/// 클릭한 지점을 향해 투사체를 발사한다.
+/// 플레이어가 장착한 모든 무기 소켓을 자동공격으로 관리한다.
+/// 각 소켓은 서로 독립적으로 동작한다: 자기 사거리(weapon_range) 안에 있는 가장 가까운
+/// 적을 찾아 그 방향으로 회전하고, 자기 쿨다운(weapon_atsp)이 끝나면 자동으로 발사한다.
+/// 마우스 조준/클릭, 무기 전환 키, 탄약·재장전 개념은 없다(자동공격 뱀서라이크 전환 결정).
 ///
 /// 무기 데이터테이블(WeaponData) 각 필드 사용 방식:
 /// - weapon_atk        : 명중 시 데미지
 /// - weapon_atsp       : 공격속도 → 다음 발사까지의 쿨다운 (1 / atsp 초)
-/// - weapon_range      : 투사체 최대 사거리
+/// - weapon_range      : 투사체 최대 사거리이자 자동 타겟팅 탐지 반경
 /// - weapon_atsize     : 투사체 크기(스케일)
-/// - weapon_aim        : 조준 정확도 → 클릭 지점 기준 방향이 최대 이 각도(도)만큼 무작위로 벗어남
-/// - weapon_rebound    : 반동 → 한 번의 발사(TryFire 1회)에서 여러 발이 나갈 때, 발마다 진행 방향은 그대로 두고 옆으로 벌어지는 간격(평행 발사)
+/// - weapon_aim        : 조준 정확도 → 타겟 방향이 최대 이 각도(도)만큼 무작위로 벗어남
+/// - weapon_rebound    : 반동 → 한 번의 발사에서 여러 발이 나갈 때, 발마다 진행 방향은 그대로 두고 옆으로 벌어지는 간격(평행 발사)
 /// - weapon_projectiles: 한 번에 발사되는 투사체 개수
-/// - weapon_capacity   : 장탄수 → 이만큼 발사하면 자동으로 재장전 시작
-/// - weapon_reload     : 재장전 소요 시간(초)
 /// - weapon_penetration: 관통 여부 (0 = 첫 충돌 시 소멸 / 1 = 관통, 충돌해도 유지)
 /// - weapon_tanhwan    : 발사할 투사체 프리팹 이름 → projectile_prefabs 목록에서 같은 이름을 찾아 사용
+/// - weapon_capacity/weapon_reload : 더 이상 사용하지 않음(탄약·재장전 제거 결정, 값은 데이터에만 남아있음)
 ///
 /// PlayerRobotController(로봇 데이터테이블)의 스탯도 함께 반영한다:
-/// - robot_atk     : 최종 데미지 = weapon_atk + robot_atk
-/// - robot_cc/cd   : 0~100 랜덤값이 robot_cc 이하면 치명타 → 데미지 = 데미지 + 데미지 * robot_cd
-/// - robot_capacity: 무기 장탄수 = weapon_capacity + weapon_capacity * robot_capacity
+/// - robot_atk   : 최종 데미지 = weapon_atk + robot_atk
+/// - robot_cc/cd : 0~100 랜덤값이 robot_cc 이하면 치명타 → 데미지 = 데미지 + 데미지 * robot_cd
 ///
 /// delayed_blast_weapon_ids 범위(기본 300400~300499, 수류탄류)에 속한 무기는
 /// weapon_atsize를 접촉 판정 크기로 쓰지 않고, 작은 크기로 날아가다가
-/// weapon_range(최대 사거리) 지점에서 weapon_atsize 범위에 한 번에 데미지를 준다.
-/// 단, 사거리 안쪽을 클릭했다면 최대 사거리까지 가지 않고 그 클릭 지점에서 바로 폭발한다.
+/// weapon_range(최대 사거리) 또는 타겟 지점에서 weapon_atsize 범위에 한 번에 데미지를 준다.
 ///
 /// 투사체 속도는 데이터테이블에 없는 값이라 무기 슬롯별로 인스펙터에서 직접 지정한다.
+/// 소켓 개수는 현재 인스펙터에 등록된 weapon_slots 그대로 사용한다. 소켓 개수·타입을
+/// 머리 파츠가 강제하는 규칙은 로봇 모딩 시스템(Phase 4)에서 연결한다.
 ///
 /// 전제: 게임플레이는 X-Y 평면만 사용 (Z축 미사용) → PlayerRobotController와 동일한 규칙
 /// </summary>
@@ -61,12 +60,12 @@ public class PlayerShootManager : MonoBehaviour
         [Tooltip("체크하면 데이터테이블의 무기 왼손 이미지(weapon_lfwpimg)를, 체크 해제하면 무기 오른손 이미지(weapon_rgwpimg)를 사용")]
         public bool use_left_hand_image;
 
-        [Tooltip("마우스 조준 중(활성 슬롯)에만 사용되는 보정각(도). 원본 이미지의 총구가 그려진 각도가 " +
-                 "atan2로 계산한 방향과 다를 때 이 값을 더해서 실제 총구가 마우스를 정확히 향하도록 보정한다. " +
+        [Tooltip("자동 조준 중에만 사용되는 보정각(도). 원본 이미지의 총구가 그려진 각도가 " +
+                 "atan2로 계산한 방향과 다를 때 이 값을 더해서 실제 총구가 타겟을 정확히 향하도록 보정한다. " +
                  "대기 자세(rest_rotation_degrees)와는 별개의 값이다")]
         public float rotation_offset_degrees;
 
-        [Tooltip("비활성 슬롯이거나 무기 교체 직후(대기 상태)일 때 고정으로 보여줄 절대 회전각(도). " +
+        [Tooltip("사거리 안에 타겟이 없을 때 고정으로 보여줄 절대 회전각(도). " +
                  "인스펙터 상의 RigingPoint Transform Rotation Z 값을 그대로 넣으면 된다. " +
                  "조준 중 보정값(rotation_offset_degrees)과 별개로 동작한다")]
         public float rest_rotation_degrees;
@@ -115,24 +114,18 @@ public class PlayerShootManager : MonoBehaviour
         public float size_multiplier;
     }
 
-    // 무기 슬롯 하나가 가지는 실시간 탄약/재장전 상태
+    // 무기 슬롯 하나가 가지는 실시간 발사 상태(쿨다운만 추적 - 탄약/재장전 없음)
     private class WeaponRuntimeState
     {
-        public int ammo_remaining = -1; // -1 = 아직 초기화 안 됨
-        public bool is_reloading = false;
-        public float reload_end_time = 0f;
+        public float next_fire_time;
     }
 
-    [Header("장착 무기 슬롯 (0번, 1번 = 무기1, 무기2)")]
+    [Header("장착 무기 소켓 (머리 파츠가 개수/타입을 정하는 규칙은 Phase 4에서 연결)")]
     [SerializeField] private List<WeaponSlot> weapon_slots = new List<WeaponSlot>();
 
     [Header("투사체 프리팹 목록 (데이터테이블 weapon_tanhwan 이름 ↔ 프리팹)")]
     [Tooltip("Assets/Prefebs 안의 투사체 프리팹을 이름과 함께 등록. 여기 없는 이름은 Resources 폴더에서도 찾아본다")]
     [SerializeField] private List<ProjectilePrefabEntry> projectile_prefabs = new List<ProjectilePrefabEntry>();
-
-    [Header("무기 전환 키")]
-    [SerializeField] private Key weapon1_key = Key.Digit1;
-    [SerializeField] private Key weapon2_key = Key.Digit2;
 
     [Header("지연 폭발 무기 (수류탄류) - 사거리 끝에서 범위 데미지")]
     [Tooltip("이 ID 범위에 속한 무기는 작게 날아가다가 사거리 끝에서 weapon_atsize 범위에 데미지를 준다")]
@@ -163,11 +156,8 @@ public class PlayerShootManager : MonoBehaviour
         new WeaponImageSizeOverride { weapon_id = 300001, size_multiplier = 1.3f } // 기관단총(SMG) - 조금 더 크게
     };
 
-    private Camera main_camera;
-    private PlayerRobotController player_stats; // 로봇 공격력/치명타/장탄 보정치를 가져오는 용도
-    private int current_slot_index = 0;
-    private float next_fire_time = 0f;
-    private WeaponData? current_weapon_data;
+    private PlayerRobotController player_stats; // 로봇 공격력/치명타 보정치를 가져오는 용도
+    private readonly Dictionary<int, WeaponData> weapon_data_by_slot = new Dictionary<int, WeaponData>();
     private readonly Dictionary<int, WeaponRuntimeState> runtime_state_by_slot = new Dictionary<int, WeaponRuntimeState>();
 
     // weapon_tanhwan(프리팹 이름) → 프리팹. 대소문자 구분 없이 조회
@@ -187,17 +177,16 @@ public class PlayerShootManager : MonoBehaviour
     // 되도록 스케일을 자동 보정한다. 값은 기존에 잘 보이던 기관총 이미지 기준
     // (스프라이트 4.8유닛 크기 x 기존 지정 스케일 0.6)으로 역산한 것.
     private const float TargetHandImageSize = 4.8f * 0.6f;
+    private const float DefaultWeaponRange = 20f;
 
     private void Awake()
     {
-        main_camera = Camera.main;
-
         // ShootManager는 Player와 별개 오브젝트라 GetComponent가 아니라 태그로 찾는다.
         GameObject player_obj = GameObject.FindGameObjectWithTag("Player");
         if (player_obj != null) player_stats = player_obj.GetComponent<PlayerRobotController>();
         if (player_stats == null)
         {
-            Debug.LogWarning("PlayerRobotController를 찾을 수 없습니다. 로봇 공격력/치명타/장탄 보정 없이 무기 기본 수치로만 발사합니다.");
+            Debug.LogWarning("PlayerRobotController를 찾을 수 없습니다. 로봇 공격력/치명타 보정 없이 무기 기본 수치로만 발사합니다.");
         }
 
         foreach (var entry in projectile_prefabs)
@@ -209,21 +198,38 @@ public class PlayerShootManager : MonoBehaviour
 
     private void Start()
     {
-        // GameDataManager는 코루틴으로 CSV를 비동기 로드하므로, Start() 시점엔
-        // 무기 데이터가 아직 없을 수 있다. 그 상태에서 RefreshCurrentWeaponData()를
-        // 한 번만 부르면 "데이터 없음" 경고만 뜨고 끝나서, 게임 시작 시 1번 슬롯
-        // 무기가 기본으로 장착되지 않는 문제가 있었다. 로드 완료 이벤트를 받아
-        // 그 시점에 다시 한번 확실히 반영되도록 한다.
-        current_slot_index = 0; // 1번 슬롯(무기1)을 기본 무기로 사용
-
+        // GameDataManager는 로컬 에셋을 Awake에서 동기 로드하므로 보통 이 시점엔 이미 IsLoaded지만,
+        // 실행 순서가 어긋나는 경우를 대비해 이벤트 폴백도 유지한다.
         if (GameDataManager.Instance.IsLoaded)
         {
-            RefreshCurrentWeaponData();
+            RefreshAllWeaponData();
             RefreshAllWeaponVisuals();
         }
         else
         {
             GameDataManager.Instance.OnLoaded += HandleGameDataLoaded;
+        }
+
+        SyncRunStateFromInspectorSlots();
+    }
+
+    /// <summary>
+    /// 런 시작 시점의 장착 상태를 RunState에 반영한다. 인스펙터에 미리 넣어둔 시작 무기는
+    /// 상점을 거치지 않았으므로 전부 일반 등급(배율 1)으로 취급한다.
+    /// (RunState.Reset()은 PlayerRobotController.Awake에서 호출되므로 Start 시점엔 이미 비워져 있다)
+    /// </summary>
+    private void SyncRunStateFromInspectorSlots()
+    {
+        RunState.EquippedWeapons.Clear();
+
+        for (int i = 0; i < weapon_slots.Count; i++)
+        {
+            RunState.EquippedWeapons.Add(new RunState.EquippedWeapon
+            {
+                WeaponId = weapon_slots[i].weapon_id,
+                Grade = ItemGrade.Normal,
+                StatMultiplier = 1f
+            });
         }
     }
 
@@ -234,14 +240,38 @@ public class PlayerShootManager : MonoBehaviour
 
     private void HandleGameDataLoaded()
     {
-        RefreshCurrentWeaponData();
+        RefreshAllWeaponData();
         RefreshAllWeaponVisuals();
     }
 
+    // 모든 소켓의 weapon_id로 GameDataManager에서 실제 스탯(WeaponData)을 다시 가져온다.
+    private void RefreshAllWeaponData()
+    {
+        weapon_data_by_slot.Clear();
+
+        if (GameDataManager.Instance == null)
+        {
+            Debug.LogWarning("GameDataManager.Instance가 없습니다. 씬에 DataManager 오브젝트가 있는지 확인하세요.");
+            return;
+        }
+
+        for (int i = 0; i < weapon_slots.Count; i++)
+        {
+            int weapon_id = weapon_slots[i].weapon_id;
+            if (GameDataManager.Instance.Weapons.TryGetValue(weapon_id, out WeaponData data))
+            {
+                weapon_data_by_slot[i] = data;
+            }
+            else
+            {
+                Debug.LogWarning($"무기ID {weapon_id}(소켓 {i})의 데이터를 찾을 수 없습니다. GameDataManager.Weapons에 해당 ID가 로드되었는지 확인하세요.");
+            }
+        }
+    }
+
     /// <summary>
-    /// 양손에 장착된 무기 슬롯 전부(선택된 슬롯뿐 아니라 왼손/오른손 두 슬롯 모두)의 이미지를
-    /// 데이터테이블(weapon_lfwpimg/weapon_rgwpimg)에 맞춰 갱신한다. 두 무기는 항상 동시에
-    /// 양손에 들려 보이므로, "현재 선택된 무기"와 무관하게 매 슬롯을 각자의 무기ID로 갱신한다.
+    /// 모든 소켓(선택된 소켓 개념 없음 - 전부 동시에 보이고 발사됨)의 이미지를
+    /// 데이터테이블(weapon_lfwpimg/weapon_rgwpimg)에 맞춰 갱신한다.
     /// </summary>
     private void RefreshAllWeaponVisuals()
     {
@@ -249,26 +279,107 @@ public class PlayerShootManager : MonoBehaviour
 
         for (int i = 0; i < weapon_slots.Count; i++)
         {
-            WeaponSlot slot = weapon_slots[i];
-            if (slot.hand_sprite_renderer == null) continue;
-
-            if (!GameDataManager.Instance.Weapons.TryGetValue(slot.weapon_id, out WeaponData data)) continue;
-
-            string sprite_name = slot.use_left_hand_image ? data.weapon_lfwpimg : data.weapon_rgwpimg;
-            Sprite sprite = ResolveWeaponSprite(sprite_name, data);
-            slot.hand_sprite_renderer.sprite = sprite;
-
-            // 원본 이미지 크기가 제각각이라(예: SMG가 기관총류보다 훨씬 큰 픽셀 크기) 매번
-            // 화면에 보이는 크기가 TargetHandImageSize로 일정해지도록 스케일을 다시 계산한다.
-            // 그 위에 무기별 개별 배율(weapon_image_size_overrides)을 추가로 곱한다.
-            if (sprite != null)
-            {
-                float max_dim = Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y, 0.0001f);
-                float normalized_scale = TargetHandImageSize / max_dim;
-                float size_multiplier = GetSizeMultiplier(slot.weapon_id);
-                slot.hand_sprite_renderer.transform.localScale = Vector3.one * (normalized_scale * size_multiplier);
-            }
+            RefreshWeaponVisual(i);
         }
+    }
+
+    // 소켓 하나의 무기 이미지를 갱신한다(상점에서 무기를 교체했을 때도 이것만 다시 부르면 된다).
+    private void RefreshWeaponVisual(int slot_index)
+    {
+        if (GameDataManager.Instance == null) return;
+        if (slot_index < 0 || slot_index >= weapon_slots.Count) return;
+
+        WeaponSlot slot = weapon_slots[slot_index];
+        if (slot.hand_sprite_renderer == null) return;
+
+        if (!GameDataManager.Instance.Weapons.TryGetValue(slot.weapon_id, out WeaponData data)) return;
+
+        string sprite_name = slot.use_left_hand_image ? data.weapon_lfwpimg : data.weapon_rgwpimg;
+        Sprite sprite = ResolveWeaponSprite(sprite_name, data);
+        slot.hand_sprite_renderer.sprite = sprite;
+
+        // 원본 이미지 크기가 제각각이라(예: SMG가 기관총류보다 훨씬 큰 픽셀 크기) 매번
+        // 화면에 보이는 크기가 TargetHandImageSize로 일정해지도록 스케일을 다시 계산한다.
+        // 그 위에 무기별 개별 배율(weapon_image_size_overrides)을 추가로 곱한다.
+        if (sprite != null)
+        {
+            float max_dim = Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y, 0.0001f);
+            float normalized_scale = TargetHandImageSize / max_dim;
+            float size_multiplier = GetSizeMultiplier(slot.weapon_id);
+            slot.hand_sprite_renderer.transform.localScale = Vector3.one * (normalized_scale * size_multiplier);
+        }
+    }
+
+    /// <summary>현재 무기 소켓 개수(상점 UI가 "어느 소켓에 장착할지" 목록을 만들 때 사용).</summary>
+    public int SocketCount => weapon_slots.Count;
+
+    /// <summary>소켓에 현재 장착된 무기 정보를 가져온다(상점 UI 표시용).</summary>
+    public bool TryGetSocketInfo(int socketIndex, out WeaponData weapon, out ItemGrade grade)
+    {
+        weapon = default;
+        grade = ItemGrade.Normal;
+
+        if (socketIndex < 0 || socketIndex >= weapon_slots.Count) return false;
+        if (!weapon_data_by_slot.TryGetValue(socketIndex, out weapon)) return false;
+
+        if (socketIndex < RunState.EquippedWeapons.Count) grade = RunState.EquippedWeapons[socketIndex].Grade;
+        return true;
+    }
+
+    /// <summary>
+    /// 상점에서 산 무기를 소켓에 즉시 장착(교체)한다. 기획서의 "무기 구매 = 소켓 즉시 교체"에 해당한다.
+    /// 등급 배율(statMultiplier)은 이후 발사 계산에서 공격력/공격속도에 곱해진다.
+    /// </summary>
+    /// <returns>장착에 성공하면 true</returns>
+    public bool EquipWeapon(int socketIndex, int weaponId, ItemGrade grade, float statMultiplier)
+    {
+        if (socketIndex < 0 || socketIndex >= weapon_slots.Count)
+        {
+            Debug.LogWarning($"무기 소켓 인덱스 {socketIndex}가 범위를 벗어났습니다(소켓 {weapon_slots.Count}개).");
+            return false;
+        }
+
+        if (GameDataManager.Instance == null ||
+            !GameDataManager.Instance.Weapons.TryGetValue(weaponId, out WeaponData data))
+        {
+            Debug.LogWarning($"무기ID {weaponId}의 데이터를 찾을 수 없어 장착하지 못했습니다.");
+            return false;
+        }
+
+        // WeaponSlot은 struct라 List에서 꺼내 수정한 뒤 다시 넣어야 반영된다.
+        WeaponSlot slot = weapon_slots[socketIndex];
+        slot.weapon_id = weaponId;
+        weapon_slots[socketIndex] = slot;
+
+        weapon_data_by_slot[socketIndex] = data;
+
+        while (RunState.EquippedWeapons.Count <= socketIndex)
+        {
+            RunState.EquippedWeapons.Add(new RunState.EquippedWeapon { WeaponId = 0, Grade = ItemGrade.Normal, StatMultiplier = 1f });
+        }
+
+        RunState.EquippedWeapons[socketIndex] = new RunState.EquippedWeapon
+        {
+            WeaponId = weaponId,
+            Grade = grade,
+            StatMultiplier = statMultiplier <= 0f ? 1f : statMultiplier
+        };
+
+        RefreshWeaponVisual(socketIndex);
+
+        // 교체 직후 이전 무기의 남은 쿨다운이 그대로 이어지지 않도록 초기화한다.
+        GetOrCreateRuntimeState(socketIndex).next_fire_time = 0f;
+
+        return true;
+    }
+
+    // 소켓에 적용할 등급 스탯 배율. 상점을 거치지 않은 시작 무기는 1(일반 등급).
+    private float GetStatMultiplier(int slot_index)
+    {
+        if (slot_index < 0 || slot_index >= RunState.EquippedWeapons.Count) return 1f;
+
+        float multiplier = RunState.EquippedWeapons[slot_index].StatMultiplier;
+        return multiplier <= 0f ? 1f : multiplier;
     }
 
     // weapon_image_size_overrides에서 해당 무기ID의 배율을 찾는다. 없으면 1(보정 없음)
@@ -306,66 +417,72 @@ public class PlayerShootManager : MonoBehaviour
 
     private void Update()
     {
-        if (GameOverManager.IsGameOver) return; // 게임오버 이후에는 무기 전환/재장전/발사 모두 정지
+        if (GameOverManager.IsGameOver || GameWinManager.IsGameWon) return; // 게임오버/승리 이후에는 조준/발사 모두 정지
 
-        HandleWeaponSwitch();
-        HandleReloadProgress();
-        AimActiveWeaponAtMouse();
-
-        if (Mouse.current == null) return;
-
-        // 클릭 순간(wasPressedThisFrame)만이 아니라 누르고 있는 동안(isPressed) 계속 발사 시도.
-        // 실제 발사 간격은 TryFire() 안의 next_fire_time(weapon_atsp 쿨다운)이 그대로 제어하므로
-        // 여기서 매 프레임 호출해도 공격속도보다 빠르게 나가지는 않는다.
-        if (Mouse.current.leftButton.isPressed)
+        for (int i = 0; i < weapon_slots.Count; i++)
         {
-            TryFire();
+            UpdateSlot(i);
         }
     }
 
     /// <summary>
-    /// 현재 사용 중인(current_slot_index) 무기 슬롯을 마우스 커서 방향으로 회전시킨다.
-    ///
-    /// 구조: 리깅 포인트(rig_point)는 위치가 고정된 회전축이고, 무기 이미지(hand_sprite_renderer)와
-    /// 총구(muzzle_point) 둘 다 그 자식으로 붙어있다. 그래서 여기서 rig_point의 "회전"만 바꾸면
-    /// 리깅 포인트 자신은 제자리에 그대로 있고, 이미지와 총구가 함께 그 지점을 중심으로 스윙하며
-    /// 마우스를 향한다 - 총이 회전하면 투사체가 나가는 위치(총구)도 같이 움직인다.
-    /// rig_point가 비어있으면 muzzle_point를 기준으로 회전한다(폴백).
-    ///
-    /// 슬롯별 rotation_offset_degrees는 무기 이미지 원본이 실제로 그려진 각도(예: 회전 0에서
-    /// 정면이 아니라 대각선을 보고 있는 경우)를 보정한다. 사용 중이 아닌 슬롯도 이 보정값을
-    /// 그대로 적용한 자세로 쉬게 하여(마냥 회전 0이 아니라), 원본 그림이 어색한 방향을 보고
-    /// 있지 않도록 한다.
+    /// 소켓 하나를 처리한다: 사거리 내 최근접 적을 찾아 조준하고, 쿨다운이 끝났으면 발사한다.
+    /// 타겟이 없으면 대기 자세(rest_rotation_degrees)로 되돌아간다.
     /// </summary>
-    private void AimActiveWeaponAtMouse()
+    private void UpdateSlot(int slot_index)
     {
-        if (Mouse.current == null || main_camera == null) return;
+        if (!weapon_data_by_slot.TryGetValue(slot_index, out WeaponData weapon)) return;
 
-        for (int i = 0; i < weapon_slots.Count; i++)
+        WeaponSlot slot = weapon_slots[slot_index];
+        Transform pivot = slot.rig_point != null ? slot.rig_point : slot.muzzle_point;
+        if (pivot == null) return;
+
+        float range = weapon.weapon_range > 0f ? weapon.weapon_range : DefaultWeaponRange;
+        EnemyUnit target = FindNearestEnemyInRange(pivot.position, range);
+
+        if (target == null)
         {
-            WeaponSlot slot = weapon_slots[i];
-            Transform pivot = slot.rig_point != null ? slot.rig_point : slot.muzzle_point;
-            if (pivot == null) continue;
+            pivot.rotation = Quaternion.Euler(0f, 0f, slot.rest_rotation_degrees);
+            ApplyAngleFlip(slot, slot.rest_rotation_degrees, false);
+            return;
+        }
 
-            if (i != current_slot_index)
+        Vector3 direction = target.transform.position - pivot.position;
+        direction.z = 0f; // X-Y 평면만 사용
+
+        if (direction.sqrMagnitude > 0.0001f)
+        {
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg + slot.rotation_offset_degrees;
+            pivot.rotation = Quaternion.Euler(0f, 0f, angle);
+            ApplyAngleFlip(slot, angle, true);
+        }
+
+        TryFireSlot(slot_index, slot, weapon, target);
+    }
+
+    // weapon_slots.Count가 커져도(최대 6소켓 예정, Phase 4에서 머리 파츠가 실제 개수를 정함)
+    // EnemyUnit.Alive를 슬롯마다 순회하는 정도는 이 데모 규모에서 비용이 미미하다.
+    private static EnemyUnit FindNearestEnemyInRange(Vector3 origin, float range)
+    {
+        EnemyUnit nearest = null;
+        float nearest_sqr_dist = range * range;
+
+        foreach (EnemyUnit enemy in EnemyUnit.Alive)
+        {
+            if (enemy == null || enemy.IsDead) continue;
+
+            Vector3 diff = enemy.transform.position - origin;
+            diff.z = 0f;
+            float sqr_dist = diff.sqrMagnitude;
+
+            if (sqr_dist <= nearest_sqr_dist)
             {
-                // 비활성 슬롯: 마우스를 따라가지 않고, 고정된 대기 자세 각도로 쉰다.
-                pivot.rotation = Quaternion.Euler(0f, 0f, slot.rest_rotation_degrees);
-                ApplyAngleFlip(slot, slot.rest_rotation_degrees, false);
-                continue;
-            }
-
-            Vector3 target_point = GetMouseWorldPointOnPlane(pivot.position.z);
-            Vector3 direction = target_point - pivot.position;
-            direction.z = 0f; // X-Y 평면만 사용
-
-            if (direction.sqrMagnitude > 0.0001f)
-            {
-                float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg + slot.rotation_offset_degrees;
-                pivot.rotation = Quaternion.Euler(0f, 0f, angle);
-                ApplyAngleFlip(slot, angle, true);
+                nearest_sqr_dist = sqr_dist;
+                nearest = enemy;
             }
         }
+
+        return nearest;
     }
 
     // 회전각이 정상 범위(flip_angle_min~max_degrees)를 벗어나면 이미지를 Y축 기준으로 좌우 반전한다.
@@ -392,206 +509,68 @@ public class PlayerShootManager : MonoBehaviour
         return angle;
     }
 
-    private void HandleWeaponSwitch()
-    {
-        if (Keyboard.current == null) return;
-
-        if (Keyboard.current[weapon1_key].wasPressedThisFrame && weapon_slots.Count > 0)
-        {
-            current_slot_index = 0;
-            RefreshCurrentWeaponData();
-            ResetAllWeaponRotationsToRest();
-        }
-        else if (Keyboard.current[weapon2_key].wasPressedThisFrame && weapon_slots.Count > 1)
-        {
-            current_slot_index = 1;
-            RefreshCurrentWeaponData();
-            ResetAllWeaponRotationsToRest();
-        }
-    }
-
-    // 1/2키로 무기를 바꾸는 순간, 두 무기 모두 각자의 대기 자세 각도(rest_rotation_degrees)로
-    // 즉시 스냅시킨다. 새로 활성화된 무기는 바로 다음 줄의 AimActiveWeaponAtMouse()가 같은 프레임
-    // 안에 다시 마우스 방향으로 회전시키지만, 전환 순간에는 항상 정해진 초기 자세에서 시작하도록
-    // 한 번 확실히 고정해서 이전 각도가 남아있는 경우가 없도록 한다.
-    private void ResetAllWeaponRotationsToRest()
-    {
-        foreach (WeaponSlot slot in weapon_slots)
-        {
-            Transform pivot = slot.rig_point != null ? slot.rig_point : slot.muzzle_point;
-            if (pivot != null) pivot.rotation = Quaternion.Euler(0f, 0f, slot.rest_rotation_degrees);
-            ApplyAngleFlip(slot, slot.rest_rotation_degrees, false);
-        }
-    }
-
-    // 선택된 슬롯의 weapon_id로 GameDataManager에서 실제 스탯(WeaponData)을 다시 가져온다.
-    private void RefreshCurrentWeaponData()
-    {
-        if (weapon_slots.Count == 0)
-        {
-            current_weapon_data = null;
-            return;
-        }
-
-        // GameDataManager.Instance가 null이면 (씬에 DataManager가 없거나, 플레이 도중 스크립트가
-        // 재컴파일되며 static Instance가 초기화된 경우 등) 여기서 NullReferenceException이 나지 않도록 방어
-        if (GameDataManager.Instance == null)
-        {
-            Debug.LogWarning("GameDataManager.Instance가 없습니다. 씬에 DataManager 오브젝트가 있는지, " +
-                              "혹은 플레이 도중 스크립트가 재컴파일되어 Instance가 초기화되지 않았는지 확인하세요.");
-            current_weapon_data = null;
-            return;
-        }
-
-        int weapon_id = weapon_slots[current_slot_index].weapon_id;
-
-        if (GameDataManager.Instance.Weapons.TryGetValue(weapon_id, out WeaponData data))
-        {
-            current_weapon_data = data;
-            EnsureRuntimeState(current_slot_index, data);
-        }
-        else
-        {
-            Debug.LogWarning($"무기ID {weapon_id}의 데이터를 찾을 수 없습니다. GameDataManager.Weapons에 해당 ID가 로드되었는지 확인하세요.");
-            current_weapon_data = null;
-        }
-    }
-
-    // 슬롯별 탄약 상태가 없으면 해당 무기의 weapon_capacity로 처음 채워서 만든다.
-    private void EnsureRuntimeState(int slot_index, WeaponData data)
+    private WeaponRuntimeState GetOrCreateRuntimeState(int slot_index)
     {
         if (!runtime_state_by_slot.TryGetValue(slot_index, out WeaponRuntimeState state))
         {
             state = new WeaponRuntimeState();
             runtime_state_by_slot[slot_index] = state;
         }
-
-        if (state.ammo_remaining < 0)
-        {
-            state.ammo_remaining = EffectiveCapacity(data);
-        }
+        return state;
     }
 
-    // robot_capacity(로봇 장탄증감 수치)를 반영한 실제 장탄수.
-    // 무기 장탄수 + 무기 장탄수 * robot_capacity. weapon_capacity가 0/미설정이면 원래대로 무제한 취급.
-    private int EffectiveCapacity(WeaponData data)
+    private void TryFireSlot(int slot_index, WeaponSlot slot, WeaponData weapon, EnemyUnit target)
     {
-        if (data.weapon_capacity <= 0) return int.MaxValue;
-
-        float modifier = player_stats != null ? player_stats.Capacity : 0f;
-        return Mathf.Max(1, Mathf.RoundToInt(data.weapon_capacity + data.weapon_capacity * modifier));
-    }
-
-    // 재장전 중인 슬롯이 있으면 시간 경과를 체크해서 재장전을 끝내준다.
-    private void HandleReloadProgress()
-    {
-        if (GameDataManager.Instance == null) return; // 아래 RefreshCurrentWeaponData와 동일한 이유의 방어 코드
-
-        foreach (var kv in runtime_state_by_slot)
-        {
-            WeaponRuntimeState state = kv.Value;
-            if (state.is_reloading && Time.time >= state.reload_end_time)
-            {
-                state.is_reloading = false;
-
-                int weapon_id = weapon_slots[kv.Key].weapon_id;
-                if (GameDataManager.Instance.Weapons.TryGetValue(weapon_id, out WeaponData data))
-                {
-                    state.ammo_remaining = EffectiveCapacity(data);
-                    Debug.Log($"{data.weapon_name} 재장전 완료 (장탄수 {state.ammo_remaining})");
-                }
-            }
-        }
-    }
-
-    private void TryFire()
-    {
-        if (current_weapon_data == null)
-        {
-            Debug.LogWarning("현재 선택된 무기의 데이터가 없어 발사할 수 없습니다.");
-            return;
-        }
-
-        if (Time.time < next_fire_time) return; // weapon_atsp(공격속도) 쿨다운 중
-
-        WeaponData weapon = current_weapon_data.Value;
-        WeaponSlot slot = weapon_slots[current_slot_index];
-
         if (slot.muzzle_point == null)
         {
-            Debug.LogWarning("무기 슬롯의 muzzle_point가 비어있습니다. 인스펙터에서 연결해주세요.");
+            Debug.LogWarning("무기 소켓의 muzzle_point가 비어있습니다. 인스펙터에서 연결해주세요.");
             return;
         }
+
+        WeaponRuntimeState state = GetOrCreateRuntimeState(slot_index);
+        if (Time.time < state.next_fire_time) return; // weapon_atsp(공격속도) 쿨다운 중
 
         // 데이터테이블의 weapon_tanhwan(발사 탄환) 이름으로 투사체 프리팹 결정
         GameObject projectile_prefab = ResolveProjectilePrefab(weapon, slot);
         if (projectile_prefab == null) return;
 
-        if (!runtime_state_by_slot.TryGetValue(current_slot_index, out WeaponRuntimeState state))
-        {
-            EnsureRuntimeState(current_slot_index, weapon);
-            state = runtime_state_by_slot[current_slot_index];
-        }
-
-        if (state.is_reloading)
-        {
-            // weapon_reload(재장전 시간) 중에는 공격 입력을 완전히 무시한다.
-            float remaining = Mathf.Max(0f, state.reload_end_time - Time.time);
-            Debug.LogWarning($"{weapon.weapon_name} 재장전 중이라 발사할 수 없습니다. (남은 시간: {remaining:F1}초)");
-            return;
-        }
-
         Vector3 fire_origin = slot.muzzle_point.position;
-        Vector3 target_point = GetMouseWorldPointOnPlane(fire_origin.z);
-
-        Vector3 to_target = target_point - fire_origin;
+        Vector3 to_target = target.transform.position - fire_origin;
         to_target.z = 0f; // Z축 미사용 규칙 - 방향은 X-Y 평면 안에서만 계산
-        // 클릭 지점까지의 거리. 지연 폭발 무기(폭발화기)가 사거리 안 클릭에서 조기 폭발할지 판단하는 데 사용
-        float click_distance = to_target.magnitude;
+        float target_distance = to_target.magnitude; // 지연 폭발 무기가 조기 폭발할지 판단하는 데 사용
 
-        Vector3 aim_direction = to_target;
-        if (aim_direction.sqrMagnitude < 0.0001f) aim_direction = Vector3.right;
-        aim_direction.Normalize();
+        Vector3 aim_direction = to_target.sqrMagnitude > 0.0001f ? to_target.normalized : Vector3.right;
 
-        // weapon_aim(조준 정확도) → 클릭 지점 기준 방향을 좌우로 무작위로 흐트러뜨림
+        // weapon_aim(조준 정확도) → 타겟 방향을 좌우로 무작위로 흐트러뜨림
         if (weapon.weapon_aim > 0f)
         {
             float random_deviation = UnityEngine.Random.Range(-weapon.weapon_aim, weapon.weapon_aim);
             aim_direction = Quaternion.Euler(0f, 0f, random_deviation) * aim_direction;
         }
 
+        // 상점에서 산 무기의 등급(수직 강화)은 공격력과 공격속도에 배율로 반영된다.
+        float grade_multiplier = GetStatMultiplier(slot_index);
+
         // 최종 데미지 = weapon_atk + robot_atk, 그리고 robot_cc/cd(치명타) 적용.
         // 여러 발이 나가는 무기(weapon_projectiles > 1)는 발사 1회에 한 번만 치명타를 굴려 모든 탄에 동일하게 적용한다.
-        int damage = ComputeDamage(weapon);
+        int damage = ComputeDamage(weapon, grade_multiplier);
 
-        FireProjectiles(projectile_prefab, slot, weapon, fire_origin, aim_direction, click_distance, damage);
-
-        // weapon_capacity(장탄수, robot_capacity 보정 반영)만큼 투사체를 소모했는지 체크
-        // → 다 소모했으면 그 순간부터 weapon_reload(재장전 시간) 동안 공격 입력을 막는다.
-        int shots_consumed = Mathf.Max(1, weapon.weapon_projectiles);
-        if (weapon.weapon_capacity > 0)
-        {
-            state.ammo_remaining -= shots_consumed;
-            if (state.ammo_remaining <= 0)
-            {
-                state.is_reloading = true;
-                state.reload_end_time = Time.time + Mathf.Max(0f, weapon.weapon_reload);
-                Debug.Log($"{weapon.weapon_name} 장탄 소진 → 재장전 시작 (소요시간 {weapon.weapon_reload}초)");
-            }
-        }
+        FireProjectiles(projectile_prefab, slot, weapon, fire_origin, aim_direction, target_distance, damage);
 
         // weapon_atsp(공격속도)가 높을수록 다음 발사까지 대기시간이 짧아짐
-        float cooldown = weapon.weapon_atsp > 0f ? 1f / weapon.weapon_atsp : 1f;
-        next_fire_time = Time.time + cooldown;
+        float attack_speed = weapon.weapon_atsp * grade_multiplier;
+        float cooldown = attack_speed > 0f ? 1f / attack_speed : 1f;
+        state.next_fire_time = Time.time + cooldown;
     }
 
     /// <summary>
-    /// 최종 투사체 데미지 = weapon_atk + robot_atk.
+    /// 최종 투사체 데미지 = (weapon_atk x 등급 배율) + robot_atk.
     /// robot_cc(치명타 확률, 0~100) 판정에 성공하면 데미지 = 데미지 + 데미지 * robot_cd.
+    /// 등급 배율은 무기 자체의 성능에만 곱하고, 로봇 스탯(robot_atk)에는 곱하지 않는다.
     /// </summary>
-    private int ComputeDamage(WeaponData weapon)
+    private int ComputeDamage(WeaponData weapon, float grade_multiplier)
     {
-        float damage = weapon.weapon_atk + (player_stats != null ? player_stats.Atk : 0);
+        float damage = weapon.weapon_atk * grade_multiplier + (player_stats != null ? player_stats.Atk : 0);
 
         if (player_stats != null && player_stats.Cc > 0f)
         {
@@ -605,8 +584,6 @@ public class PlayerShootManager : MonoBehaviour
         return Mathf.Max(0, Mathf.RoundToInt(damage));
     }
 
-    // weapon_projectiles(발사 개수)만큼 투사체를 생성. 2발 이상이면 진행 방향은 그대로 두고,
-    // weapon_rebound를 좌우 간격으로 사용해 옆으로 나란히(평행하게) 추가 발사한다.
     /// <summary>
     /// 데이터테이블의 weapon_tanhwan(발사 탄환) 이름으로 투사체 프리팹을 찾는다.
     /// 1) 인스펙터의 projectile_prefabs 목록  2) Resources 폴더  3) 슬롯의 예비 프리팹
@@ -643,7 +620,9 @@ public class PlayerShootManager : MonoBehaviour
         return null;
     }
 
-    private void FireProjectiles(GameObject projectile_prefab, WeaponSlot slot, WeaponData weapon, Vector3 origin, Vector3 direction, float click_distance, int damage)
+    // weapon_projectiles(발사 개수)만큼 투사체를 생성. 2발 이상이면 진행 방향은 그대로 두고,
+    // weapon_rebound를 좌우 간격으로 사용해 옆으로 나란히(평행하게) 추가 발사한다.
+    private void FireProjectiles(GameObject projectile_prefab, WeaponSlot slot, WeaponData weapon, Vector3 origin, Vector3 direction, float target_distance, int damage)
     {
         int projectile_count = Mathf.Max(1, weapon.weapon_projectiles);
         float side_spacing = weapon.weapon_rebound * side_spacing_multiplier;
@@ -656,11 +635,11 @@ public class PlayerShootManager : MonoBehaviour
         float travel_size = delayed_blast ? Mathf.Max(0.01f, delayed_blast_travel_size) : size;
 
         // 폭발화기는 기본적으로 최대 사거리(weapon_range)에서 터지지만,
-        // 사거리 안쪽을 클릭했다면 그 클릭 지점에서 조기 폭발한다.
-        float travel_range = weapon.weapon_range > 0f ? weapon.weapon_range : 20f;
-        if (delayed_blast && click_distance > 0f && click_distance < travel_range)
+        // 타겟이 사거리 안쪽에 있다면 그 지점에서 조기 폭발한다.
+        float travel_range = weapon.weapon_range > 0f ? weapon.weapon_range : DefaultWeaponRange;
+        if (delayed_blast && target_distance > 0f && target_distance < travel_range)
         {
-            travel_range = click_distance;
+            travel_range = target_distance;
         }
 
         // 진행 방향(direction) 기준으로 옆(좌우)을 가리키는 벡터. X-Y 평면에서 90도 회전.
@@ -675,7 +654,7 @@ public class PlayerShootManager : MonoBehaviour
             float side_offset = 0f;
             if (projectile_count > 1)
             {
-                // 발마다 반동(weapon_rebound)만큼 옆으로 위치가 벌어짐 (이 발사 1번에 한해서만 적용, 다음 클릭엔 다시 가운데부터 계산)
+                // 발마다 반동(weapon_rebound)만큼 옆으로 위치가 벌어짐 (이 발사 1번에 한해서만 적용, 다음 발사엔 다시 가운데부터 계산)
                 side_offset = side_spacing * (i - (projectile_count - 1) / 2f);
             }
 
@@ -702,20 +681,5 @@ public class PlayerShootManager : MonoBehaviour
             if (weapon_id >= range.min_id && weapon_id <= range.max_id) return true;
         }
         return false;
-    }
-
-    // 마우스 스크린 좌표를 Z = plane_z 평면 위의 월드 좌표로 변환
-    private Vector3 GetMouseWorldPointOnPlane(float plane_z)
-    {
-        Vector2 mouse_screen_pos = Mouse.current.position.ReadValue();
-        Ray ray = main_camera.ScreenPointToRay(mouse_screen_pos);
-
-        Plane plane = new Plane(Vector3.forward, new Vector3(0f, 0f, plane_z));
-        if (plane.Raycast(ray, out float enter))
-        {
-            return ray.GetPoint(enter);
-        }
-
-        return ray.origin; // 평면과 교차하지 않는 예외 상황 폴백
     }
 }

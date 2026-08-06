@@ -42,6 +42,31 @@ public class EnemySpawner : MonoBehaviour
     private Dictionary<int, GameObject> prefabMap;
     private readonly List<EnemyUnit> alive_enemies = new List<EnemyUnit>();
 
+    // WaveManager가 웨이브 사이(정비/상점)에는 스폰을 멈추고, 웨이브별 난이도(간격/최대 생존수)를
+    // 조절할 수 있도록 노출하는 제어 인터페이스. 기본값은 항상 스폰 진행.
+    public bool IsSpawningEnabled { get; private set; } = true;
+    public float BaseSpawnInterval => spawnInterval;
+    public int BaseMaxAliveEnemies => maxAliveEnemies;
+
+    public void SetSpawningEnabled(bool enabled) => IsSpawningEnabled = enabled;
+
+    // 웨이브 번호에 따른 스폰 간격/최대 생존수를 직접 지정한다. 0 이하 값은 무시(변경 없음)한다.
+    public void ConfigureDifficulty(float newSpawnInterval, int newMaxAliveEnemies)
+    {
+        if (newSpawnInterval > 0f) spawnInterval = newSpawnInterval;
+        if (newMaxAliveEnemies > 0) maxAliveEnemies = newMaxAliveEnemies;
+    }
+
+    // 웨이브 종료 시 화면에 남은 적을 한꺼번에 정리한다(기획서: 웨이브 종료 후 정비 진입).
+    public void DespawnAllAliveEnemies()
+    {
+        foreach (EnemyUnit enemy in alive_enemies)
+        {
+            if (enemy != null) Destroy(enemy.gameObject);
+        }
+        alive_enemies.Clear();
+    }
+
     private void Awake()
     {
         prefabMap = new Dictionary<int, GameObject>();
@@ -72,7 +97,8 @@ public class EnemySpawner : MonoBehaviour
         {
             yield return new WaitForSeconds(Mathf.Max(0.1f, spawnInterval));
 
-            if (GameOverManager.IsGameOver) continue; // 게임오버 후에는 더 이상 스폰하지 않음
+            if (GameOverManager.IsGameOver || GameWinManager.IsGameWon) continue; // 게임오버/승리 후에는 더 이상 스폰하지 않음
+            if (!IsSpawningEnabled) continue; // 웨이브 사이(정비/상점)에는 스폰하지 않음
 
             alive_enemies.RemoveAll(e => e == null); // 죽어서 파괴된 개체는 목록에서 정리
             if (maxAliveEnemies > 0 && alive_enemies.Count >= maxAliveEnemies) continue;

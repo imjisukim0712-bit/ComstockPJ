@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eaa9ba2925df72c4d92c9a83ab4beaf0, type: 3}
+  m_Name: AiCoreUpgradePool
+  m_EditorClassIdentifier: Assembly-CSharp::AiCoreUpgradePool
+  options:
+  - displayName: "\uC0AC\uACA9\uC220 \uCD5C\uC801\uD654"
+    description: "\uACF5\uACA9\uB825 +2.5"
+    statType: 1
+    amount: 2.5
+  - displayName: "\uD0C0\uAC9F \uCD94\uC801 \uAE30\uC220"
+    description: "\uCE58\uBA85\uD0C0 \uD655\uB960 +5%"
+    statType: 6
+    amount: 5
+  - displayName: "A* \uC54C\uACE0\uB9AC\uC998"
+    description: "\uC774\uB3D9\uC18D\uB3C4 +1.2"
+    statType: 3
+    amount: 1.2
+  - displayName: "\uB0C9\uAC01 \uC2DC\uC2A4\uD15C \uAC15\uD654"
+    description: "\uCCB4\uB825 +10"
+    statType: 0
+    amount: 10
+  - displayName: "\uC7A5\uAC11\uD310 \uBCF4\uAC15"
+    description: "\uBC29\uC5B4\uB825 +2"
+    statType: 2
+    amount: 2
+  - displayName: "\uADE0\uD615 \uC870\uC815 \uC54C\uACE0\uB9AC\uC998"
+    description: "\uD68C\uD53C\uC728 +3%"
+    statType: 4
+    amount: 3
+  - displayName: "\uD589\uC6B4\uC758 \uD68C\uB85C"
+    description: "\uD589\uC6B4 +1"
+    statType: 5
+    amount: 1
+  - displayName: "\uCE58\uBA85\uD0C0 \uC99D\uD3ED\uAE30"
+    description: "\uCE58\uBA85\uD0C0 \uD53C\uD574 +10%"
+    statType: 7
+    amount: 0.1

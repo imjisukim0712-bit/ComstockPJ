@@ -23,7 +23,7 @@ public class RobotSelectManager : MonoBehaviour
 
     [Header("출발 버튼")]
     [SerializeField] private Button chulbalButton;
-    [SerializeField] private string nextSceneName = "SamplePlay00";
+    [SerializeField] private string nextSceneName = "Ground01";
 
     private int selectedRobotId = -1;
 

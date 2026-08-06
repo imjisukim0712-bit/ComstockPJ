@@ -45,12 +45,18 @@ public class PlayerRobotController : MonoBehaviour
     private Vector3 moveInput;
     private bool hasIsMovingParam;
     private bool wasMoving;
+    private RobotData baseRobotData;
+    private bool statsInitialized;
 
     private void Awake()
     {
-        // 씬을 재시작해서 새 Player가 만들어질 때 이전 판의 게임오버/인벤토리 상태가 남아있지 않도록 초기화
+        // 씬을 재시작해서 새 Player가 만들어질 때 이전 판의 게임오버/인벤토리/런 상태가 남아있지 않도록 초기화
         GameOverManager.Reset();
+        GameWinManager.Reset();
         PlayerInventory.Reset();
+        RunState.Reset();
+        EnemyUnit.Alive.Clear();
+        EnemyUnit.ResetStaticCaches();
 
         rb = GetComponent<Rigidbody>();
 
@@ -88,6 +94,9 @@ public class PlayerRobotController : MonoBehaviour
         else GameDataManager.Instance.OnLoaded += InitFromSession;
     }
 
+    private void OnEnable() => RunState.OnChanged += HandleRunStateChanged;
+    private void OnDisable() => RunState.OnChanged -= HandleRunStateChanged;
+
     private void InitFromSession()
     {
         int robotId = PlayerSession.SelectedRobotId;
@@ -108,19 +117,39 @@ public class PlayerRobotController : MonoBehaviour
         }
 
         RobotId = data.robot_id;
-        MaxHp = data.robot_hp;
-        CurrentHp = data.robot_hp;
-        Atk = data.robot_atk;
-        Def = data.robot_def;
-        MoveSpeed = data.robot_speed;
-        Avoid = data.robot_avoid;
-        Luck = data.robot_luck;
-        Cc = data.robot_cc;
-        Cd = data.robot_cd;
-        Capacity = data.robot_capacity;
+        baseRobotData = data;
+        Capacity = data.robot_capacity; // 탄약 제거로 더 이상 게임플레이에 쓰이지 않음(데이터만 보존)
         Reload = data.robot_reload;
-        Mess = data.robot_mess;
         SpecialId = data.robot_special;
+
+        ApplyAggregatedStats(isInitialApply: true);
+        statsInitialized = true;
+    }
+
+    // AI 코어 업그레이드 선택 등으로 RunState.CoreStatBonuses가 바뀔 때마다 최종 스탯을 다시 계산한다.
+    private void HandleRunStateChanged()
+    {
+        if (statsInitialized) ApplyAggregatedStats(isInitialApply: false);
+    }
+
+    // RobotStats.Compute()로 머리(로봇) 기본값 + AI 코어 누적 보너스를 합산해 반영한다.
+    // 최대 체력이 늘어나면 그만큼 현재 체력도 함께 채워준다(로그라이크 통상 관례).
+    private void ApplyAggregatedStats(bool isInitialApply)
+    {
+        AggregatedRobotStats stats = RobotStats.Compute(baseRobotData);
+
+        int previousMaxHp = MaxHp;
+        MaxHp = stats.MaxHp;
+        Atk = stats.Atk;
+        Def = stats.Def;
+        MoveSpeed = stats.MoveSpeed;
+        Avoid = stats.Avoid;
+        Luck = stats.Luck;
+        Cc = stats.Cc;
+        Cd = stats.Cd;
+        Mess = stats.Mess;
+
+        CurrentHp = isInitialApply ? MaxHp : Mathf.Min(MaxHp, CurrentHp + Mathf.Max(0, MaxHp - previousMaxHp));
 
         // 로봇 질량(robot_mess)을 Rigidbody에 반영. 0/미설정이면 물리 계산이 깨지므로 기존 값 유지
         if (rb != null && Mess > 0f) rb.mass = Mess;
