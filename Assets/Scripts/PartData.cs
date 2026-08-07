@@ -44,8 +44,13 @@ public struct PartData
     public StatType bonusStat;
     public float bonusAmount;
 
+    [Header("무게")]
+    [Tooltip("이 파츠 자체의 무게. 장착된 무기 무게와 함께 합산되어 " +
+             "(자기장 코어 + 다리)의 weightCapacity와 비교된다. 디스크에는 무게가 없다")]
+    public float weight;
+
     [Header("무게 지탱 (자기장 코어, 다리 전용)")]
-    [Tooltip("장착된 모든 무기의 weight 합이 (자기장 코어 + 다리)의 이 값을 넘으면 장착이 거부된다")]
+    [Tooltip("장착된 모든 무기 + 파츠의 무게 합이 (자기장 코어 + 다리)의 이 값을 넘으면 장착이 거부된다")]
     public float weightCapacity;
 
     [Header("디스크 슬롯 (DiscSlot 슬롯 전용)")]
@@ -72,9 +77,14 @@ public struct PartData
         }
 
         string statPart = bonusAmount != 0f ? $"{StatTypeNames.ToKorean(bonusStat)} +{bonusAmount:0.##}" : string.Empty;
-        string weightPart = weightCapacity != 0f ? $"무게 지탱 +{weightCapacity:0.##}" : string.Empty;
+        string capacityPart = weightCapacity != 0f ? $"무게 지탱 +{weightCapacity:0.##}" : string.Empty;
+        string weightPart = weight != 0f ? $"무게 {weight:0.##}" : string.Empty;
 
-        if (statPart.Length > 0 && weightPart.Length > 0) return $"{statPart} / {weightPart}";
-        return statPart.Length > 0 ? statPart : (weightPart.Length > 0 ? weightPart : "(보너스 없음)");
+        var parts = new System.Collections.Generic.List<string>();
+        if (statPart.Length > 0) parts.Add(statPart);
+        if (capacityPart.Length > 0) parts.Add(capacityPart);
+        if (weightPart.Length > 0) parts.Add(weightPart);
+
+        return parts.Count > 0 ? string.Join(" / ", parts) : "(보너스 없음)";
     }
 }

@@ -9,29 +9,36 @@ using UnityEngine;
 /// 마우스 조준/클릭, 무기 전환 키, 탄약·재장전 개념은 없다(자동공격 뱀서라이크 전환 결정).
 ///
 /// 무기 데이터테이블(WeaponData) 각 필드 사용 방식:
-/// - weapon_atk        : 명중 시 데미지
-/// - weapon_atsp       : 공격속도 → 다음 발사까지의 쿨다운 (1 / atsp 초)
-/// - weapon_range      : 사거리(탄이 날아가는 최대 거리)와 감지거리(적을 감지해 발사를 시작하는
-///                       거리)의 <b>기준값</b>. 무기 소켓 파츠의 등급이 이 값에 각각 다른 배율을
-///                       곱해 최종 사거리/감지거리를 만든다(ModdingManager.GetWeaponSocketModifiers).
-///                       감지거리는 사거리를 넘지 않도록 잘린다 - 닿지도 않을 적에게 쏘지 않기 위함
-/// - weapon_atsize     : 투사체 크기(스케일)
-/// - weapon_aim        : 조준 정확도 → 타겟 방향이 최대 이 각도(도)만큼 무작위로 벗어남
-/// - weapon_rebound    : 반동 → 한 번의 발사에서 여러 발이 나갈 때, 발마다 진행 방향은 그대로 두고 옆으로 벌어지는 간격(평행 발사)
+/// - weapon_atk        : 투사체 1발당 데미지. <b>등급별 상승분이 데이터에 이미 반영</b>되어 있다
+///                       (무기는 등급마다 별도 행을 갖는다 - 배율을 곱하지 않는다)
+/// - weapon_atsp       : 공격속도 → 대기시간 = 1 / atsp 초.
+///                       <b>대기시간은 발사 동작이 끝난 뒤부터 흐른다</b>(사용자 확정 사항).
+///                       빔처럼 지속시간이 있는 무기는 (지속시간 + 대기시간)이 한 주기가 된다
+/// - weapon_range      : 탄이 날아가는 최대 거리. 빔은 빔 길이, 근접은 스윙 반경
+/// - weapon_detect     : 적을 감지해 발사를 시작하는 거리. 사거리와 <b>별개 필드</b>이며 사거리로 잘린다
+///                       (둘 다 무기 소켓 파츠 등급의 배율이 곱해진다 - ModdingManager.GetWeaponSocketModifiers)
+/// - weapon_speed      : 투사체 이동 속도
+/// - weapon_rotspeed   : 조준 방향으로 돌아가는 속도(도/초)
+/// - weapon_atsize     : 투사체 크기(스케일). 빔에서는 빔의 반폭
+/// - weapon_aim        : 탄퍼짐 반각(도) → <b>투사체 하나하나가 개별로</b> 흔들린다
+/// - weapon_rebound    : 다중탄이 부채꼴로 벌어지는 탄 사이 각도 간격(도)
 /// - weapon_projectiles: 한 번에 발사되는 투사체 개수
-/// - weapon_penetration: 관통 여부 (0 = 첫 충돌 시 소멸 / 1 = 관통, 충돌해도 유지)
+/// - weapon_pierce     : 관통 횟수 (0 = 없음 / N = N회 / -1 = 무제한)
+/// - weapon_pierce_chance : 관통 발동 확률 → 투사체마다 따로 굴린다(산탄 8발이 각각 판정)
+/// - weapon_splash     : 착탄 시 범위 피해 반경. 0보다 크면 폭발 무기가 된다
+/// - weapon_defignore  : 적 방어력을 무시하는 비율(0~1)
+/// - weapon_knockback  : 적중한 적을 밀어내는 초기 속도
+/// - weapon_duration   : 빔의 지속 시간(초)
+/// - weapon_firemode   : 투사체 / 빔 / 근접 스윙
+/// - weapon_imgscale   : 손 이미지 크기 배율
+/// - weapon_imgangle   : 이미지에 그려진 총구 방향과 조준각의 차이를 메우는 보정각
 /// - weapon_tanhwan    : 발사할 투사체 프리팹 이름 → projectile_prefabs 목록에서 같은 이름을 찾아 사용
-/// - weapon_capacity/weapon_reload : 더 이상 사용하지 않음(탄약·재장전 제거 결정, 값은 데이터에만 남아있음)
 ///
 /// PlayerRobotController(로봇 데이터테이블)의 스탯도 함께 반영한다:
-/// - robot_atk   : 최종 데미지 = weapon_atk + robot_atk
+/// - robot_atk   : <b>발사 1회당</b> 더해지는 값을 투사체 개수로 나눠 균등 배분한다.
+///                 투사체마다 통째로 더하면 산탄총(8발)만 8배로 이득을 보기 때문이다
 /// - robot_cc/cd : 0~100 랜덤값이 robot_cc 이하면 치명타 → 데미지 = 데미지 + 데미지 * robot_cd
 ///
-/// delayed_blast_weapon_ids 범위(기본 300400~300499, 수류탄류)에 속한 무기는
-/// weapon_atsize를 접촉 판정 크기로 쓰지 않고, 작은 크기로 날아가다가
-/// weapon_range(최대 사거리) 또는 타겟 지점에서 weapon_atsize 범위에 한 번에 데미지를 준다.
-///
-/// 투사체 속도는 데이터테이블에 없는 값이라 무기 슬롯별로 인스펙터에서 직접 지정한다.
 /// 소켓 개수는 현재 인스펙터에 등록된 weapon_slots 그대로 사용한다. 소켓 개수·타입을
 /// 머리 파츠가 강제하는 규칙은 로봇 모딩 시스템(Phase 4)에서 연결한다.
 ///
@@ -54,7 +61,7 @@ public class PlayerShootManager : MonoBehaviour
         [Tooltip("데이터테이블의 weapon_tanhwan(발사 탄환) 이름을 못 찾았을 때 사용할 예비 프리팹")]
         public GameObject projectile_prefab;
 
-        [Tooltip("이 무기 투사체의 이동 속도 - 데이터테이블에 없는 값이라 여기서 직접 지정")]
+        [Tooltip("무기 데이터의 weapon_speed가 0일 때만 쓰이는 예비 투사체 속도")]
         public float projectile_speed;
 
         [Tooltip("이 슬롯의 무기 이미지를 보여줄 SpriteRenderer (예: LeftWp_img, RightWp_img 자식의 SpriteRenderer)")]
@@ -87,23 +94,13 @@ public class PlayerShootManager : MonoBehaviour
         public float flip_extra_rotation_degrees;
 
         // WeaponSlot은 struct라 필드 초기화식을 쓸 수 없다(C# 9). 기본값은 인스펙터에서 넣는다.
-        [Tooltip("무기가 조준 방향으로 돌아가는 속도(초당 도). 즉시 홱 돌지 않고 이 속도로 서서히 돌린다. " +
-                 "권장 540. 0 이하로 두면 예전처럼 즉시 회전한다")]
+        [Tooltip("무기 데이터의 weapon_rotspeed가 0일 때만 쓰이는 예비 회전 속도(초당 도). " +
+                 "권장 540. 0 이하로 두면 즉시 회전한다")]
         public float rotation_speed_degrees_per_second;
 
         [Tooltip("조준이 타겟 방향과 이 각도(도) 안으로 들어와야 발사한다. 회전이 느린 무기가 " +
                  "엉뚱한 방향으로 쏘는 것을 막는다. 권장 25. 0 이하로 두면 각도와 무관하게 항상 발사한다")]
         public float fire_angle_tolerance_degrees;
-    }
-
-    [Serializable]
-    public struct WeaponIdRange
-    {
-        [Tooltip("범위 시작 weapon_id (포함)")]
-        public int min_id;
-
-        [Tooltip("범위 끝 weapon_id (포함)")]
-        public int max_id;
     }
 
     [Serializable]
@@ -116,19 +113,10 @@ public class PlayerShootManager : MonoBehaviour
         public GameObject prefab;
     }
 
-    [Serializable]
-    public struct WeaponImageSizeOverride
-    {
-        [Tooltip("크기를 보정할 무기ID (weapon_id)")]
-        public int weapon_id;
-
-        [Tooltip("자동 정규화된 크기(TargetHandImageSize)에 추가로 곱할 배율. 1 = 보정 없음")]
-        public float size_multiplier;
-    }
-
     // 무기 슬롯 하나가 가지는 실시간 발사 상태(쿨다운만 추적 - 탄약/재장전 없음)
     private class WeaponRuntimeState
     {
+        // 다음 발사가 가능해지는 시각. "발사 동작 종료 시각 + 대기시간"으로 계산한다.
         public float next_fire_time;
     }
 
@@ -139,34 +127,18 @@ public class PlayerShootManager : MonoBehaviour
     [Tooltip("Assets/Prefebs 안의 투사체 프리팹을 이름과 함께 등록. 여기 없는 이름은 Resources 폴더에서도 찾아본다")]
     [SerializeField] private List<ProjectilePrefabEntry> projectile_prefabs = new List<ProjectilePrefabEntry>();
 
-    [Header("지연 폭발 무기 (수류탄류) - 사거리 끝에서 범위 데미지")]
-    [Tooltip("이 ID 범위에 속한 무기는 작게 날아가다가 사거리 끝에서 weapon_atsize 범위에 데미지를 준다")]
-    [SerializeField]
-    private List<WeaponIdRange> delayed_blast_weapon_ids = new List<WeaponIdRange>
-    {
-        new WeaponIdRange { min_id = 300400, max_id = 300499 }
-    };
+    [Header("폭발 연출")]
+    [Tooltip("폭발(weapon_splash > 0) 범위를 화면에 잠깐 보여주는 시간(초). 0이면 연출 없이 즉시 사라짐")]
+    [SerializeField] private float blast_visual_duration = 0.08f;
 
-    [Tooltip("날아가는 동안의 투사체 크기. 폭발 전까지는 이 크기로만 이동한다")]
-    [SerializeField] private float delayed_blast_travel_size = 0.1f;
+    [Header("감지거리 상한")]
+    [Tooltip("소켓 파츠 배율까지 곱한 뒤에도 이 거리(유닛)를 넘겨 적을 조준하지 않는다. " +
+             "화면 밖의 보이지 않는 적과 교전하는 것을 막기 위한 값으로, 직교 카메라 세로 가시 반경(8.66)에 맞춘다")]
+    [SerializeField] private float max_detect_range = 8.5f;
 
-    [Tooltip("날아가는 중 적과 닿으면 사거리 끝까지 가지 않고 그 자리에서 즉시 폭발")]
-    [SerializeField] private bool delayed_blast_explode_on_contact = true;
-
-    [Tooltip("폭발 범위를 화면에 잠깐 보여주는 시간(초). 0이면 연출 없이 즉시 사라짐")]
-    [SerializeField] private float delayed_blast_visual_duration = 0.08f;
-
-    [Header("투사체 간 좌우 간격 배율")]
-    [Tooltip("weapon_rebound(반경 간격) 값에 곱해지는 배율. 투사체끼리 더 멀리/가깝게 벌리고 싶을 때 조절")]
-    [SerializeField] private float side_spacing_multiplier = 2f;
-
-    [Header("무기별 이미지 크기 보정")]
-    [Tooltip("특정 무기ID의 손 이미지를 자동 정규화 크기보다 더 크게/작게 보이고 싶을 때 배율 지정")]
-    [SerializeField]
-    private List<WeaponImageSizeOverride> weapon_image_size_overrides = new List<WeaponImageSizeOverride>
-    {
-        new WeaponImageSizeOverride { weapon_id = 300001, size_multiplier = 1.3f } // 기관단총(SMG) - 조금 더 크게
-    };
+    [Header("빔 연출용 스프라이트")]
+    [Tooltip("빔 무기(weapon_firemode=Beam)가 늘려서 사용할 Resources 폴더의 스프라이트 이름")]
+    [SerializeField] private string beam_sprite_name = "Energy";
 
     private PlayerRobotController player_stats; // 로봇 공격력/치명타 보정치를 가져오는 용도
     private readonly Dictionary<int, WeaponData> weapon_data_by_slot = new Dictionary<int, WeaponData>();
@@ -189,7 +161,6 @@ public class PlayerShootManager : MonoBehaviour
     // 되도록 스케일을 자동 보정한다. 값은 기존에 잘 보이던 기관총 이미지 기준
     // (스프라이트 4.8유닛 크기 x 기존 지정 스케일 0.6)으로 역산한 것.
     private const float TargetHandImageSize = 4.8f * 0.6f;
-    private const float DefaultWeaponRange = 20f;
 
     private void Awake()
     {
@@ -226,8 +197,8 @@ public class PlayerShootManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 런 시작 시점의 장착 상태를 RunState에 반영한다. 인스펙터에 미리 넣어둔 시작 무기는
-    /// 상점을 거치지 않았으므로 전부 일반 등급(배율 1)으로 취급한다.
+    /// 런 시작 시점의 장착 상태를 RunState에 반영한다. 등급은 무기 데이터 행이 직접 들고 있으므로
+    /// (등급마다 별도 행이 존재한다) weapon_grade를 그대로 읽어온다.
     /// (RunState.Reset()은 PlayerRobotController.Awake에서 호출되므로 Start 시점엔 이미 비워져 있다)
     /// </summary>
     private void SyncRunStateFromInspectorSlots()
@@ -236,11 +207,15 @@ public class PlayerShootManager : MonoBehaviour
 
         for (int i = 0; i < weapon_slots.Count; i++)
         {
+            int weapon_id = weapon_slots[i].weapon_id;
+
+            ItemGrade grade = ItemGrade.Normal;
+            if (weapon_data_by_slot.TryGetValue(i, out WeaponData data)) grade = data.weapon_grade;
+
             RunState.EquippedWeapons.Add(new RunState.EquippedWeapon
             {
-                WeaponId = weapon_slots[i].weapon_id,
-                Grade = ItemGrade.Normal,
-                StatMultiplier = 1f
+                WeaponId = weapon_id,
+                Grade = grade
             });
         }
     }
@@ -310,15 +285,14 @@ public class PlayerShootManager : MonoBehaviour
         Sprite sprite = ResolveWeaponSprite(sprite_name, data);
         slot.hand_sprite_renderer.sprite = sprite;
 
-        // 원본 이미지 크기가 제각각이라(예: SMG가 기관총류보다 훨씬 큰 픽셀 크기) 매번
+        // 원본 이미지 크기가 제각각이라(예: 1536px 총기류 vs 250px 근접무기) 매번
         // 화면에 보이는 크기가 TargetHandImageSize로 일정해지도록 스케일을 다시 계산한다.
-        // 그 위에 무기별 개별 배율(weapon_image_size_overrides)을 추가로 곱한다.
+        // 그 위에 무기별 개별 배율(weapon_imgscale)을 추가로 곱한다.
         if (sprite != null)
         {
             float max_dim = Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y, 0.0001f);
             float normalized_scale = TargetHandImageSize / max_dim;
-            float size_multiplier = GetSizeMultiplier(slot.weapon_id);
-            slot.hand_sprite_renderer.transform.localScale = Vector3.one * (normalized_scale * size_multiplier);
+            slot.hand_sprite_renderer.transform.localScale = Vector3.one * (normalized_scale * data.ImageScale);
         }
     }
 
@@ -340,10 +314,10 @@ public class PlayerShootManager : MonoBehaviour
 
     /// <summary>
     /// 상점에서 산 무기를 소켓에 즉시 장착(교체)한다. 기획서의 "무기 구매 = 소켓 즉시 교체"에 해당한다.
-    /// 등급 배율(statMultiplier)은 이후 발사 계산에서 공격력/공격속도에 곱해진다.
+    /// 등급은 무기 데이터 행이 직접 들고 있으므로(등급마다 별도 행) 따로 받지 않는다.
     /// </summary>
     /// <returns>장착에 성공하면 true</returns>
-    public bool EquipWeapon(int socketIndex, int weaponId, ItemGrade grade, float statMultiplier)
+    public bool EquipWeapon(int socketIndex, int weaponId)
     {
         if (socketIndex < 0 || socketIndex >= weapon_slots.Count)
         {
@@ -367,14 +341,13 @@ public class PlayerShootManager : MonoBehaviour
 
         while (RunState.EquippedWeapons.Count <= socketIndex)
         {
-            RunState.EquippedWeapons.Add(new RunState.EquippedWeapon { WeaponId = 0, Grade = ItemGrade.Normal, StatMultiplier = 1f });
+            RunState.EquippedWeapons.Add(new RunState.EquippedWeapon { WeaponId = 0, Grade = ItemGrade.Normal });
         }
 
         RunState.EquippedWeapons[socketIndex] = new RunState.EquippedWeapon
         {
             WeaponId = weaponId,
-            Grade = grade,
-            StatMultiplier = statMultiplier <= 0f ? 1f : statMultiplier
+            Grade = data.weapon_grade
         };
 
         RefreshWeaponVisual(socketIndex);
@@ -383,25 +356,6 @@ public class PlayerShootManager : MonoBehaviour
         GetOrCreateRuntimeState(socketIndex).next_fire_time = 0f;
 
         return true;
-    }
-
-    // 소켓에 적용할 등급 스탯 배율. 상점을 거치지 않은 시작 무기는 1(일반 등급).
-    private float GetStatMultiplier(int slot_index)
-    {
-        if (slot_index < 0 || slot_index >= RunState.EquippedWeapons.Count) return 1f;
-
-        float multiplier = RunState.EquippedWeapons[slot_index].StatMultiplier;
-        return multiplier <= 0f ? 1f : multiplier;
-    }
-
-    // weapon_image_size_overrides에서 해당 무기ID의 배율을 찾는다. 없으면 1(보정 없음)
-    private float GetSizeMultiplier(int weapon_id)
-    {
-        foreach (WeaponImageSizeOverride entry in weapon_image_size_overrides)
-        {
-            if (entry.weapon_id == weapon_id) return entry.size_multiplier;
-        }
-        return 1f;
     }
 
     // 데이터테이블에 적힌 이미지 이름으로 Resources 폴더에서 스프라이트를 찾아온다 (캐시 사용)
@@ -466,7 +420,7 @@ public class PlayerShootManager : MonoBehaviour
 
         if (target == null)
         {
-            float rest_angle = RotatePivotTowards(slot, pivot, slot.rest_rotation_degrees);
+            float rest_angle = RotatePivotTowards(slot, weapon, pivot, slot.rest_rotation_degrees);
             ApplyAngleFlip(slot, rest_angle, false);
             return;
         }
@@ -476,8 +430,11 @@ public class PlayerShootManager : MonoBehaviour
 
         if (direction.sqrMagnitude > 0.0001f)
         {
-            float target_angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg + slot.rotation_offset_degrees;
-            float current_angle = RotatePivotTowards(slot, pivot, target_angle);
+            // weapon_imgangle: 무기 그림마다 총구가 그려진 각도가 달라서, 무기를 바꾸면
+            // 슬롯 보정각(rotation_offset_degrees)만으로는 총구가 타겟을 향하지 않는다.
+            float target_angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg
+                                 + slot.rotation_offset_degrees + weapon.weapon_imgangle;
+            float current_angle = RotatePivotTowards(slot, weapon, pivot, target_angle);
             ApplyAngleFlip(slot, current_angle, true);
 
             // 아직 타겟 쪽으로 다 돌지 못했으면 발사를 미룬다 - 그래야 "무기가 돌아가는 시간"이
@@ -492,40 +449,48 @@ public class PlayerShootManager : MonoBehaviour
         TryFireSlot(slot_index, slot, weapon, target);
     }
 
-    /// <summary>탄이 실제로 날아가는 최대 거리 = 무기 기본 사거리 x 소켓 등급의 사거리 배율.</summary>
+    /// <summary>탄이 실제로 날아가는 최대 거리 = 무기 사거리 x 소켓 등급의 사거리 배율.</summary>
     private float GetTravelRange(WeaponData weapon)
     {
-        float baseRange = weapon.weapon_range > 0f ? weapon.weapon_range : DefaultWeaponRange;
-        return baseRange * socket_modifiers.Range;
+        return weapon.TravelRange * socket_modifiers.Range;
     }
 
     /// <summary>
-    /// 적을 감지해 발사를 시작하는 거리 = 무기 기본 사거리 x 소켓 등급의 감지거리 배율.
-    /// 감지한 적에게 탄이 닿아야 의미가 있으므로 사거리를 넘지 않도록 잘라둔다.
+    /// 적을 감지해 발사를 시작하는 거리 = 무기 감지거리(weapon_detect) x 소켓 등급의 감지거리 배율.
+    /// 두 가지로 한 번 더 잘린다:
+    /// 1) 사거리 - 감지한 적에게 탄이 닿아야 의미가 있다
+    /// 2) max_detect_range - 화면 밖의 보이지 않는 적과 교전하지 않도록 하는 상한
     /// </summary>
     private float GetDetectRange(WeaponData weapon)
     {
-        float baseRange = weapon.weapon_range > 0f ? weapon.weapon_range : DefaultWeaponRange;
-        return Mathf.Min(baseRange * socket_modifiers.DetectRange, GetTravelRange(weapon));
+        float detect = weapon.DetectRange * socket_modifiers.DetectRange;
+        detect = Mathf.Min(detect, GetTravelRange(weapon));
+
+        if (max_detect_range > 0f) detect = Mathf.Min(detect, max_detect_range);
+        return detect;
     }
 
     /// <summary>
-    /// 무기 피벗을 목표 각도 쪽으로 rotation_speed_degrees_per_second(x 소켓 등급 배율) 속도만큼만
-    /// 돌리고, 이번 프레임에 실제로 적용된 각도를 돌려준다.
-    /// 속도가 0 이하면 예전처럼 즉시 목표 각도로 스냅한다.
+    /// 무기 피벗을 목표 각도 쪽으로 무기의 회전 속도(x 소켓 등급 배율)만큼만 돌리고,
+    /// 이번 프레임에 실제로 적용된 각도를 돌려준다.
+    /// 무기 데이터에 회전 속도가 없으면 슬롯 값으로 폴백하고, 그것도 0 이하면 즉시 스냅한다.
     /// </summary>
-    private float RotatePivotTowards(WeaponSlot slot, Transform pivot, float target_angle)
+    private float RotatePivotTowards(WeaponSlot slot, WeaponData weapon, Transform pivot, float target_angle)
     {
+        float base_speed = weapon.weapon_rotspeed > 0f
+            ? weapon.weapon_rotspeed
+            : slot.rotation_speed_degrees_per_second;
+
         float applied_angle;
 
-        if (slot.rotation_speed_degrees_per_second <= 0f)
+        if (base_speed <= 0f)
         {
             applied_angle = target_angle;
         }
         else
         {
             float current_angle = pivot.eulerAngles.z;
-            float speed = slot.rotation_speed_degrees_per_second * socket_modifiers.RotationSpeed;
+            float speed = base_speed * socket_modifiers.RotationSpeed;
             applied_angle = Mathf.MoveTowardsAngle(current_angle, target_angle, speed * Time.deltaTime);
         }
 
@@ -601,49 +566,62 @@ public class PlayerShootManager : MonoBehaviour
         }
 
         WeaponRuntimeState state = GetOrCreateRuntimeState(slot_index);
-        if (Time.time < state.next_fire_time) return; // weapon_atsp(공격속도) 쿨다운 중
-
-        // 데이터테이블의 weapon_tanhwan(발사 탄환) 이름으로 투사체 프리팹 결정
-        GameObject projectile_prefab = ResolveProjectilePrefab(weapon, slot);
-        if (projectile_prefab == null) return;
+        if (Time.time < state.next_fire_time) return; // 대기시간 중
 
         Vector3 fire_origin = slot.muzzle_point.position;
         Vector3 to_target = target.transform.position - fire_origin;
         to_target.z = 0f; // Z축 미사용 규칙 - 방향은 X-Y 평면 안에서만 계산
-        float target_distance = to_target.magnitude; // 지연 폭발 무기가 조기 폭발할지 판단하는 데 사용
+        float target_distance = to_target.magnitude; // 폭발 무기가 조기 폭발할지 판단하는 데 사용
 
         Vector3 aim_direction = to_target.sqrMagnitude > 0.0001f ? to_target.normalized : Vector3.right;
 
-        // weapon_aim(조준 정확도) → 타겟 방향을 좌우로 무작위로 흐트러뜨림
-        if (weapon.weapon_aim > 0f)
+        // 최종 데미지 = weapon_atk + (robot_atk를 투사체 수로 나눈 값), 그리고 robot_cc/cd(치명타) 적용.
+        // 여러 발이 나가는 무기는 발사 1회에 한 번만 치명타를 굴려 모든 탄에 동일하게 적용한다.
+        int damage = ComputeDamage(weapon);
+
+        // 발사 동작이 지속되는 시간. 빔만 0보다 크고 나머지는 즉발이다.
+        float attack_duration = 0f;
+
+        switch (weapon.weapon_firemode)
         {
-            float random_deviation = UnityEngine.Random.Range(-weapon.weapon_aim, weapon.weapon_aim);
-            aim_direction = Quaternion.Euler(0f, 0f, random_deviation) * aim_direction;
+            case WeaponFireMode.Beam:
+                FireBeam(weapon, fire_origin, aim_direction, damage);
+                attack_duration = Mathf.Max(0f, weapon.weapon_duration);
+                break;
+
+            case WeaponFireMode.MeleeSwing:
+                // 근접은 투사체를 만들지 않고 총구 앞 부채꼴을 즉시 판정한다
+                MeleeSwing.Execute(fire_origin, aim_direction, GetTravelRange(weapon), damage,
+                                   weapon.weapon_defignore, weapon.weapon_knockback);
+                break;
+
+            default:
+                // 데이터테이블의 weapon_tanhwan(발사 탄환) 이름으로 투사체 프리팹 결정
+                GameObject projectile_prefab = ResolveProjectilePrefab(weapon, slot);
+                if (projectile_prefab == null) return;
+
+                FireProjectiles(projectile_prefab, slot, weapon, fire_origin, aim_direction, target_distance, damage);
+                break;
         }
 
-        // 상점에서 산 무기의 등급(수직 강화)은 공격력과 공격속도에 배율로 반영된다.
-        float grade_multiplier = GetStatMultiplier(slot_index);
-
-        // 최종 데미지 = weapon_atk + robot_atk, 그리고 robot_cc/cd(치명타) 적용.
-        // 여러 발이 나가는 무기(weapon_projectiles > 1)는 발사 1회에 한 번만 치명타를 굴려 모든 탄에 동일하게 적용한다.
-        int damage = ComputeDamage(weapon, grade_multiplier);
-
-        FireProjectiles(projectile_prefab, slot, weapon, fire_origin, aim_direction, target_distance, damage);
-
-        // weapon_atsp(공격속도)가 높을수록 다음 발사까지 대기시간이 짧아짐
-        float attack_speed = weapon.weapon_atsp * grade_multiplier;
-        float cooldown = attack_speed > 0f ? 1f / attack_speed : 1f;
-        state.next_fire_time = Time.time + cooldown;
+        // 대기시간은 <b>발사 동작이 끝난 뒤부터</b> 흐른다(사용자 확정 사항).
+        // 덕분에 3초짜리 빔은 3초 + 대기시간이 한 주기가 되어 빔이 여러 개 겹치지 않는다.
+        float cooldown = weapon.weapon_atsp > 0f ? 1f / weapon.weapon_atsp : 1f;
+        state.next_fire_time = Time.time + attack_duration + cooldown;
     }
 
     /// <summary>
-    /// 최종 투사체 데미지 = (weapon_atk x 등급 배율) + robot_atk.
+    /// 최종 투사체 데미지 = weapon_atk + (robot_atk / 투사체 개수).
     /// robot_cc(치명타 확률, 0~100) 판정에 성공하면 데미지 = 데미지 + 데미지 * robot_cd.
-    /// 등급 배율은 무기 자체의 성능에만 곱하고, 로봇 스탯(robot_atk)에는 곱하지 않는다.
+    ///
+    /// robot_atk를 투사체 개수로 나누는 이유: 예전처럼 투사체마다 통째로 더하면
+    /// 8발이 나가는 산탄총만 robot_atk를 8배로 받아가고, 1발짜리 저격총은 거의 이득이 없다.
+    /// 무기 등급 배율은 곱하지 않는다 - 등급별 공격력이 데이터 행에 이미 반영되어 있다.
     /// </summary>
-    private int ComputeDamage(WeaponData weapon, float grade_multiplier)
+    private int ComputeDamage(WeaponData weapon)
     {
-        float damage = weapon.weapon_atk * grade_multiplier + (player_stats != null ? player_stats.Atk : 0);
+        float robot_atk = player_stats != null ? player_stats.Atk : 0f;
+        float damage = weapon.weapon_atk + robot_atk / weapon.ProjectileCount;
 
         if (player_stats != null && player_stats.Cc > 0f)
         {
@@ -654,7 +632,16 @@ public class PlayerShootManager : MonoBehaviour
             }
         }
 
-        return Mathf.Max(0, Mathf.RoundToInt(damage));
+        return Mathf.Max(1, Mathf.RoundToInt(damage));
+    }
+
+    /// <summary>지속시간 동안 직선 범위를 태우는 빔을 만든다(플라즈마 캐논).</summary>
+    private void FireBeam(WeaponData weapon, Vector3 origin, Vector3 direction, int total_damage)
+    {
+        Sprite visual = ResolveWeaponSprite(beam_sprite_name, weapon);
+
+        BeamProjectile.Fire(visual, origin, direction, GetTravelRange(weapon), weapon.ProjectileSize,
+                            total_damage, weapon.weapon_duration, weapon.weapon_defignore, weapon.weapon_knockback);
     }
 
     /// <summary>
@@ -693,66 +680,67 @@ public class PlayerShootManager : MonoBehaviour
         return null;
     }
 
-    // weapon_projectiles(발사 개수)만큼 투사체를 생성. 2발 이상이면 진행 방향은 그대로 두고,
-    // weapon_rebound를 좌우 간격으로 사용해 옆으로 나란히(평행하게) 추가 발사한다.
+    /// <summary>
+    /// weapon_projectiles(발사 개수)만큼 투사체를 생성한다. 2발 이상이면 <b>부채꼴로</b> 벌어진다
+    /// (weapon_rebound = 탄 사이 각도 간격). 예전에는 같은 방향으로 평행하게 나가서
+    /// 산탄총 8발이 "흩어지는 산탄"이 아니라 "벽처럼 나란한 줄"로 보였다.
+    ///
+    /// 탄퍼짐(weapon_aim)과 확률 관통(weapon_pierce_chance)은 <b>탄마다 따로</b> 굴린다.
+    /// 그래야 "탄마다 60% 확률로 1번 관통" 같은 원안 스펙이 그대로 재현된다.
+    /// </summary>
     private void FireProjectiles(GameObject projectile_prefab, WeaponSlot slot, WeaponData weapon, Vector3 origin, Vector3 direction, float target_distance, int damage)
     {
-        int projectile_count = Mathf.Max(1, weapon.weapon_projectiles);
-        float side_spacing = weapon.weapon_rebound * side_spacing_multiplier;
-        float speed = slot.projectile_speed > 0f ? slot.projectile_speed : 15f; // 슬롯에 값이 없으면 기본 속도로 폴백
-        float size = weapon.weapon_atsize > 0f ? weapon.weapon_atsize : 1f;
-        bool can_penetrate = weapon.weapon_penetration;
+        int projectile_count = weapon.ProjectileCount;
 
-        // 지연 폭발 무기는 날아가는 동안만 작은 크기를 쓰고, 원래 공격범위는 폭발 시점에 적용
-        bool delayed_blast = IsDelayedBlastWeapon(weapon.weapon_id);
-        float travel_size = delayed_blast ? Mathf.Max(0.01f, delayed_blast_travel_size) : size;
+        float speed = weapon.weapon_speed > 0f
+            ? weapon.weapon_speed
+            : (slot.projectile_speed > 0f ? slot.projectile_speed : WeaponData.DefaultProjectileSpeed);
 
-        // 폭발화기는 기본적으로 최대 사거리에서 터지지만,
+        // 폭발 무기는 기본적으로 최대 사거리에서 터지지만,
         // 타겟이 사거리 안쪽에 있다면 그 지점에서 조기 폭발한다.
         float travel_range = GetTravelRange(weapon);
-        if (delayed_blast && target_distance > 0f && target_distance < travel_range)
+        if (weapon.weapon_splash > 0f && target_distance > 0f && target_distance < travel_range)
         {
             travel_range = target_distance;
         }
 
-        // 진행 방향(direction) 기준으로 옆(좌우)을 가리키는 벡터. X-Y 평면에서 90도 회전.
-        Vector3 side_axis = new Vector3(-direction.y, direction.x, 0f);
-
-        // 프리팹이 기본적으로 오른쪽(Vector3.right)을 바라본다고 가정하고 방향에 맞게 회전
-        // 프리팹이 다른 축을 정면으로 쓴다면 Vector3.right 부분만 바꾸면 됨
-        Quaternion shot_rotation = Quaternion.FromToRotation(Vector3.right, direction);
+        float base_angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
 
         for (int i = 0; i < projectile_count; i++)
         {
-            float side_offset = 0f;
-            if (projectile_count > 1)
+            // 부채꼴 배치: 가운데를 기준으로 좌우 대칭으로 벌린다
+            float angle_offset = projectile_count > 1
+                ? weapon.weapon_rebound * (i - (projectile_count - 1) / 2f)
+                : 0f;
+
+            // 탄퍼짐은 탄 하나하나가 개별로 흔들린다
+            if (weapon.weapon_aim > 0f)
             {
-                // 발마다 반동(weapon_rebound)만큼 옆으로 위치가 벌어짐 (이 발사 1번에 한해서만 적용, 다음 발사엔 다시 가운데부터 계산)
-                side_offset = side_spacing * (i - (projectile_count - 1) / 2f);
+                angle_offset += UnityEngine.Random.Range(-weapon.weapon_aim, weapon.weapon_aim);
             }
 
-            Vector3 spawn_position = origin + side_axis * side_offset;
+            float shot_angle = base_angle + angle_offset;
+            float radians = shot_angle * Mathf.Deg2Rad;
+            Vector3 shot_direction = new Vector3(Mathf.Cos(radians), Mathf.Sin(radians), 0f);
 
-            GameObject obj = Instantiate(projectile_prefab, spawn_position, shot_rotation);
+            // 프리팹이 기본적으로 오른쪽(Vector3.right)을 바라본다고 가정하고 방향에 맞게 회전
+            GameObject obj = Instantiate(projectile_prefab, origin, Quaternion.Euler(0f, 0f, shot_angle));
             Projectile projectile = obj.GetComponent<Projectile>();
             if (projectile == null) projectile = obj.AddComponent<Projectile>();
 
-            projectile.Launch(direction, speed, damage, travel_range, travel_size, can_penetrate);
-
-            if (delayed_blast)
+            projectile.Launch(new Projectile.Spec
             {
-                projectile.SetDelayedBlast(size, delayed_blast_explode_on_contact, delayed_blast_visual_duration);
-            }
+                Direction = shot_direction,
+                Speed = speed,
+                Damage = damage,
+                MaxRange = travel_range,
+                Size = weapon.ProjectileSize,
+                PierceCount = weapon.RollPierceCount(), // 탄마다 따로 확률 관통 판정
+                SplashRadius = weapon.weapon_splash,
+                DefIgnore = weapon.weapon_defignore,
+                Knockback = weapon.weapon_knockback,
+                BlastVisualDuration = blast_visual_duration
+            });
         }
-    }
-
-    // weapon_id가 지연 폭발 무기 ID 범위에 들어가는지 확인
-    private bool IsDelayedBlastWeapon(int weapon_id)
-    {
-        foreach (WeaponIdRange range in delayed_blast_weapon_ids)
-        {
-            if (weapon_id >= range.min_id && weapon_id <= range.max_id) return true;
-        }
-        return false;
     }
 }

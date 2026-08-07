@@ -20,14 +20,12 @@ public static class RunState
     public static Dictionary<StatType, float> CoreStatBonuses { get; private set; } = new Dictionary<StatType, float>();
     public static int PendingCoreUpgradeChoices { get; set; } = 0;
 
-    // 소켓 하나에 장착된 무기. 같은 무기라도 등급에 따라 성능이 달라지므로(등급 = 수직 강화)
-    // 무기 ID만으로는 부족하고 등급과 그 등급의 스탯 배율을 함께 들고 있어야 한다.
-    // 배율을 여기 저장해두면 PlayerShootManager가 상점 카탈로그 에셋을 몰라도 된다.
+    // 소켓 하나에 장착된 무기. 등급마다 별도의 무기 데이터 행이 존재하므로(13종 x 5등급 = 65행)
+    // WeaponId만 알면 등급별 성능이 전부 따라온다. Grade는 UI 표시(등급 색상)용 사본이다.
     public struct EquippedWeapon
     {
         public int WeaponId;
         public ItemGrade Grade;
-        public float StatMultiplier;
     }
 
     // 소켓 인덱스 순서대로 장착된 무기 (머리 파츠가 정하는 소켓 개수만큼 채워짐).

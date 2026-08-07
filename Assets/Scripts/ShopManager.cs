@@ -28,7 +28,6 @@ public class ShopManager : MonoBehaviour
         // 무기일 때만 사용
         public int WeaponId;
         public WeaponData Weapon;
-        public float StatMultiplier;
 
         // 디스크일 때만 사용
         public DiscData Disc;
@@ -41,10 +40,24 @@ public class ShopManager : MonoBehaviour
         {
             if (IsDisc) return Disc.BuildDescription();
 
-            // 등급 배율이 실제로 곱해진 뒤의 값을 보여준다(플레이어가 등급 차이를 체감할 수 있도록).
-            int atk = Mathf.RoundToInt(Weapon.weapon_atk * StatMultiplier);
-            float atsp = Weapon.weapon_atsp * StatMultiplier;
-            return $"공격력 {atk} / 공격속도 {atsp:0.##} / 사거리 {Weapon.weapon_range}";
+            // 등급별 수치가 데이터 행에 이미 반영되어 있으므로 배율을 곱하지 않고 그대로 보여준다.
+            string text = $"공격력 {Weapon.weapon_atk:0.##} / 공격속도 {Weapon.weapon_atsp:0.##} / 사거리 {Weapon.weapon_range:0.##}";
+
+            if (Weapon.weapon_projectiles > 1) text += $" / {Weapon.weapon_projectiles}발";
+            if (Weapon.weapon_splash > 0f) text += $" / 폭발 {Weapon.weapon_splash:0.##}";
+            if (Weapon.weapon_pierce != 0)
+            {
+                string pierce = Weapon.weapon_pierce < 0 ? "관통 전체" : $"관통 {Weapon.weapon_pierce}회";
+                if (Weapon.weapon_pierce_chance > 0f && Weapon.weapon_pierce_chance < 1f)
+                {
+                    pierce += $"({Weapon.weapon_pierce_chance * 100f:0}%)";
+                }
+                text += $" / {pierce}";
+            }
+            if (Weapon.weapon_defignore > 0f) text += $" / 방어무시 {Weapon.weapon_defignore * 100f:0}%";
+            if (Weapon.weapon_knockback > 0f) text += " / 넉백";
+
+            return text;
         }
     }
 
@@ -193,7 +206,7 @@ public class ShopManager : MonoBehaviour
             return false;
         }
 
-        if (!shootManager.EquipWeapon(socketIndex, offer.WeaponId, offer.Grade, offer.StatMultiplier)) return false;
+        if (!shootManager.EquipWeapon(socketIndex, offer.WeaponId)) return false;
 
         RunState.Gold -= offer.Price;
         offer.Purchased = true;
@@ -287,27 +300,54 @@ public class ShopManager : MonoBehaviour
         };
     }
 
+    /// <summary>
+    /// 등급을 먼저 뽑고, <b>그 등급의 무기 행 중에서</b> 하나를 고른다.
+    /// 무기는 등급마다 별도의 데이터 행을 갖고 있으므로(13종 x 5등급 = 65행) 예전처럼
+    /// 무기를 먼저 고르고 등급 배율을 곱하는 방식이 아니다. 가격도 행에 최종가가 들어있다.
+    /// </summary>
     private Offer CreateWeaponOffer()
     {
-        ShopCatalog.WeaponEntry entry = catalog.WeaponEntries[Random.Range(0, catalog.WeaponEntries.Count)];
-        ItemGrade grade = catalog.RollGrade(Mathf.Max(1, RunState.WaveNumber));
-        ShopCatalog.GradeSetting gradeSetting = catalog.GetGradeSetting(grade);
+        ItemGrade rolled = catalog.RollGrade(Mathf.Max(1, RunState.WaveNumber));
 
-        if (GameDataManager.Instance == null ||
-            !GameDataManager.Instance.Weapons.TryGetValue(entry.weaponId, out WeaponData weapon))
+        // 뽑은 등급에 무기가 하나도 없으면 한 등급씩 낮춰가며 찾는다
+        // (PartsCatalog.TryRollLootPart의 등급 폴백과 같은 방식).
+        for (int g = (int)rolled; g >= 0; g--)
         {
-            Debug.LogWarning($"상점 품목용 무기ID {entry.weaponId}의 데이터를 찾을 수 없습니다. ShopCatalog의 무기 목록을 확인하세요.");
-            return null;
+            List<ShopCatalog.WeaponEntry> candidates = GetWeaponEntriesOfGrade((ItemGrade)g);
+            if (candidates.Count == 0) continue;
+
+            ShopCatalog.WeaponEntry entry = candidates[Random.Range(0, candidates.Count)];
+            GameDataManager.Instance.Weapons.TryGetValue(entry.weaponId, out WeaponData weapon);
+
+            return new Offer
+            {
+                IsDisc = false,
+                WeaponId = entry.weaponId,
+                Weapon = weapon,
+                Grade = weapon.weapon_grade,
+                Price = Mathf.Max(0, entry.basePrice)
+            };
         }
 
-        return new Offer
+        Debug.LogWarning("상점에 등장 가능한 무기가 없습니다. ShopCatalog의 무기 목록과 GameDataAsset의 무기 테이블이 같은 ID를 갖고 있는지 확인하세요.");
+        return null;
+    }
+
+    // 상점 판매 목록 중 특정 등급의 무기만 추린다.
+    private List<ShopCatalog.WeaponEntry> GetWeaponEntriesOfGrade(ItemGrade grade)
+    {
+        var result = new List<ShopCatalog.WeaponEntry>();
+        if (GameDataManager.Instance == null) return result;
+
+        foreach (ShopCatalog.WeaponEntry entry in catalog.WeaponEntries)
         {
-            IsDisc = false,
-            WeaponId = entry.weaponId,
-            Weapon = weapon,
-            Grade = grade,
-            StatMultiplier = gradeSetting.statMultiplier,
-            Price = Mathf.Max(0, Mathf.RoundToInt(entry.basePrice * gradeSetting.priceMultiplier))
-        };
+            if (GameDataManager.Instance.Weapons.TryGetValue(entry.weaponId, out WeaponData weapon) &&
+                weapon.weapon_grade == grade)
+            {
+                result.Add(entry);
+            }
+        }
+
+        return result;
     }
 }

@@ -217,11 +217,17 @@ public class ModdingManager : MonoBehaviour
     /// 슬롯에서 빠진 기존 파츠는 인벤토리의 같은 자리로 들어가므로 되돌리는 것도 가능하다
     /// (단, 정비 화면을 닫으면 인벤토리에 남은 것은 전부 사라진다).
     ///
-    /// 무기 타입/무게 제약은 여기서 검사하지 않는다 - Phase 4에서 정한 대로 이미 장착된 무기를
-    /// 소급 검증하지 않고, 제약은 "무기를 소켓에 넣는" 상점 구매 시점에만 적용한다.
+    /// 파츠에도 무게가 있으므로(사용자 확정 사항) <b>무게 제한은 여기서도 검사한다</b>.
+    /// 무기 타입 제한만 소급 검증하지 않는다 - 그쪽은 "무기를 소켓에 넣는" 상점 구매 시점에만 적용한다.
     /// </summary>
-    public bool TrySwapInventoryWithSlot(int inventoryIndex, PartSlot slot)
+    public bool TrySwapInventoryWithSlot(int inventoryIndex, PartSlot slot) =>
+        TrySwapInventoryWithSlot(inventoryIndex, slot, out _);
+
+    /// <summary>교체에 실패하면 reason에 이유가 담긴다(정비 화면이 그대로 보여준다).</summary>
+    public bool TrySwapInventoryWithSlot(int inventoryIndex, PartSlot slot, out string reason)
     {
+        reason = string.Empty;
+
         if (catalog == null) return false;
         if (inventoryIndex < 0 || inventoryIndex >= RunState.ModdingInventory.Count) return false;
 
@@ -230,6 +236,14 @@ public class ModdingManager : MonoBehaviour
 
         // 파츠는 자기 슬롯에만 들어간다.
         if (incoming.slot != slot) return false;
+
+        // 무거운 파츠로 갈아끼우면 지탱력을 넘길 수 있다.
+        // (자기장 코어/다리를 교체하는 경우엔 지탱력 자체도 함께 바뀐다 - CheckPartWeightLimit 참고)
+        if (!CheckPartWeightLimit(incoming, out float totalAfter, out float capacity))
+        {
+            reason = $"무게 초과 ({totalAfter:0.#} / {capacity:0.#})";
+            return false;
+        }
 
         string key = slot.ToString();
         bool hadPrevious = RunState.EquippedPartIds.TryGetValue(key, out int previousId);
@@ -267,7 +281,7 @@ public class ModdingManager : MonoBehaviour
     // 무게 / 무기 타입 제약 (상점 구매 시 ShopManager가 사용)
     // ---------------------------------------------------------------------
 
-    /// <summary>자기장 코어 + 다리의 weightCapacity 합 = 무기 무게를 지탱할 수 있는 총량.</summary>
+    /// <summary>자기장 코어 + 다리의 weightCapacity 합 = 무게를 지탱할 수 있는 총량.</summary>
     public float GetTotalWeightCapacity()
     {
         float total = 0f;
@@ -296,12 +310,57 @@ public class ModdingManager : MonoBehaviour
         return sum;
     }
 
+    /// <summary>
+    /// 장착된 <b>파츠</b>들의 무게 합(디스크는 무게가 없다). excludeSlot을 주면 그 슬롯은 빼고 센다 -
+    /// 그 슬롯을 다른 파츠로 교체했을 때의 무게를 계산하기 위함이다.
+    /// </summary>
+    public float GetEquippedPartsWeightSum(PartSlot? excludeSlot = null)
+    {
+        float sum = 0f;
+
+        foreach (PartSlot slot in System.Enum.GetValues(typeof(PartSlot)))
+        {
+            if (excludeSlot.HasValue && slot == excludeSlot.Value) continue;
+            if (TryGetEquippedPart(slot, out PartData part)) sum += part.weight;
+        }
+
+        return sum;
+    }
+
+    /// <summary>무기 + 파츠를 전부 합친 현재 총 무게.</summary>
+    public float GetTotalWeight() => GetEquippedWeaponWeightSum() + GetEquippedPartsWeightSum();
+
     /// <summary>이 소켓에 이 무기를 넣었을 때 무게 제한(자기장 코어+다리)을 넘지 않는지 확인한다.</summary>
     public bool CheckWeightLimit(int socketIndex, int newWeaponId, out float totalAfter, out float capacity)
     {
         capacity = GetTotalWeightCapacity();
-        totalAfter = GetEquippedWeaponWeightSum(socketIndex) + GetWeaponWeight(newWeaponId);
+        totalAfter = GetEquippedWeaponWeightSum(socketIndex) + GetWeaponWeight(newWeaponId) + GetEquippedPartsWeightSum();
         return totalAfter <= capacity;
+    }
+
+    /// <summary>
+    /// 이 파츠로 교체했을 때 무게 제한을 넘지 않는지 확인한다.
+    /// 파츠에도 무게가 생겼기 때문에(사용자 확정 사항) 파츠 교체도 무기 구매와 같은 검사를 받는다.
+    ///
+    /// 주의: 교체하려는 파츠가 자기장 코어/다리면 지탱력 자체가 바뀌므로,
+    /// 새 파츠의 weightCapacity를 반영한 지탱력과 비교해야 한다.
+    /// </summary>
+    public bool CheckPartWeightLimit(PartData newPart, out float totalAfter, out float capacity)
+    {
+        totalAfter = GetEquippedWeaponWeightSum() + GetEquippedPartsWeightSum(newPart.slot) + newPart.weight;
+
+        capacity = 0f;
+        capacity += GetCapacityAfterSwap(PartSlot.MagneticCore, newPart);
+        capacity += GetCapacityAfterSwap(PartSlot.Leg, newPart);
+
+        return totalAfter <= capacity;
+    }
+
+    // 해당 슬롯의 지탱력을 구하되, 교체 대상이 바로 그 슬롯이면 새 파츠의 값을 쓴다.
+    private float GetCapacityAfterSwap(PartSlot slot, PartData newPart)
+    {
+        if (newPart.slot == slot) return newPart.weightCapacity;
+        return TryGetEquippedPart(slot, out PartData current) ? current.weightCapacity : 0f;
     }
 
     /// <summary>

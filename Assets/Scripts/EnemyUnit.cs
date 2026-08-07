@@ -159,6 +159,10 @@ public class EnemyUnit : MonoBehaviour
     private const float SeparationRadius = 1.3f;
     private const float SeparationWeight = 1.4f;
 
+    // 넉백으로 밀려나는 속도(유닛/초)와 초당 감쇠량. ApplyKnockback이 채우고 FixedUpdate가 소비한다.
+    private Vector3 knockback_velocity;
+    private const float KnockbackDecay = 40f;
+
     protected virtual void FixedUpdate()
     {
         if (IsDead || GameOverManager.IsGameOver || GameWinManager.IsGameWon)
@@ -180,7 +184,12 @@ public class EnemyUnit : MonoBehaviour
         Vector3 separation = ComputeSeparation();
 
         Vector3 move_dir = seek + separation;
-        rb.linearVelocity = move_dir.sqrMagnitude > 0.0001f ? move_dir.normalized * MoveSpeed : Vector3.zero;
+        Vector3 move_velocity = move_dir.sqrMagnitude > 0.0001f ? move_dir.normalized * MoveSpeed : Vector3.zero;
+
+        // 넉백 속도를 시간에 따라 줄이면서 이동 속도에 더한다(덮어쓰지 않는다 - ApplyKnockback 주석 참고)
+        knockback_velocity = Vector3.MoveTowards(knockback_velocity, Vector3.zero, KnockbackDecay * Time.fixedDeltaTime);
+
+        rb.linearVelocity = move_velocity + knockback_velocity;
     }
 
     // 반경 안의 다른 EnemyUnit들로부터 밀려나는 방향(가까울수록 세게)을 합산한다.
@@ -205,13 +214,37 @@ public class EnemyUnit : MonoBehaviour
         return push * SeparationWeight;
     }
 
-    public void TakeDamage(int amount)
+    /// <summary>
+    /// 피해를 입힌다. def_ignore_percent(0~1)만큼 방어력이 무시된다
+    /// (플라즈마 캐논 0.5 = 방어력 절반 무시, 레이저 피스톨 0.25 등).
+    /// 기본값이 0이라 방어무시가 없는 기존 호출부는 그대로 동작한다.
+    /// </summary>
+    public void TakeDamage(int amount, float def_ignore_percent = 0f)
     {
         if (IsDead) return;
 
-        int dmg = Mathf.Max(1, amount - Def);
+        int effective_def = Mathf.RoundToInt(Def * (1f - Mathf.Clamp01(def_ignore_percent)));
+        int dmg = Mathf.Max(1, amount - effective_def);
         CurrentHp -= dmg;
         if (CurrentHp <= 0) Die();
+    }
+
+    /// <summary>
+    /// 넉백을 건다. <b>Rigidbody.AddForce는 이 클래스에서 쓸 수 없다</b> -
+    /// FixedUpdate가 매 프레임 linearVelocity를 통째로 덮어쓰기 때문에 다음 프레임에 사라진다.
+    /// 그래서 넉백을 별도 속도로 들고 있다가 이동 속도에 <b>더해서</b> 합성한다.
+    ///
+    /// 이동을 정지시키는 대신 합성하는 이유: 전기톱검(공속 3/s)처럼 빠른 근접무기 앞에서
+    /// 적이 영구히 밀려나 접근조차 못 하는 상태(무한 안전지대)가 되는 것을 막기 위함이다.
+    /// </summary>
+    public void ApplyKnockback(Vector3 direction, float strength)
+    {
+        if (IsDead || strength <= 0f) return;
+
+        direction.z = 0f; // X-Y 평면만 사용
+        if (direction.sqrMagnitude <= 0.0001f) return;
+
+        knockback_velocity = direction.normalized * strength; // 누적하지 않고 덮어쓴다(연사에 밀려 날아가지 않도록)
     }
 
     protected virtual void Die()

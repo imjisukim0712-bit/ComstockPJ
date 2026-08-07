@@ -39,22 +39,136 @@ MonoBehaviour:
     weight: 3
     minWave: 7
   weaponEntries:
-  - weaponId: 300001
-    basePrice: 25
   - weaponId: 300101
-    basePrice: 30
+    basePrice: 45
+  - weaponId: 300102
+    basePrice: 81
+  - weaponId: 300103
+    basePrice: 135
+  - weaponId: 300104
+    basePrice: 225
+  - weaponId: 300105
+    basePrice: 360
   - weaponId: 300201
-    basePrice: 35
+    basePrice: 45
+  - weaponId: 300202
+    basePrice: 81
+  - weaponId: 300203
+    basePrice: 135
+  - weaponId: 300204
+    basePrice: 225
+  - weaponId: 300205
+    basePrice: 360
   - weaponId: 300301
-    basePrice: 40
+    basePrice: 55
+  - weaponId: 300302
+    basePrice: 99
+  - weaponId: 300303
+    basePrice: 165
+  - weaponId: 300304
+    basePrice: 275
+  - weaponId: 300305
+    basePrice: 440
   - weaponId: 300401
-    basePrice: 45
+    basePrice: 60
+  - weaponId: 300402
+    basePrice: 108
+  - weaponId: 300403
+    basePrice: 180
+  - weaponId: 300404
+    basePrice: 300
+  - weaponId: 300405
+    basePrice: 480
   - weaponId: 300501
-    basePrice: 40
+    basePrice: 55
+  - weaponId: 300502
+    basePrice: 99
+  - weaponId: 300503
+    basePrice: 165
+  - weaponId: 300504
+    basePrice: 275
+  - weaponId: 300505
+    basePrice: 440
   - weaponId: 300601
-    basePrice: 30
-  - weaponId: 300701
+    basePrice: 25
+  - weaponId: 300602
     basePrice: 45
+  - weaponId: 300603
+    basePrice: 75
+  - weaponId: 300604
+    basePrice: 125
+  - weaponId: 300605
+    basePrice: 200
+  - weaponId: 300701
+    basePrice: 25
+  - weaponId: 300702
+    basePrice: 45
+  - weaponId: 300703
+    basePrice: 75
+  - weaponId: 300704
+    basePrice: 125
+  - weaponId: 300705
+    basePrice: 200
+  - weaponId: 300801
+    basePrice: 40
+  - weaponId: 300802
+    basePrice: 72
+  - weaponId: 300803
+    basePrice: 120
+  - weaponId: 300804
+    basePrice: 200
+  - weaponId: 300805
+    basePrice: 320
+  - weaponId: 300901
+    basePrice: 30
+  - weaponId: 300902
+    basePrice: 54
+  - weaponId: 300903
+    basePrice: 90
+  - weaponId: 300904
+    basePrice: 150
+  - weaponId: 300905
+    basePrice: 240
+  - weaponId: 301001
+    basePrice: 35
+  - weaponId: 301002
+    basePrice: 63
+  - weaponId: 301003
+    basePrice: 105
+  - weaponId: 301004
+    basePrice: 175
+  - weaponId: 301005
+    basePrice: 280
+  - weaponId: 301101
+    basePrice: 20
+  - weaponId: 301102
+    basePrice: 36
+  - weaponId: 301103
+    basePrice: 60
+  - weaponId: 301104
+    basePrice: 100
+  - weaponId: 301105
+    basePrice: 160
+  - weaponId: 301201
+    basePrice: 25
+  - weaponId: 301202
+    basePrice: 45
+  - weaponId: 301203
+    basePrice: 75
+  - weaponId: 301204
+    basePrice: 125
+  - weaponId: 301205
+    basePrice: 200
+  - weaponId: 301301
+    basePrice: 30
+  - weaponId: 301302
+    basePrice: 54
+  - weaponId: 301303
+    basePrice: 90
+  - weaponId: 301304
+    basePrice: 150
+  - weaponId: 301305
+    basePrice: 240
   discs:
   - discId: 400001
     discName: "\uACFC\uBD80\uD558 \uD68C\uB85C"

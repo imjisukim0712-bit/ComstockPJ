@@ -189,9 +189,10 @@ public class ModdingPanelUI : MonoBehaviour
         List<PartData> before = moddingManager.GetInventoryParts();
         string incomingName = selectedInventoryIndex < before.Count ? before[selectedInventoryIndex].partName : "파츠";
 
-        if (!moddingManager.TrySwapInventoryWithSlot(selectedInventoryIndex, slot))
+        if (!moddingManager.TrySwapInventoryWithSlot(selectedInventoryIndex, slot, out string reason))
         {
-            SetHint("교체하지 못했습니다.");
+            // 무게 초과처럼 이유가 분명한 경우에는 그대로 보여준다(그냥 "실패"만 뜨면 원인을 알 수 없다).
+            SetHint(reason.Length > 0 ? $"교체하지 못했습니다 - {reason}" : "교체하지 못했습니다.");
             return;
         }
 

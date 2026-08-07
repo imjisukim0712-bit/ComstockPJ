@@ -4,11 +4,18 @@ using UnityEngine;
 /// <summary>
 /// PlayerShootManager가 Instantiate 시점에 Launch()를 호출해 초기화하는 투사체.
 /// 지정된 방향으로 직선 이동하다가 EnemyUnit과 충돌하면 데미지를 준다.
-/// 관통(can_penetrate) 여부에 따라 첫 충돌 시 사라지거나, 여러 대상을 뚫고 계속 나아간다.
 ///
-/// 지연 폭발(SetDelayedBlast) 모드:
-/// 수류탄처럼 날아가는 동안은 아주 작은 크기(travel size)로 이동하다가,
-/// 사거리 끝(또는 적과 접촉)에 도달하는 순간 weapon_atsize만큼의 범위에 한 번에 데미지를 준다.
+/// 관통(PierceCount):
+/// - 0  : 첫 충돌에 소멸
+/// - N  : N번까지 뚫고 지나간다 (대물저격총 3회, 지정사수소총 1회 등)
+/// - -1 : 무제한 관통 (플라즈마 계열)
+/// 확률 관통(60%/40%/50%)은 <b>투사체를 만들기 전에</b> WeaponData.RollPierceCount()로 굴린
+/// 결과를 넘겨받는다. 즉 산탄 8발은 각자 따로 관통 판정을 받는다.
+///
+/// 스플래시(SplashRadius > 0):
+/// 착탄하는 순간(또는 사거리 끝에 도달하는 순간) 반경 안의 모든 적에게 한 번씩 데미지를 준다.
+/// 예전에는 weapon_id 300400~300499 범위를 하드코딩해서 판별했지만, 이제는 무기 데이터의
+/// 스플래시 반경만 보고 결정하므로 어떤 무기에도 폭발을 붙일 수 있다.
 ///
 /// 전제:
 /// - 이동은 X-Y 평면에서만 일어남 (Z축 미사용)
@@ -18,60 +25,65 @@ using UnityEngine;
 [RequireComponent(typeof(Collider))]
 public class Projectile : MonoBehaviour
 {
-    private Vector3 direction;
-    private float speed;
-    private int damage;
-    private float max_range;
-    private bool can_penetrate;
-    private Vector3 spawn_position;
+    /// <summary>
+    /// 발사 파라미터 묶음. 인자가 10개 가까이 되어 위치 인자로 넘기면 실수하기 쉬워서 구조체로 묶었다.
+    /// </summary>
+    public struct Spec
+    {
+        public Vector3 Direction;
+        public float Speed;
+        public int Damage;
+        public float MaxRange;
+        public float Size;
 
-    // --- 지연 폭발(수류탄류) 관련 ---
-    private bool is_delayed_blast;      // 사거리 끝에서 범위 데미지를 주는 모드인지
-    private float blast_size;           // 폭발 시 적용할 크기 (weapon_atsize)
-    private bool explode_on_contact;    // 날아가는 중 적과 닿았을 때도 즉시 폭발할지
-    private float blast_visual_duration; // 폭발 범위를 눈으로 보여주는 시간(초)
+        /// <summary>0 = 관통 없음 / N = N회 관통 / -1 = 무제한 관통</summary>
+        public int PierceCount;
+
+        /// <summary>0보다 크면 착탄 시 이 반경(월드 유닛) 안의 적을 모두 타격</summary>
+        public float SplashRadius;
+
+        /// <summary>적 방어력을 무시하는 비율 (0~1)</summary>
+        public float DefIgnore;
+
+        /// <summary>적중한 적을 밀어내는 초기 속도(유닛/초)</summary>
+        public float Knockback;
+
+        /// <summary>폭발 범위를 눈으로 보여주는 시간(초). 0이면 연출 없이 즉시 사라짐</summary>
+        public float BlastVisualDuration;
+    }
+
+    private const int UnlimitedPierce = -1;
+
+    private Spec spec;
+    private Vector3 spawn_position;
+    private int remaining_pierce;
     private bool has_exploded;
 
     // 관통 시 같은 대상에게 중복으로 데미지가 들어가지 않도록 이미 맞은 대상을 기록
     private readonly HashSet<EnemyUnit> already_hit = new HashSet<EnemyUnit>();
 
-    public void Launch(Vector3 fire_direction, float fire_speed, int fire_damage, float fire_range, float size, bool penetrate)
+    public void Launch(Spec launch_spec)
     {
-        direction = fire_direction.sqrMagnitude > 0.0001f ? fire_direction.normalized : Vector3.right;
-        speed = fire_speed;
-        damage = fire_damage;
-        max_range = fire_range > 0f ? fire_range : 20f; // weapon_range가 0/미설정이면 기본 사거리로 폴백
-        can_penetrate = penetrate;
+        spec = launch_spec;
+        spec.Direction = spec.Direction.sqrMagnitude > 0.0001f ? spec.Direction.normalized : Vector3.right;
+        if (spec.MaxRange <= 0f) spec.MaxRange = WeaponData.DefaultRange; // 사거리가 0/미설정이면 기본 사거리로 폴백
+
+        remaining_pierce = spec.PierceCount;
         spawn_position = transform.position;
 
-        // weapon_atsize(투사체 크기) 반영
-        transform.localScale = Vector3.one * (size > 0f ? size : 1f);
-    }
-
-    /// <summary>
-    /// 지연 폭발 모드로 전환한다. Launch()를 작은 travel size로 호출한 뒤 이어서 호출할 것.
-    /// </summary>
-    /// <param name="explosion_size">폭발 시 적용할 크기 (weapon_atsize)</param>
-    /// <param name="contact_triggers_explosion">날아가는 중 적과 닿아도 즉시 폭발할지</param>
-    /// <param name="visual_duration">폭발 범위를 화면에 보여주는 시간(초). 0이면 즉시 사라짐</param>
-    public void SetDelayedBlast(float explosion_size, bool contact_triggers_explosion, float visual_duration)
-    {
-        is_delayed_blast = true;
-        blast_size = explosion_size > 0f ? explosion_size : 1f;
-        explode_on_contact = contact_triggers_explosion;
-        blast_visual_duration = Mathf.Max(0f, visual_duration);
+        transform.localScale = Vector3.one * (spec.Size > 0f ? spec.Size : 1f);
     }
 
     private void Update()
     {
         if (has_exploded) return; // 폭발 연출 중에는 더 이상 움직이지 않음
 
-        transform.position += direction * speed * Time.deltaTime;
+        transform.position += spec.Direction * spec.Speed * Time.deltaTime;
 
-        if (Vector3.Distance(spawn_position, transform.position) >= max_range)
+        if (Vector3.Distance(spawn_position, transform.position) >= spec.MaxRange)
         {
-            // 사거리 끝 도달 → 지연 폭발 무기는 이 순간에 범위 데미지
-            if (is_delayed_blast) Explode();
+            // 사거리 끝 도달 → 폭발 무기는 이 순간에 범위 데미지, 나머지는 그냥 소멸
+            if (spec.SplashRadius > 0f) Explode();
             else Destroy(gameObject);
         }
     }
@@ -83,58 +95,56 @@ public class Projectile : MonoBehaviour
         EnemyUnit enemy = FindEnemy(other);
         if (enemy == null) return;
 
-        // 지연 폭발 무기는 접촉 시 단일 데미지를 주지 않는다.
-        // (설정에 따라 즉시 폭발하거나, 그대로 통과해서 사거리 끝까지 날아간다)
-        if (is_delayed_blast)
+        // 폭발 무기는 접촉 지점에서 즉시 터진다(단일 데미지는 따로 주지 않는다 - 폭발 데미지에 포함)
+        if (spec.SplashRadius > 0f)
         {
-            if (explode_on_contact) Explode();
+            Explode();
             return;
         }
 
         if (already_hit.Contains(enemy)) return; // 관통 중 같은 대상 중복 히트 방지
+        already_hit.Add(enemy);
 
-        enemy.TakeDamage(damage);
+        ApplyHit(enemy);
 
-        if (can_penetrate)
+        if (remaining_pierce == UnlimitedPierce) return;    // 무제한 관통 - 계속 진행
+        if (remaining_pierce > 0)
         {
-            already_hit.Add(enemy); // 관통이면 파괴하지 않고 계속 진행, 이 대상만 다시 안 맞도록 기록
+            remaining_pierce--;                             // 남은 관통 횟수 소모
+            return;
         }
-        else
-        {
-            Destroy(gameObject); // 관통이 아니면 첫 충돌에서 소멸
-        }
+
+        Destroy(gameObject); // 관통이 없거나 전부 소진되면 소멸
     }
 
     /// <summary>
-    /// 폭발 지점 주변 blast 반경 안의 모든 EnemyUnit에게 한 번씩 데미지를 준다.
+    /// 폭발 지점 주변 반경 안의 모든 EnemyUnit에게 한 번씩 데미지를 준다.
     /// </summary>
     private void Explode()
     {
         if (has_exploded) return;
         has_exploded = true;
 
-        float radius = GetWorldBlastRadius();
-
         // 반경 안의 적을 모두 찾아 중복 없이 한 번씩만 데미지 적용
-        Collider[] hits = Physics.OverlapSphere(transform.position, radius);
+        Collider[] hits = Physics.OverlapSphere(transform.position, spec.SplashRadius);
         foreach (Collider hit in hits)
         {
             EnemyUnit enemy = FindEnemy(hit);
             if (enemy == null || already_hit.Contains(enemy)) continue;
 
             already_hit.Add(enemy);
-            enemy.TakeDamage(damage);
+            ApplyHit(enemy);
         }
 
-        // 터진 범위를 눈으로 확인할 수 있도록 잠깐 크기를 키워서 보여준 뒤 제거
-        if (blast_visual_duration > 0f)
+        // 터진 범위를 눈으로 확인할 수 있도록 잠깐 폭발 반경만큼 키워서 보여준 뒤 제거
+        if (spec.BlastVisualDuration > 0f)
         {
-            transform.localScale = Vector3.one * blast_size;
+            transform.localScale = Vector3.one * Mathf.Max(0.1f, spec.SplashRadius);
 
             Collider own_collider = GetComponent<Collider>();
             if (own_collider != null) own_collider.enabled = false; // 연출 중 추가 트리거 방지
 
-            Destroy(gameObject, blast_visual_duration);
+            Destroy(gameObject, spec.BlastVisualDuration);
         }
         else
         {
@@ -142,14 +152,19 @@ public class Projectile : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 폭발 반경(월드 단위). 투사체가 blast_size 크기였을 때의 콜라이더 반경과 같게 맞춘다.
-    /// → 데이터테이블의 weapon_atsize가 기존 '공격 범위'와 동일한 의미를 유지한다.
-    /// </summary>
-    private float GetWorldBlastRadius()
+    /// <summary>데미지 + 넉백을 한 번에 적용한다. 넉백 방향은 투사체 진행 방향이다.</summary>
+    private void ApplyHit(EnemyUnit enemy)
     {
-        if (GetComponent<Collider>() is SphereCollider sphere) return sphere.radius * blast_size;
-        return blast_size * 0.5f; // 구형 콜라이더가 아니면 지름 기준으로 근사
+        enemy.TakeDamage(spec.Damage, spec.DefIgnore);
+
+        if (spec.Knockback > 0f)
+        {
+            // 폭발은 터진 지점에서 바깥으로, 직격탄은 날아가던 방향으로 민다
+            Vector3 push = spec.SplashRadius > 0f
+                ? (enemy.transform.position - transform.position)
+                : spec.Direction;
+            enemy.ApplyKnockback(push, spec.Knockback);
+        }
     }
 
     // 콜라이더가 자식에 붙어 있는 경우까지 대응

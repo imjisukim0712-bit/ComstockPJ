@@ -214,4 +214,13 @@ public class PartsCatalog : ScriptableObject
         result = default;
         return false;
     }
+
+#if UNITY_EDITOR
+    // WeaponTableGenerator(에디터 전용)가 목록을 통째로 갈아끼우기 위한 진입점.
+    // 리플렉션 대신 명시적 세터를 두는 이유: 필드 이름이 바뀌면 컴파일 에러로 바로 드러나고,
+    // #if UNITY_EDITOR 덕분에 빌드에는 아예 포함되지 않는다.
+    public void EditorSetWeaponMeta(List<WeaponMetaEntry> value) => weaponMeta = value;
+    public List<PartData> EditorGetParts() => parts;
+    public void EditorSetParts(List<PartData> value) => parts = value;
+#endif
 }

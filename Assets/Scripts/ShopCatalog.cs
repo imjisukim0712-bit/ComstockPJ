@@ -140,4 +140,9 @@ public class ShopCatalog : ScriptableObject
 
         return ItemGrade.Normal;
     }
+
+#if UNITY_EDITOR
+    // WeaponTableGenerator(에디터 전용)가 상점 판매 목록을 통째로 갈아끼우기 위한 진입점.
+    public void EditorSetWeaponEntries(List<WeaponEntry> value) => weaponEntries = value;
+#endif
 }

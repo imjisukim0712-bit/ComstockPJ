@@ -404,7 +404,7 @@ public class ShopPanelUI : MonoBehaviour
                 $"다리: {PartLine(modding, PartSlot.Leg)}\n" +
                 $"다리 장갑: {PartLine(modding, PartSlot.LegArmor)}\n" +
                 $"발: {PartLine(modding, PartSlot.Foot)}\n" +
-                $"무게 지탱 {(modding != null ? modding.GetEquippedWeaponWeightSum() : 0f):0.#} / " +
+                $"무게 지탱 {(modding != null ? modding.GetTotalWeight() : 0f):0.#} / " +
                 $"{(modding != null ? modding.GetTotalWeightCapacity() : 0f):0.#}";
         }
     }
