@@ -50,9 +50,21 @@ public class RewardPickup : MonoBehaviour
 
         switch (Type)
         {
-            case RewardType.Gold: RunState.Gold += Amount; break;
-            case RewardType.PartBox: RunState.UnopenedPartBoxCount += Amount; break;
-            default: RunState.CoreExp += Amount; break;
+            case RewardType.Gold:
+                RunState.Gold += Amount;
+                break;
+
+            // 부품 상자는 머리(로봇)의 적재량 상한이 있으므로 정비 매니저를 거쳐 지급한다.
+            // EnemyUnit이 드랍 시점에도 상한을 보지만, 여러 몬스터가 거의 동시에 죽으면
+            // 둘 다 그 검사를 통과한 뒤 여기서 상한을 넘을 수 있다(초과분은 버려진다).
+            case RewardType.PartBox:
+                if (ModdingManager.Instance != null) ModdingManager.Instance.AddPartBoxes(Amount);
+                else RunState.UnopenedPartBoxCount += Amount;
+                break;
+
+            default:
+                RunState.CoreExp += Amount;
+                break;
         }
 
         RunState.NotifyChanged();

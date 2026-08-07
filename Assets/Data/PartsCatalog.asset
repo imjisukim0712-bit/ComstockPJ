@@ -18,197 +18,1345 @@ MonoBehaviour:
     slot: 0
     grade: 0
     isDefaultStarter: 1
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 1
+    socketDetectRangeMultiplier: 1
+    socketRotationSpeedMultiplier: 1
     bonusStat: 0
     bonusAmount: 0
     weightCapacity: 0
+    discSlotCount: 0
   - partId: 500002
     partName: "\uD45C\uC900 \uD314 \uC7A5\uAC11"
     slot: 1
     grade: 0
     isDefaultStarter: 1
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
     bonusStat: 2
     bonusAmount: 0
     weightCapacity: 0
+    discSlotCount: 0
   - partId: 500003
     partName: "\uD45C\uC900 \uC790\uAE30\uC7A5 \uCF54\uC5B4"
     slot: 2
     grade: 0
     isDefaultStarter: 1
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
     bonusStat: 0
     bonusAmount: 0
     weightCapacity: 4
+    discSlotCount: 0
   - partId: 500004
     partName: "\uD45C\uC900 \uB2E4\uB9AC"
     slot: 3
     grade: 0
     isDefaultStarter: 1
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
     bonusStat: 4
     bonusAmount: 0
     weightCapacity: 4
+    discSlotCount: 0
   - partId: 500005
     partName: "\uD45C\uC900 \uB2E4\uB9AC \uC7A5\uAC11"
     slot: 4
     grade: 0
     isDefaultStarter: 1
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
     bonusStat: 2
     bonusAmount: 0
     weightCapacity: 0
+    discSlotCount: 0
   - partId: 500006
     partName: "\uD45C\uC900 \uBC1C"
     slot: 5
     grade: 0
     isDefaultStarter: 1
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
     bonusStat: 3
     bonusAmount: 0
     weightCapacity: 0
-  - partId: 500011
-    partName: "\uC815\uBC00 \uC870\uC900 \uC18C\uCF13"
-    slot: 0
-    grade: 1
-    isDefaultStarter: 0
-    restrictsWeaponType: 1
-    allowedWeaponType: 2
-    bonusStat: 0
+    discSlotCount: 0
+  - partId: 500007
+    partName: "\uD45C\uC900 \uD5EC\uBA67"
+    slot: 6
+    grade: 0
+    isDefaultStarter: 1
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
     bonusAmount: 0
     weightCapacity: 0
-  - partId: 500012
-    partName: "\uC18D\uC0AC \uC18C\uCF13"
-    slot: 0
-    grade: 1
-    isDefaultStarter: 0
-    restrictsWeaponType: 1
-    allowedWeaponType: 0
-    bonusStat: 0
+    discSlotCount: 0
+  - partId: 500008
+    partName: "\uD45C\uC900 \uB514\uC2A4\uD06C \uC2AC\uB86F"
+    slot: 7
+    grade: 0
+    isDefaultStarter: 1
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
     bonusAmount: 0
     weightCapacity: 0
-  - partId: 500013
-    partName: "\uC5D0\uB108\uC9C0 \uBC29\uCD9C \uC18C\uCF13"
-    slot: 0
-    grade: 2
-    isDefaultStarter: 0
-    restrictsWeaponType: 1
-    allowedWeaponType: 4
-    bonusStat: 0
-    bonusAmount: 0
-    weightCapacity: 0
-  - partId: 500014
+    discSlotCount: 6
+  - partId: 510050
     partName: "\uB098\uB178 \uCF54\uD305 \uC7A5\uAC11"
     slot: 1
     grade: 0
     isDefaultStarter: 0
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
     bonusStat: 2
     bonusAmount: 3
     weightCapacity: 0
-  - partId: 500015
+    discSlotCount: 0
+  - partId: 510051
+    partName: "\uB098\uB178 \uCF54\uD305 \uC7A5\uAC11"
+    slot: 1
+    grade: 1
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 3.9
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510052
+    partName: "\uB098\uB178 \uCF54\uD305 \uC7A5\uAC11"
+    slot: 1
+    grade: 2
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 5.1
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510053
+    partName: "\uB098\uB178 \uCF54\uD305 \uC7A5\uAC11"
+    slot: 1
+    grade: 3
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 6.6
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510054
+    partName: "\uB098\uB178 \uCF54\uD305 \uC7A5\uAC11"
+    slot: 1
+    grade: 4
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 9
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510060
+    partName: "\uAC15\uD654 \uC7A5\uAC11"
+    slot: 1
+    grade: 0
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 5
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510061
+    partName: "\uAC15\uD654 \uC7A5\uAC11"
+    slot: 1
+    grade: 1
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 6.5
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510062
     partName: "\uAC15\uD654 \uC7A5\uAC11"
     slot: 1
     grade: 2
     isDefaultStarter: 0
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
     bonusStat: 2
-    bonusAmount: 8
+    bonusAmount: 8.5
     weightCapacity: 0
-  - partId: 500016
+    discSlotCount: 0
+  - partId: 510063
+    partName: "\uAC15\uD654 \uC7A5\uAC11"
+    slot: 1
+    grade: 3
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 11
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510064
+    partName: "\uAC15\uD654 \uC7A5\uAC11"
+    slot: 1
+    grade: 4
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 15
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510070
+    partName: "\uCD08\uC804\uB3C4 \uCF54\uC5B4"
+    slot: 2
+    grade: 0
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 5
+    discSlotCount: 0
+  - partId: 510071
+    partName: "\uCD08\uC804\uB3C4 \uCF54\uC5B4"
+    slot: 2
+    grade: 1
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 6.5
+    discSlotCount: 0
+  - partId: 510072
     partName: "\uCD08\uC804\uB3C4 \uCF54\uC5B4"
     slot: 2
     grade: 2
     isDefaultStarter: 0
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    bonusStat: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
     bonusAmount: 0
-    weightCapacity: 8
-  - partId: 500017
+    weightCapacity: 8.5
+    discSlotCount: 0
+  - partId: 510073
+    partName: "\uCD08\uC804\uB3C4 \uCF54\uC5B4"
+    slot: 2
+    grade: 3
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 11
+    discSlotCount: 0
+  - partId: 510074
+    partName: "\uCD08\uC804\uB3C4 \uCF54\uC5B4"
+    slot: 2
+    grade: 4
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 15
+    discSlotCount: 0
+  - partId: 510080
+    partName: "\uACE0\uBC00\uB3C4 \uCF54\uC5B4"
+    slot: 2
+    grade: 0
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 7
+    discSlotCount: 0
+  - partId: 510081
+    partName: "\uACE0\uBC00\uB3C4 \uCF54\uC5B4"
+    slot: 2
+    grade: 1
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 9.1
+    discSlotCount: 0
+  - partId: 510082
+    partName: "\uACE0\uBC00\uB3C4 \uCF54\uC5B4"
+    slot: 2
+    grade: 2
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 11.9
+    discSlotCount: 0
+  - partId: 510083
+    partName: "\uACE0\uBC00\uB3C4 \uCF54\uC5B4"
+    slot: 2
+    grade: 3
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 15.4
+    discSlotCount: 0
+  - partId: 510084
     partName: "\uACE0\uBC00\uB3C4 \uCF54\uC5B4"
     slot: 2
     grade: 4
     isDefaultStarter: 0
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    bonusStat: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
     bonusAmount: 0
-    weightCapacity: 14
-  - partId: 500018
+    weightCapacity: 21
+    discSlotCount: 0
+  - partId: 510090
+    partName: "\uC720\uC555 \uB2E4\uB9AC"
+    slot: 3
+    grade: 0
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 4
+    bonusAmount: 2
+    weightCapacity: 5
+    discSlotCount: 0
+  - partId: 510091
+    partName: "\uC720\uC555 \uB2E4\uB9AC"
+    slot: 3
+    grade: 1
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 4
+    bonusAmount: 2.6
+    weightCapacity: 6.5
+    discSlotCount: 0
+  - partId: 510092
+    partName: "\uC720\uC555 \uB2E4\uB9AC"
+    slot: 3
+    grade: 2
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 4
+    bonusAmount: 3.4
+    weightCapacity: 8.5
+    discSlotCount: 0
+  - partId: 510093
     partName: "\uC720\uC555 \uB2E4\uB9AC"
     slot: 3
     grade: 3
     isDefaultStarter: 0
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
     bonusStat: 4
-    bonusAmount: 5
-    weightCapacity: 10
-  - partId: 500019
+    bonusAmount: 4.4
+    weightCapacity: 11
+    discSlotCount: 0
+  - partId: 510094
+    partName: "\uC720\uC555 \uB2E4\uB9AC"
+    slot: 3
+    grade: 4
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 4
+    bonusAmount: 6
+    weightCapacity: 15
+    discSlotCount: 0
+  - partId: 510100
+    partName: "\uC548\uC815\uD654 \uB2E4\uB9AC"
+    slot: 3
+    grade: 0
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 4
+    bonusAmount: 1
+    weightCapacity: 7
+    discSlotCount: 0
+  - partId: 510101
+    partName: "\uC548\uC815\uD654 \uB2E4\uB9AC"
+    slot: 3
+    grade: 1
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 4
+    bonusAmount: 1.3
+    weightCapacity: 9.1
+    discSlotCount: 0
+  - partId: 510102
+    partName: "\uC548\uC815\uD654 \uB2E4\uB9AC"
+    slot: 3
+    grade: 2
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 4
+    bonusAmount: 1.7
+    weightCapacity: 11.9
+    discSlotCount: 0
+  - partId: 510103
+    partName: "\uC548\uC815\uD654 \uB2E4\uB9AC"
+    slot: 3
+    grade: 3
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 4
+    bonusAmount: 2.2
+    weightCapacity: 15.4
+    discSlotCount: 0
+  - partId: 510104
+    partName: "\uC548\uC815\uD654 \uB2E4\uB9AC"
+    slot: 3
+    grade: 4
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 4
+    bonusAmount: 3
+    weightCapacity: 21
+    discSlotCount: 0
+  - partId: 510110
+    partName: "\uD2F0\uD0C0\uB284 \uB2E4\uB9AC \uC7A5\uAC11"
+    slot: 4
+    grade: 0
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 4
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510111
+    partName: "\uD2F0\uD0C0\uB284 \uB2E4\uB9AC \uC7A5\uAC11"
+    slot: 4
+    grade: 1
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 5.2
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510112
+    partName: "\uD2F0\uD0C0\uB284 \uB2E4\uB9AC \uC7A5\uAC11"
+    slot: 4
+    grade: 2
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 6.8
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510113
+    partName: "\uD2F0\uD0C0\uB284 \uB2E4\uB9AC \uC7A5\uAC11"
+    slot: 4
+    grade: 3
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 8.8
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510114
     partName: "\uD2F0\uD0C0\uB284 \uB2E4\uB9AC \uC7A5\uAC11"
     slot: 4
     grade: 4
     isDefaultStarter: 0
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
     bonusStat: 2
-    bonusAmount: 15
+    bonusAmount: 12
     weightCapacity: 0
-  - partId: 500020
+    discSlotCount: 0
+  - partId: 510120
+    partName: "\uBCF5\uD569 \uB2E4\uB9AC \uC7A5\uAC11"
+    slot: 4
+    grade: 0
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 6
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510121
+    partName: "\uBCF5\uD569 \uB2E4\uB9AC \uC7A5\uAC11"
+    slot: 4
+    grade: 1
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 7.8
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510122
+    partName: "\uBCF5\uD569 \uB2E4\uB9AC \uC7A5\uAC11"
+    slot: 4
+    grade: 2
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 10.2
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510123
+    partName: "\uBCF5\uD569 \uB2E4\uB9AC \uC7A5\uAC11"
+    slot: 4
+    grade: 3
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 13.2
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510124
+    partName: "\uBCF5\uD569 \uB2E4\uB9AC \uC7A5\uAC11"
+    slot: 4
+    grade: 4
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 18
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510130
+    partName: "\uACBD\uB7C9 \uBD80\uCE20"
+    slot: 5
+    grade: 0
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 3
+    bonusAmount: 0.6
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510131
     partName: "\uACBD\uB7C9 \uBD80\uCE20"
     slot: 5
     grade: 1
     isDefaultStarter: 0
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
     bonusStat: 3
     bonusAmount: 0.8
     weightCapacity: 0
-  - partId: 500021
+    discSlotCount: 0
+  - partId: 510132
+    partName: "\uACBD\uB7C9 \uBD80\uCE20"
+    slot: 5
+    grade: 2
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 3
+    bonusAmount: 1
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510133
+    partName: "\uACBD\uB7C9 \uBD80\uCE20"
+    slot: 5
+    grade: 3
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 3
+    bonusAmount: 1.3
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510134
+    partName: "\uACBD\uB7C9 \uBD80\uCE20"
+    slot: 5
+    grade: 4
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 3
+    bonusAmount: 1.8
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510140
+    partName: "\uC81C\uD2B8 \uBD80\uC2A4\uD130"
+    slot: 5
+    grade: 0
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 3
+    bonusAmount: 0.9
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510141
+    partName: "\uC81C\uD2B8 \uBD80\uC2A4\uD130"
+    slot: 5
+    grade: 1
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 3
+    bonusAmount: 1.2
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510142
+    partName: "\uC81C\uD2B8 \uBD80\uC2A4\uD130"
+    slot: 5
+    grade: 2
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 3
+    bonusAmount: 1.5
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510143
     partName: "\uC81C\uD2B8 \uBD80\uC2A4\uD130"
     slot: 5
     grade: 3
     isDefaultStarter: 0
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
     bonusStat: 3
-    bonusAmount: 1.5
+    bonusAmount: 2
     weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510144
+    partName: "\uC81C\uD2B8 \uBD80\uC2A4\uD130"
+    slot: 5
+    grade: 4
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 3
+    bonusAmount: 2.7
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510150
+    partName: "\uACBD\uB7C9 \uD5EC\uBA67"
+    slot: 6
+    grade: 0
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 2
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510151
+    partName: "\uACBD\uB7C9 \uD5EC\uBA67"
+    slot: 6
+    grade: 1
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 2.6
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510152
+    partName: "\uACBD\uB7C9 \uD5EC\uBA67"
+    slot: 6
+    grade: 2
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 3.4
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510153
+    partName: "\uACBD\uB7C9 \uD5EC\uBA67"
+    slot: 6
+    grade: 3
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 4.4
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510154
+    partName: "\uACBD\uB7C9 \uD5EC\uBA67"
+    slot: 6
+    grade: 4
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 6
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510160
+    partName: "\uAC15\uD654 \uD5EC\uBA67"
+    slot: 6
+    grade: 0
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 4
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510161
+    partName: "\uAC15\uD654 \uD5EC\uBA67"
+    slot: 6
+    grade: 1
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 5.2
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510162
+    partName: "\uAC15\uD654 \uD5EC\uBA67"
+    slot: 6
+    grade: 2
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 6.8
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510163
+    partName: "\uAC15\uD654 \uD5EC\uBA67"
+    slot: 6
+    grade: 3
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 8.8
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510164
+    partName: "\uAC15\uD654 \uD5EC\uBA67"
+    slot: 6
+    grade: 4
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 12
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 510170
+    partName: "\uD655\uC7A5 \uB514\uC2A4\uD06C \uC2AC\uB86F"
+    slot: 7
+    grade: 0
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 6
+  - partId: 510171
+    partName: "\uD655\uC7A5 \uB514\uC2A4\uD06C \uC2AC\uB86F"
+    slot: 7
+    grade: 1
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 7
+  - partId: 510172
+    partName: "\uD655\uC7A5 \uB514\uC2A4\uD06C \uC2AC\uB86F"
+    slot: 7
+    grade: 2
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 8
+  - partId: 510173
+    partName: "\uD655\uC7A5 \uB514\uC2A4\uD06C \uC2AC\uB86F"
+    slot: 7
+    grade: 3
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 10
+  - partId: 510174
+    partName: "\uD655\uC7A5 \uB514\uC2A4\uD06C \uC2AC\uB86F"
+    slot: 7
+    grade: 4
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 12
+  - partId: 510180
+    partName: "\uB300\uC6A9\uB7C9 \uB514\uC2A4\uD06C \uC2AC\uB86F"
+    slot: 7
+    grade: 0
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 7
+  - partId: 510181
+    partName: "\uB300\uC6A9\uB7C9 \uB514\uC2A4\uD06C \uC2AC\uB86F"
+    slot: 7
+    grade: 1
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 8
+  - partId: 510182
+    partName: "\uB300\uC6A9\uB7C9 \uB514\uC2A4\uD06C \uC2AC\uB86F"
+    slot: 7
+    grade: 2
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 10
+  - partId: 510183
+    partName: "\uB300\uC6A9\uB7C9 \uB514\uC2A4\uD06C \uC2AC\uB86F"
+    slot: 7
+    grade: 3
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 12
+  - partId: 510184
+    partName: "\uB300\uC6A9\uB7C9 \uB514\uC2A4\uD06C \uC2AC\uB86F"
+    slot: 7
+    grade: 4
+    isDefaultStarter: 0
+    restrictsWeaponClass: 0
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 0
+    socketDetectRangeMultiplier: 0
+    socketRotationSpeedMultiplier: 0
+    bonusStat: 2
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 14
+  - partId: 520000
+    partName: "\uACBD\uBB34\uC7A5 \uC18C\uCF13"
+    slot: 0
+    grade: 0
+    isDefaultStarter: 0
+    restrictsWeaponClass: 1
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 1
+    socketDetectRangeMultiplier: 1
+    socketRotationSpeedMultiplier: 1
+    bonusStat: 1
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 520001
+    partName: "\uACBD\uBB34\uC7A5 \uC18C\uCF13"
+    slot: 0
+    grade: 1
+    isDefaultStarter: 0
+    restrictsWeaponClass: 1
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 1.15
+    socketDetectRangeMultiplier: 1.1
+    socketRotationSpeedMultiplier: 1.2
+    bonusStat: 1
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 520002
+    partName: "\uACBD\uBB34\uC7A5 \uC18C\uCF13"
+    slot: 0
+    grade: 2
+    isDefaultStarter: 0
+    restrictsWeaponClass: 1
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 1.3
+    socketDetectRangeMultiplier: 1.2
+    socketRotationSpeedMultiplier: 1.45
+    bonusStat: 1
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 520003
+    partName: "\uACBD\uBB34\uC7A5 \uC18C\uCF13"
+    slot: 0
+    grade: 3
+    isDefaultStarter: 0
+    restrictsWeaponClass: 1
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 1.5
+    socketDetectRangeMultiplier: 1.35
+    socketRotationSpeedMultiplier: 1.75
+    bonusStat: 1
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 520004
+    partName: "\uACBD\uBB34\uC7A5 \uC18C\uCF13"
+    slot: 0
+    grade: 4
+    isDefaultStarter: 0
+    restrictsWeaponClass: 1
+    allowedWeaponClass: 0
+    socketRangeMultiplier: 1.75
+    socketDetectRangeMultiplier: 1.5
+    socketRotationSpeedMultiplier: 2.2
+    bonusStat: 1
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 520010
+    partName: "\uC911\uBB34\uC7A5 \uC18C\uCF13"
+    slot: 0
+    grade: 0
+    isDefaultStarter: 0
+    restrictsWeaponClass: 1
+    allowedWeaponClass: 1
+    socketRangeMultiplier: 1
+    socketDetectRangeMultiplier: 1
+    socketRotationSpeedMultiplier: 1
+    bonusStat: 1
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 520011
+    partName: "\uC911\uBB34\uC7A5 \uC18C\uCF13"
+    slot: 0
+    grade: 1
+    isDefaultStarter: 0
+    restrictsWeaponClass: 1
+    allowedWeaponClass: 1
+    socketRangeMultiplier: 1.15
+    socketDetectRangeMultiplier: 1.1
+    socketRotationSpeedMultiplier: 1.2
+    bonusStat: 1
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 520012
+    partName: "\uC911\uBB34\uC7A5 \uC18C\uCF13"
+    slot: 0
+    grade: 2
+    isDefaultStarter: 0
+    restrictsWeaponClass: 1
+    allowedWeaponClass: 1
+    socketRangeMultiplier: 1.3
+    socketDetectRangeMultiplier: 1.2
+    socketRotationSpeedMultiplier: 1.45
+    bonusStat: 1
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 520013
+    partName: "\uC911\uBB34\uC7A5 \uC18C\uCF13"
+    slot: 0
+    grade: 3
+    isDefaultStarter: 0
+    restrictsWeaponClass: 1
+    allowedWeaponClass: 1
+    socketRangeMultiplier: 1.5
+    socketDetectRangeMultiplier: 1.35
+    socketRotationSpeedMultiplier: 1.75
+    bonusStat: 1
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 520014
+    partName: "\uC911\uBB34\uC7A5 \uC18C\uCF13"
+    slot: 0
+    grade: 4
+    isDefaultStarter: 0
+    restrictsWeaponClass: 1
+    allowedWeaponClass: 1
+    socketRangeMultiplier: 1.75
+    socketDetectRangeMultiplier: 1.5
+    socketRotationSpeedMultiplier: 2.2
+    bonusStat: 1
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 520020
+    partName: "\uADFC\uC811 \uACB0\uD569 \uC18C\uCF13"
+    slot: 0
+    grade: 0
+    isDefaultStarter: 0
+    restrictsWeaponClass: 1
+    allowedWeaponClass: 2
+    socketRangeMultiplier: 1
+    socketDetectRangeMultiplier: 1
+    socketRotationSpeedMultiplier: 1
+    bonusStat: 1
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 520021
+    partName: "\uADFC\uC811 \uACB0\uD569 \uC18C\uCF13"
+    slot: 0
+    grade: 1
+    isDefaultStarter: 0
+    restrictsWeaponClass: 1
+    allowedWeaponClass: 2
+    socketRangeMultiplier: 1.15
+    socketDetectRangeMultiplier: 1.1
+    socketRotationSpeedMultiplier: 1.2
+    bonusStat: 1
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 520022
+    partName: "\uADFC\uC811 \uACB0\uD569 \uC18C\uCF13"
+    slot: 0
+    grade: 2
+    isDefaultStarter: 0
+    restrictsWeaponClass: 1
+    allowedWeaponClass: 2
+    socketRangeMultiplier: 1.3
+    socketDetectRangeMultiplier: 1.2
+    socketRotationSpeedMultiplier: 1.45
+    bonusStat: 1
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 520023
+    partName: "\uADFC\uC811 \uACB0\uD569 \uC18C\uCF13"
+    slot: 0
+    grade: 3
+    isDefaultStarter: 0
+    restrictsWeaponClass: 1
+    allowedWeaponClass: 2
+    socketRangeMultiplier: 1.5
+    socketDetectRangeMultiplier: 1.35
+    socketRotationSpeedMultiplier: 1.75
+    bonusStat: 1
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 0
+  - partId: 520024
+    partName: "\uADFC\uC811 \uACB0\uD569 \uC18C\uCF13"
+    slot: 0
+    grade: 4
+    isDefaultStarter: 0
+    restrictsWeaponClass: 1
+    allowedWeaponClass: 2
+    socketRangeMultiplier: 1.75
+    socketDetectRangeMultiplier: 1.5
+    socketRotationSpeedMultiplier: 2.2
+    bonusStat: 1
+    bonusAmount: 0
+    weightCapacity: 0
+    discSlotCount: 0
   weaponMeta:
   - weaponId: 300001
     type: 0
+    weaponClass: 0
     weight: 2
   - weaponId: 300101
     type: 2
+    weaponClass: 0
     weight: 3
   - weaponId: 300201
     type: 1
+    weaponClass: 0
     weight: 3
   - weaponId: 300301
     type: 2
+    weaponClass: 1
     weight: 4
   - weaponId: 300401
     type: 3
+    weaponClass: 1
     weight: 5
   - weaponId: 300501
     type: 4
+    weaponClass: 0
     weight: 3
+  - weaponId: 300601
+    type: 5
+    weaponClass: 2
+    weight: 2
+  - weaponId: 300701
+    type: 5
+    weaponClass: 2
+    weight: 4
   headModdingInfos:
   - robotId: 100001
     weaponSocketCount: 2
     discSlotCount: 6
+    partBoxCapacity: 20
   - robotId: 100002
     weaponSocketCount: 2
     discSlotCount: 6
+    partBoxCapacity: 24
   boxGradeSettings:
   - grade: 0
     weight: 50

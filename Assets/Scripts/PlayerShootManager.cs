@@ -11,7 +11,10 @@ using UnityEngine;
 /// 무기 데이터테이블(WeaponData) 각 필드 사용 방식:
 /// - weapon_atk        : 명중 시 데미지
 /// - weapon_atsp       : 공격속도 → 다음 발사까지의 쿨다운 (1 / atsp 초)
-/// - weapon_range      : 투사체 최대 사거리이자 자동 타겟팅 탐지 반경
+/// - weapon_range      : 사거리(탄이 날아가는 최대 거리)와 감지거리(적을 감지해 발사를 시작하는
+///                       거리)의 <b>기준값</b>. 무기 소켓 파츠의 등급이 이 값에 각각 다른 배율을
+///                       곱해 최종 사거리/감지거리를 만든다(ModdingManager.GetWeaponSocketModifiers).
+///                       감지거리는 사거리를 넘지 않도록 잘린다 - 닿지도 않을 적에게 쏘지 않기 위함
 /// - weapon_atsize     : 투사체 크기(스케일)
 /// - weapon_aim        : 조준 정확도 → 타겟 방향이 최대 이 각도(도)만큼 무작위로 벗어남
 /// - weapon_rebound    : 반동 → 한 번의 발사에서 여러 발이 나갈 때, 발마다 진행 방향은 그대로 두고 옆으로 벌어지는 간격(평행 발사)
@@ -424,11 +427,19 @@ public class PlayerShootManager : MonoBehaviour
         return null;
     }
 
+    // 무기 소켓 파츠(등급)가 주는 사거리/감지거리/회전속도 배율. 매 슬롯마다 조회하지 않도록
+    // 프레임당 한 번만 읽어둔다(소켓 파츠는 현재 모든 소켓에 공통 적용된다).
+    private ModdingManager.SocketModifiers socket_modifiers = ModdingManager.SocketModifiers.Identity;
+
     private void Update()
     {
         // 게임오버/승리 이후, 그리고 정비 화면(AI 코어/로봇 정비/상점)이 열려 있는 동안에는
         // 조준/발사 모두 정지 - 정비 중에는 인게임이 완전히 멈춰 있어야 한다(사용자 확정 사항).
         if (GameOverManager.IsGameOver || GameWinManager.IsGameWon || GameFlowManager.IsIntermission) return;
+
+        socket_modifiers = ModdingManager.Instance != null
+            ? ModdingManager.Instance.GetWeaponSocketModifiers()
+            : ModdingManager.SocketModifiers.Identity;
 
         for (int i = 0; i < weapon_slots.Count; i++)
         {
@@ -448,8 +459,10 @@ public class PlayerShootManager : MonoBehaviour
         Transform pivot = slot.rig_point != null ? slot.rig_point : slot.muzzle_point;
         if (pivot == null) return;
 
-        float range = weapon.weapon_range > 0f ? weapon.weapon_range : DefaultWeaponRange;
-        EnemyUnit target = FindNearestEnemyInRange(pivot.position, range);
+        // 감지거리 = 적을 감지해 발사를 시작하는 거리. 탄이 날아가는 최대 거리(사거리)와는
+        // 별개이며, 둘 다 무기 기본값(weapon_range)에 소켓 등급 배율을 곱해서 얻는다.
+        float detect_range = GetDetectRange(weapon);
+        EnemyUnit target = FindNearestEnemyInRange(pivot.position, detect_range);
 
         if (target == null)
         {
@@ -479,12 +492,29 @@ public class PlayerShootManager : MonoBehaviour
         TryFireSlot(slot_index, slot, weapon, target);
     }
 
+    /// <summary>탄이 실제로 날아가는 최대 거리 = 무기 기본 사거리 x 소켓 등급의 사거리 배율.</summary>
+    private float GetTravelRange(WeaponData weapon)
+    {
+        float baseRange = weapon.weapon_range > 0f ? weapon.weapon_range : DefaultWeaponRange;
+        return baseRange * socket_modifiers.Range;
+    }
+
     /// <summary>
-    /// 무기 피벗을 목표 각도 쪽으로 rotation_speed_degrees_per_second 속도만큼만 돌리고,
-    /// 이번 프레임에 실제로 적용된 각도를 돌려준다.
+    /// 적을 감지해 발사를 시작하는 거리 = 무기 기본 사거리 x 소켓 등급의 감지거리 배율.
+    /// 감지한 적에게 탄이 닿아야 의미가 있으므로 사거리를 넘지 않도록 잘라둔다.
+    /// </summary>
+    private float GetDetectRange(WeaponData weapon)
+    {
+        float baseRange = weapon.weapon_range > 0f ? weapon.weapon_range : DefaultWeaponRange;
+        return Mathf.Min(baseRange * socket_modifiers.DetectRange, GetTravelRange(weapon));
+    }
+
+    /// <summary>
+    /// 무기 피벗을 목표 각도 쪽으로 rotation_speed_degrees_per_second(x 소켓 등급 배율) 속도만큼만
+    /// 돌리고, 이번 프레임에 실제로 적용된 각도를 돌려준다.
     /// 속도가 0 이하면 예전처럼 즉시 목표 각도로 스냅한다.
     /// </summary>
-    private static float RotatePivotTowards(WeaponSlot slot, Transform pivot, float target_angle)
+    private float RotatePivotTowards(WeaponSlot slot, Transform pivot, float target_angle)
     {
         float applied_angle;
 
@@ -495,8 +525,8 @@ public class PlayerShootManager : MonoBehaviour
         else
         {
             float current_angle = pivot.eulerAngles.z;
-            applied_angle = Mathf.MoveTowardsAngle(current_angle, target_angle,
-                                                   slot.rotation_speed_degrees_per_second * Time.deltaTime);
+            float speed = slot.rotation_speed_degrees_per_second * socket_modifiers.RotationSpeed;
+            applied_angle = Mathf.MoveTowardsAngle(current_angle, target_angle, speed * Time.deltaTime);
         }
 
         pivot.rotation = Quaternion.Euler(0f, 0f, applied_angle);
@@ -677,9 +707,9 @@ public class PlayerShootManager : MonoBehaviour
         bool delayed_blast = IsDelayedBlastWeapon(weapon.weapon_id);
         float travel_size = delayed_blast ? Mathf.Max(0.01f, delayed_blast_travel_size) : size;
 
-        // 폭발화기는 기본적으로 최대 사거리(weapon_range)에서 터지지만,
+        // 폭발화기는 기본적으로 최대 사거리에서 터지지만,
         // 타겟이 사거리 안쪽에 있다면 그 지점에서 조기 폭발한다.
-        float travel_range = weapon.weapon_range > 0f ? weapon.weapon_range : DefaultWeaponRange;
+        float travel_range = GetTravelRange(weapon);
         if (delayed_blast && target_distance > 0f && target_distance < travel_range)
         {
             travel_range = target_distance;

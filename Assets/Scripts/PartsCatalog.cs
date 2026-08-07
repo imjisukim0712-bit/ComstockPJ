@@ -15,12 +15,18 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "PartsCatalog", menuName = "Comstock/파츠 카탈로그")]
 public class PartsCatalog : ScriptableObject
 {
-    /// <summary>weapon_id → 화기 타입/무게. 시트에 없는 값이라 여기서 보강한다.</summary>
+    /// <summary>weapon_id → 무기 타입/투사체 타입/무게. 시트에 없는 값이라 여기서 보강한다.</summary>
     [Serializable]
     public struct WeaponMetaEntry
     {
         public int weaponId;
+
+        [Tooltip("투사체 타입(연사/산탄/정밀/폭발/에너지/근접) - 공격 방식의 분류. " +
+                 "소켓 장착 제한과는 무관하다")]
         public WeaponType type;
+
+        [Tooltip("무기 타입(경무장/중무장/근접무기) - 무기 소켓 파츠가 이 값으로 장착 가능 여부를 가른다")]
+        public WeaponClass weaponClass;
 
         [Tooltip("자기장 코어 + 다리의 weightCapacity 합과 비교되는 무게")]
         public float weight;
@@ -35,8 +41,12 @@ public class PartsCatalog : ScriptableObject
         [Tooltip("무기 소켓 개수 (PlayerShootManager 인스펙터 설정과 일치해야 한다)")]
         public int weaponSocketCount;
 
-        [Tooltip("장착 가능한 최대 디스크 개수")]
+        [Tooltip("장착 가능한 최대 디스크 개수. DiscSlot 파츠를 장착하면 그 파츠 값이 이 기본값을 대체한다")]
         public int discSlotCount;
+
+        [Tooltip("적재량 - 한 번에 보유할 수 있는 최대 부품 상자 개수. 이 개수에 도달하면 " +
+                 "몬스터가 더 이상 부품 상자를 드랍하지 않으며, 정비 화면의 임시 인벤토리 크기도 이 값이다")]
+        public int partBoxCapacity;
     }
 
     /// <summary>부품 상자 개봉 시 등급 추첨에 쓰는 가중치. ShopCatalog.GradeSetting과 같은 패턴.</summary>
@@ -117,15 +127,31 @@ public class PartsCatalog : ScriptableObject
         return false;
     }
 
+    /// <summary>적재량 데이터가 아직 없는 로봇에 쓰는 안전한 기본 상자 보유 상한.</summary>
+    public const int DefaultPartBoxCapacity = 20;
+
     public HeadModdingInfo GetHeadModdingInfo(int robotId)
     {
-        foreach (HeadModdingInfo info in headModdingInfos)
+        foreach (HeadModdingInfo entry in headModdingInfos)
         {
-            if (info.robotId == robotId) return info;
+            if (entry.robotId != robotId) continue;
+
+            // struct라 여기서 복사본이 만들어진다(foreach 변수 자체는 수정할 수 없다).
+            // 적재량이 0인 항목은 이 필드가 없던 시절에 저장된 데이터라, 그대로 두면 상자를
+            // 하나도 못 얻는 상태가 되므로 안전한 기본값으로 보정해서 돌려준다.
+            HeadModdingInfo info = entry;
+            if (info.partBoxCapacity <= 0) info.partBoxCapacity = DefaultPartBoxCapacity;
+            return info;
         }
 
-        // 데이터가 아직 없는 로봇ID면 안전한 기본값(소켓 2, 디스크 6)으로 폴백
-        return new HeadModdingInfo { robotId = robotId, weaponSocketCount = 2, discSlotCount = 6 };
+        // 데이터가 아직 없는 로봇ID면 안전한 기본값으로 폴백
+        return new HeadModdingInfo
+        {
+            robotId = robotId,
+            weaponSocketCount = 2,
+            discSlotCount = 6,
+            partBoxCapacity = DefaultPartBoxCapacity
+        };
     }
 
     /// <summary>Phase 3 ShopCatalog와 동일한 가중치 추첨 방식으로 부품 상자 등급을 뽑는다.</summary>
@@ -153,34 +179,39 @@ public class PartsCatalog : ScriptableObject
     }
 
     /// <summary>
-    /// 지정한 등급의 슬롯 중 하나를 무작위로 골라, 그 슬롯의 후보 파츠(기본 파츠 제외) 중
-    /// 하나를 뽑는다. 그 등급에 맞는 후보가 없으면 슬롯 전체(등급 무관)에서 다시 뽑는다.
+    /// 추첨된 등급에 해당하는 루트 파츠(기본 파츠 제외) 전체에서 하나를 뽑는다.
+    ///
+    /// 파츠는 종류마다 5개 등급이 전부 존재하는 형식이므로(예: 무쇠다리 = 일반/희귀/서사/유일/전설)
+    /// 등급을 먼저 확정해도 후보가 비지 않는다. 예전에는 슬롯을 먼저 무작위로 고른 뒤 그 슬롯에
+    /// 해당 등급이 없으면 등급 무관하게 뽑는 폴백을 탔는데, 슬롯당 파츠가 몇 개 없어서 이 폴백이
+    /// 거의 항상 걸렸고 그 결과 boxGradeSettings의 minWave가 무시돼 웨이브 1에도 전설이 나왔다.
+    ///
+    /// 그래도 데이터가 아직 채워지지 않은 등급을 만날 수 있으므로, 후보가 없으면 <b>하위</b>
+    /// 등급으로 내려가며 찾는다(상위로 올라가면 minWave 게이팅이 다시 깨진다).
     /// </summary>
     public bool TryRollLootPart(ItemGrade grade, out PartData result)
     {
-        var slots = new List<PartSlot>((PartSlot[])Enum.GetValues(typeof(PartSlot)));
-        PartSlot chosenSlot = slots[UnityEngine.Random.Range(0, slots.Count)];
+        var candidates = new List<PartData>();
 
-        var exactGradeCandidates = new List<PartData>();
-        var anyGradeCandidates = new List<PartData>();
-
-        foreach (PartData part in parts)
+        for (int g = (int)grade; g >= 0; g--)
         {
-            if (part.slot != chosenSlot || part.isDefaultStarter) continue;
+            candidates.Clear();
 
-            anyGradeCandidates.Add(part);
-            if (part.grade == grade) exactGradeCandidates.Add(part);
+            foreach (PartData part in parts)
+            {
+                if (part.isDefaultStarter) continue;
+                if ((int)part.grade != g) continue;
+                candidates.Add(part);
+            }
+
+            if (candidates.Count > 0)
+            {
+                result = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+                return true;
+            }
         }
 
-        List<PartData> pool = exactGradeCandidates.Count > 0 ? exactGradeCandidates : anyGradeCandidates;
-
-        if (pool.Count == 0)
-        {
-            result = default;
-            return false;
-        }
-
-        result = pool[UnityEngine.Random.Range(0, pool.Count)];
-        return true;
+        result = default;
+        return false;
     }
 }

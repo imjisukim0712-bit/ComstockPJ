@@ -51,6 +51,10 @@ MonoBehaviour:
     basePrice: 45
   - weaponId: 300501
     basePrice: 40
+  - weaponId: 300601
+    basePrice: 30
+  - weaponId: 300701
+    basePrice: 45
   discs:
   - discId: 400001
     discName: "\uACFC\uBD80\uD558 \uD68C\uB85C"

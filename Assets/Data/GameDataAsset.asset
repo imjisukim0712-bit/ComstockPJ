@@ -151,6 +151,36 @@ MonoBehaviour:
     weapon_tanhwan: Energy
     weapon_lfwpimg: LeftGiganchong
     weapon_rgwpimg: RightGiganchong
+  - weapon_id: 300601
+    weapon_name: "\uC9C4\uB3D9 \uBE14\uB808\uC774\uB4DC"
+    weapon_atk: 8
+    weapon_atsp: 4
+    weapon_range: 2
+    weapon_atsize: 0.7
+    weapon_aim: 0
+    weapon_rebound: 1
+    weapon_projectiles: 1
+    weapon_capacity: 0
+    weapon_reload: 0
+    weapon_penetration: 1
+    weapon_tanhwan: Energy
+    weapon_lfwpimg: LeftGiganchong
+    weapon_rgwpimg: RightGiganchong
+  - weapon_id: 300701
+    weapon_name: "\uD30C\uC77C \uBC99\uCEE4"
+    weapon_atk: 30
+    weapon_atsp: 1.2
+    weapon_range: 3
+    weapon_atsize: 1.2
+    weapon_aim: 0
+    weapon_rebound: 1
+    weapon_projectiles: 1
+    weapon_capacity: 0
+    weapon_reload: 0
+    weapon_penetration: 1
+    weapon_tanhwan: Energy
+    weapon_lfwpimg: LeftGiganchong
+    weapon_rgwpimg: RightGiganchong
   amors:
   - amor_id: 400001
     amor_name: "\uAC15\uD654 \uC7A5\uAC11"

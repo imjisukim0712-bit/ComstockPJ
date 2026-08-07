@@ -59,6 +59,9 @@ public class WaveManager : MonoBehaviour
     public event Action<int> OnWaveStarted;
     public event Action<int> OnWaveEnded;
 
+    /// <summary>UI 표시용 - 마지막(보스) 웨이브 번호. 정비 화면의 "WAVE 07 / 20" 표기에 쓴다.</summary>
+    public int FinalWaveNumber => finalWaveNumber;
+
     /// <summary>HUD 표시용 - 현재 웨이브의 남은 제한시간(초). 시간이 끝나면 0.</summary>
     public float RemainingSeconds { get; private set; }
 

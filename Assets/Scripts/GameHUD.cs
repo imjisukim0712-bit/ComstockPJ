@@ -42,6 +42,10 @@ public class GameHUD : MonoBehaviour
     [Tooltip("남은 시간을 조회할 웨이브 매니저")]
     [SerializeField] private WaveManager waveManager;
 
+    [Tooltip("보유한 부품 상자를 '부품 상자 5/20' 형식으로 표시할 텍스트 (비워두면 표시 생략).\n" +
+             "분모는 머리(로봇)의 적재량이며, 이 개수에 도달하면 몬스터가 상자를 더 드랍하지 않는다")]
+    [SerializeField] private TextMeshProUGUI partBoxText;
+
     [Header("AI 코어 경험치 바")]
     [Tooltip("AI 코어 레벨/경험치를 조회할 매니저 (다음 레벨 필요 경험치 계산에 사용)")]
     [SerializeField] private AiCoreManager aiCoreManager;
@@ -102,6 +106,19 @@ public class GameHUD : MonoBehaviour
 
         UpdateWaveTime();
         UpdateExpBar();
+        UpdatePartBoxCount();
+    }
+
+    // 부품 상자는 머리(로봇)의 적재량만큼만 보유할 수 있고 상한에 도달하면 더 드랍되지 않으므로,
+    // 플레이어가 "지금 몇 개까지 더 얻을 수 있는지" 알 수 있게 보유량/상한을 함께 보여준다.
+    private void UpdatePartBoxCount()
+    {
+        if (partBoxText == null) return;
+
+        ModdingManager modding = ModdingManager.Instance;
+        int capacity = modding != null ? modding.PartBoxCapacity : 0;
+
+        partBoxText.text = $"부품 상자 {RunState.UnopenedPartBoxCount}/{capacity}";
     }
 
     // 웨이브 남은 초. 제한시간이 끝난 뒤에는 남은 적을 다 잡아야 웨이브가 끝나므로,

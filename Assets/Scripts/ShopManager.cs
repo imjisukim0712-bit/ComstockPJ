@@ -71,13 +71,10 @@ public class ShopManager : MonoBehaviour
     /// </summary>
     private int GetDiscSlotCount()
     {
-        ModdingManager modding = Object.FindFirstObjectByType<ModdingManager>();
-        PlayerRobotController player = Object.FindFirstObjectByType<PlayerRobotController>();
-
-        if (modding != null && modding.Catalog != null && player != null)
-        {
-            return modding.Catalog.GetHeadModdingInfo(player.RobotId).discSlotCount;
-        }
+        // ModdingManager가 디스크 슬롯 파츠(DiscSlot)까지 반영해 최종 개수를 계산한다 -
+        // 파츠를 끼웠으면 그 값이, 없으면 머리(로봇) 기본값이 쓰인다.
+        ModdingManager modding = ModdingManager.Instance;
+        if (modding != null && modding.Catalog != null) return modding.DiscSlotCount;
 
         return catalog != null ? catalog.DiscSlotCount : 0;
     }

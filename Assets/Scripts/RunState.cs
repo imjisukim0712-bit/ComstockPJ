@@ -56,8 +56,15 @@ public static class RunState
     // 새 파츠를 장착하면 이전 파츠의 보너스는 사라져야 하기 때문).
     public static Dictionary<StatType, float> PartStatBonuses { get; private set; } = new Dictionary<StatType, float>();
 
-    // 인게임에서 파밍했지만 아직 정비 시간에 개봉하지 않은 부품 상자 개수
+    // 인게임에서 파밍했지만 아직 정비 시간에 개봉하지 않은 부품 상자 개수.
+    // 상한은 머리(로봇)의 적재량(PartsCatalog.HeadModdingInfo.partBoxCapacity)이며,
+    // 상한에 도달하면 몬스터가 더 이상 상자를 드랍하지 않는다.
     public static int UnopenedPartBoxCount { get; set; } = 0;
+
+    // 정비 화면에서만 존재하는 임시 인벤토리(부품 상자를 자동 개봉해 담아둔 파츠 ID 목록).
+    // 정비 화면을 닫으면 남은 내용물은 전부 사라진다(사용자 확정 사항). 파츠를 교체하면
+    // 슬롯에서 빠진 기존 파츠도 이 목록으로 들어왔다가 정비 종료와 함께 함께 사라진다.
+    public static List<int> ModdingInventory { get; private set; } = new List<int>();
 
     public static event Action OnChanged;
 
@@ -83,5 +90,6 @@ public static class RunState
         EquippedPartIds.Clear();
         PartStatBonuses.Clear();
         UnopenedPartBoxCount = 0;
+        ModdingInventory.Clear();
     }
 }

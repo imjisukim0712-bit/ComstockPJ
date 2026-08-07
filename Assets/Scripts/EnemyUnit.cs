@@ -254,10 +254,14 @@ public class EnemyUnit : MonoBehaviour
     }
 
     // 골드/경험치와 별개로, PartsCatalog.PartBoxDropChance 확률로 부품 상자를 추가로 드랍한다.
+    // 단, 머리(로봇)의 적재량 상한에 도달했으면 아예 드랍하지 않는다 - 주울 수 없는 상자가
+    // 필드에 쌓이면 플레이어가 헛걸음을 하게 되므로 나오지 않는 편이 낫다.
     private void TryDropPartBox()
     {
         if (modding_manager_cache == null) modding_manager_cache = FindFirstObjectByType<ModdingManager>();
         if (modding_manager_cache == null || modding_manager_cache.Catalog == null) return;
+
+        if (!modding_manager_cache.CanReceiveMorePartBoxes) return;
 
         if (Random.value <= modding_manager_cache.Catalog.PartBoxDropChance)
         {
