@@ -114,6 +114,7 @@ public class WaveManager : MonoBehaviour
             float spawnInterval = Mathf.Max(minSpawnInterval, enemySpawner.BaseSpawnInterval * Mathf.Pow(spawnIntervalDecayPerWave, wave - 1));
             int maxAlive = enemySpawner.BaseMaxAliveEnemies + maxAliveIncreasePerWave * (wave - 1);
             enemySpawner.ConfigureDifficulty(spawnInterval, maxAlive);
+            enemySpawner.SetCurrentWave(wave);
             enemySpawner.SetSpawningEnabled(true);
         }
 

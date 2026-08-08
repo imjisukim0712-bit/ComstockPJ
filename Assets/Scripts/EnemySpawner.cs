@@ -23,8 +23,20 @@ public class EnemySpawner : MonoBehaviour
     [SerializeField] private List<MonsterPrefabEntry> monsterPrefabs = new List<MonsterPrefabEntry>();
 
     [Header("자동 스폰 설정")]
-    [Tooltip("스폰할 몬스터ID 목록. 매 스폰마다 이 중 하나를 무작위로 골라 소환한다")]
+    [Tooltip("스폰할 몬스터ID 목록(항상 후보). 매 스폰마다 이 중 하나를 무작위로 골라 소환한다")]
     [SerializeField] private List<int> spawnMonsterIds = new List<int> { 200001 }; // 기본: 좀비
+
+    [Header("상위 몬스터 해금")]
+    [Tooltip("이 몬스터ID들은 advancedUnlockWave 웨이브에 도달하기 전까지는 스폰 후보에서 제외된다(예: 차저를 초반부터 섞지 않기 위함)")]
+    [SerializeField] private List<int> advancedMonsterIds = new List<int>();
+    [Tooltip("advancedMonsterIds가 스폰 후보에 합류하는 웨이브 번호")]
+    [SerializeField] private int advancedUnlockWave = 4;
+
+    private int currentWave = 1;
+    private readonly List<int> spawn_pool_buffer = new List<int>();
+
+    /// <summary>WaveManager가 웨이브 시작 시 호출해 상위 몬스터 해금 여부를 갱신한다.</summary>
+    public void SetCurrentWave(int wave) => currentWave = wave;
 
     [Tooltip("한 번에 몇 마리씩 스폰할지. 뱀서라이크 문법상 화면이 적으로 가득 차야 하므로 1보다 크게 둔다")]
     [SerializeField] private int spawnBatchSize = 3;
@@ -108,13 +120,17 @@ public class EnemySpawner : MonoBehaviour
             if (!IsSpawningEnabled) continue; // 웨이브 사이(정비/상점)에는 스폰하지 않음
 
             alive_enemies.RemoveAll(e => e == null); // 죽어서 파괴된 개체는 목록에서 정리
-            if (spawnMonsterIds.Count == 0) continue;
+
+            spawn_pool_buffer.Clear();
+            spawn_pool_buffer.AddRange(spawnMonsterIds);
+            if (currentWave >= advancedUnlockWave) spawn_pool_buffer.AddRange(advancedMonsterIds);
+            if (spawn_pool_buffer.Count == 0) continue;
 
             for (int i = 0; i < Mathf.Max(1, spawnBatchSize); i++)
             {
                 if (maxAliveEnemies > 0 && alive_enemies.Count >= maxAliveEnemies) break;
 
-                int monsterId = spawnMonsterIds[UnityEngine.Random.Range(0, spawnMonsterIds.Count)];
+                int monsterId = spawn_pool_buffer[UnityEngine.Random.Range(0, spawn_pool_buffer.Count)];
                 Vector3 position = GetRandomSpawnPosition();
 
                 EnemyUnit unit = SpawnMonster(monsterId, position);

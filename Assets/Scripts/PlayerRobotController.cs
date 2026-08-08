@@ -77,6 +77,7 @@ public class PlayerRobotController : MonoBehaviour
         RunState.Reset();
         EnemyUnit.Alive.Clear();
         EnemyUnit.ResetStaticCaches();
+        RewardPickup.AlivePartBoxes.Clear();
         GameFlowManager.ResetStaticState();
 
         startPosition = transform.position;

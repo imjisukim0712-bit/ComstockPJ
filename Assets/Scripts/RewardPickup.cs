@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public enum RewardType
@@ -16,6 +17,10 @@ public enum RewardType
 [RequireComponent(typeof(Collider))]
 public class RewardPickup : MonoBehaviour
 {
+    // 화면 밖 부품 상자 위치를 화살표로 안내하는 PartBoxIndicatorUI가 순회하는 목록
+    // (EnemyUnit.Alive와 동일한 패턴). PartBox 타입만 등록한다.
+    public static readonly List<RewardPickup> AlivePartBoxes = new List<RewardPickup>();
+
     public RewardType Type { get; private set; }
     public int Amount { get; private set; }
 
@@ -25,6 +30,8 @@ public class RewardPickup : MonoBehaviour
     {
         Type = type;
         Amount = amount;
+
+        if (Type == RewardType.PartBox) AlivePartBoxes.Add(this);
     }
 
     private void OnTriggerEnter(Collider other)
@@ -47,6 +54,8 @@ public class RewardPickup : MonoBehaviour
     {
         if (collected) return;
         collected = true;
+
+        if (Type == RewardType.PartBox) AlivePartBoxes.Remove(this);
 
         switch (Type)
         {
