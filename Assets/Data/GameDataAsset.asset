@@ -15,7 +15,7 @@ MonoBehaviour:
   monsters:
   - monster_id: 200001
     monster_name: "\uC880\uBE44"
-    monster_hp: 30
+    monster_hp: 180
     monster_atk: 15
     monster_def: 0
     monster_speed: 3.2
@@ -24,7 +24,7 @@ MonoBehaviour:
     monster_atsp: 1
   - monster_id: 200002
     monster_name: "\uCC28\uC800"
-    monster_hp: 75
+    monster_hp: 450
     monster_atk: 10
     monster_def: 0
     monster_speed: 2.4

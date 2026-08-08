@@ -9058,6 +9058,8 @@ MonoBehaviour:
   blast_visual_duration: 0.08
   max_detect_range: 8.5
   beam_sprite_name: Energy
+  roll_rig_local_position: {x: 0, y: 4.3, z: 0}
+  roll_rig_lateral_spread: 0.5
 --- !u!4 &1320994819
 Transform:
   m_ObjectHideFlags: 0
@@ -11540,8 +11542,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3, y: 3, z: 0.01}
-  m_Center: {x: -0.1, y: 0.4, z: 0}
+  m_Size: {x: 3, y: 1.7, z: 0.01}
+  m_Center: {x: -0.1, y: 0.85, z: 0}
 --- !u!54 &1786583643
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -11581,8 +11583,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f30bb42e48958fd48b11538bd3db3299, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerRobotController
-  dashDistance: 3.5
-  dashDuration: 0.18
+  dashDistance: 5
+  dashDuration: 0.28
   dashCooldown: 1.2
   fallbackRobotIdForTesting: 100001
   animator: {fileID: 1786583645}
@@ -11590,6 +11592,7 @@ MonoBehaviour:
   flipSprite: 1
   flipXOnRight: 1
   spriteRenderer: {fileID: 1786583640}
+  proceduralRig: {fileID: 0}
 --- !u!95 &1786583645
 Animator:
   serializedVersion: 7

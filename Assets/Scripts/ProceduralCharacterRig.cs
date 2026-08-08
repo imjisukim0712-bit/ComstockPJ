@@ -156,6 +156,12 @@ public class ProceduralCharacterRig : MonoBehaviour
     private Vector2 externalVelocity;
     private bool built;
 
+    // 구르기(대시) 연출 - 외부(PlayerRobotController)가 SetRoll()로 켜고 끈다. 다리 IK는
+    // 손대지 않고(구르는 속도가 보행 로직이 감당할 수 있는 범위를 훨씬 넘어서므로) 대신
+    // 다리를 숨기고 몸통만 통째로 회전시켜 "떼굴떼굴 구른다"는 느낌을 낸다.
+    private bool rollActive;
+    private float rollSpinDegrees;
+
     /// <summary>보행에 쓰이는 현재 속도(유닛/초).</summary>
     public float CurrentSpeed { get; private set; }
 
@@ -219,6 +225,17 @@ public class ProceduralCharacterRig : MonoBehaviour
 
     /// <summary>Rigidbody가 없을 때 외부에서 이동 속도를 넣어준다(XY 평면).</summary>
     public void SetLocomotion(Vector2 planarVelocity) => externalVelocity = planarVelocity;
+
+    /// <summary>
+    /// 구르기(대시) 연출을 켜고 끈다. active=true인 동안은 매 프레임 spinDegrees(보통 0→360으로
+    /// 진행)를 몸통 회전에 그대로 적용하고 다리는 숨긴다. active=false가 되는 순간 다리를 되살리고
+    /// 평소 보행 로직으로 되돌아간다.
+    /// </summary>
+    public void SetRoll(bool active, float spinDegrees)
+    {
+        rollActive = active;
+        rollSpinDegrees = spinDegrees;
+    }
 
     /// <summary>PlayerRobotController처럼 3D 벡터를 쓰는 쪽을 위한 편의 오버로드.</summary>
     public void SetLocomotion(Vector3 planarVelocity) => externalVelocity = new Vector2(planarVelocity.x, planarVelocity.y);
@@ -397,6 +414,13 @@ public class ProceduralCharacterRig : MonoBehaviour
         if (rebuildRequested) Build();
         if (!built) return;
 
+        if (rollActive)
+        {
+            ApplyRollPose();
+            return;
+        }
+        if (!legsGroup.gameObject.activeSelf) legsGroup.gameObject.SetActive(true); // 구르기 종료 시 다리 복구
+
         float dt = Time.deltaTime;
         Vector2 velocity = velocitySource != null
             ? new Vector2(velocitySource.linearVelocity.x, velocitySource.linearVelocity.y)
@@ -423,6 +447,23 @@ public class ProceduralCharacterRig : MonoBehaviour
         phase = Mathf.Repeat(phase + frequency * dt, 1f);
 
         Apply(dt, velocity);
+    }
+
+    /// <summary>
+    /// 구르는 동안의 자세. 다리 IK는 구르기 속도(보행 로직이 감당하는 범위를 훨씬 넘어선다)를
+    /// 감당하지 못하므로 아예 숨기고, 몸통만 rollSpinDegrees만큼 회전시킨다(0→360도로 진행하면
+    /// 정확히 한 바퀴 돈다). 회전 중간에 살짝 떠올랐다 내려오는 아치를 더해 튕겨 구르는 느낌을 낸다.
+    /// </summary>
+    private void ApplyRollPose()
+    {
+        if (legsGroup.gameObject.activeSelf) legsGroup.gameObject.SetActive(false);
+
+        float progress01 = Mathf.Repeat(Mathf.Abs(rollSpinDegrees), 360f) / 360f;
+        float hop = Mathf.Sin(progress01 * Mathf.PI) * legLength * 0.25f;
+
+        bodyPivot.localPosition = new Vector3(0f, standHipY + hop, 0f);
+        bodyPivot.localRotation = Quaternion.Euler(0f, 0f, rollSpinDegrees);
+        bodyVisual.localScale = Vector3.one;
     }
 
     private void Apply(float dt, Vector2 velocity)

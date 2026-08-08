@@ -37,6 +37,21 @@ public class EnemyUnit : MonoBehaviour
     private Transform player_transform;
     private PlayerRobotController player;
 
+    [Header("체력바 (체력이 100% 미만일 때만 표시)")]
+    [Tooltip("체력바 폭 = 본인 스프라이트 폭 × 이 비율")]
+    [SerializeField] private float healthBarWidthRatio = 0.55f;
+    [Tooltip("체력바 두께(월드 유닛). 몬스터마다 스케일이 달라도 두께는 폭 대비 일정 비율로 맞춘다")]
+    [SerializeField] private float healthBarThicknessRatio = 0.16f;
+    [Tooltip("스프라이트 맨 위에서 체력바까지 추가로 띄우는 여백(월드 유닛)")]
+    [SerializeField] private float healthBarMargin = 0.15f;
+
+    private SpriteRenderer body_sprite_renderer;
+    private Transform health_bar_root;
+    private Transform health_bar_fill;
+    private float health_bar_width;
+    private static Sprite white_pixel_sprite;      // pivot 중앙 - 배경용
+    private static Sprite white_pixel_sprite_left; // pivot 왼쪽 - 채움 바용(왼쪽 고정, 오른쪽만 줄어듦)
+
     // 부품 상자 드랍 확률 조회용. 몬스터마다 새로 찾지 않도록 클래스 전체가 공유하는 캐시.
     // PlayerRobotController.Awake()가 Alive.Clear()와 함께 매 런 시작마다 비워준다(재시도 시 이전 판의 참조가 남지 않도록).
     private static ModdingManager modding_manager_cache;
@@ -58,6 +73,8 @@ public class EnemyUnit : MonoBehaviour
         MoveSpeed = data.monster_speed;
         AttackRange = data.monster_range;
         AtSp = data.monster_atsp;
+
+        UpdateHealthBar(); // 스폰 직후는 항상 100%이므로 바를 숨긴 상태로 초기화한다
     }
 
     // protected virtual로 열어둔 이유: BossUnit이 이 클래스를 상속해서 광역 공격 패턴을 얹는다.
@@ -73,6 +90,7 @@ public class EnemyUnit : MonoBehaviour
         rb.constraints |= RigidbodyConstraints.FreezePositionZ;
 
         FindPlayer();
+        BuildHealthBar();
 
         Alive.Add(this);
     }
@@ -226,7 +244,102 @@ public class EnemyUnit : MonoBehaviour
         int effective_def = Mathf.RoundToInt(Def * (1f - Mathf.Clamp01(def_ignore_percent)));
         int dmg = Mathf.Max(1, amount - effective_def);
         CurrentHp -= dmg;
+        UpdateHealthBar();
         if (CurrentHp <= 0) Die();
+    }
+
+    // ── 체력바 ──────────────────────────────────────────────────
+    // Canvas 없이 SpriteRenderer 두 장(배경/채움)만으로 만든 머리 위 체력바.
+    // 100%일 때는 숨겨져 있다가 피해를 입어 CurrentHp < MaxHp가 되는 순간부터 보인다.
+    // 폭/두께를 본인 스프라이트 크기에 비례시켜서, 좀비/차저/보스처럼 스케일이 크게
+    // 달라도(EnemyUnit 실측 콜라이더 작업과 같은 원칙) 몸집에 맞는 바가 자동으로 나온다.
+    private void BuildHealthBar()
+    {
+        body_sprite_renderer = GetComponent<SpriteRenderer>();
+        if (body_sprite_renderer == null) return;
+
+        // SpriteRenderer.bounds는 월드 스페이스 값이다. health_bar_root는 이 오브젝트(transform)의
+        // 자식이라 localPosition/localScale에 넣는 값에는 부모의 스케일이 다시 곱해진다 - 그래서
+        // 월드 스페이스로 잰 값을 그대로 쓰면 스케일이 이중으로 적용돼(예: 좀비는 0.13배) 체력바가
+        // 훨씬 작고 낮은 위치(거의 얼굴 높이)에 그려지는 문제가 있었다. 부모 스케일로 한 번 나눠서
+        // "로컬 공간에서 이 값을 넣으면 월드 기준으로 원하는 크기/위치가 나오도록" 되돌린다.
+        float scale = transform.lossyScale.x; // 좀비/차저/보스/플레이어 전부 x=y=z 균등 스케일
+        if (Mathf.Approximately(scale, 0f)) scale = 1f;
+
+        float world_sprite_width = body_sprite_renderer.bounds.size.x;
+        float world_sprite_top = body_sprite_renderer.bounds.extents.y; // pivot이 중앙이므로 top = 절반 높이(월드 기준)
+
+        health_bar_width = Mathf.Max(0.05f, (world_sprite_width * healthBarWidthRatio) / scale);
+        float thickness = health_bar_width * healthBarThicknessRatio;
+        float local_top_offset = (world_sprite_top + healthBarMargin) / scale;
+
+        health_bar_root = new GameObject("HealthBar").transform;
+        health_bar_root.SetParent(transform, false);
+        health_bar_root.localPosition = new Vector3(0f, local_top_offset, 0f);
+
+        int sorting_base = body_sprite_renderer.sortingOrder + 5;
+
+        SpriteRenderer bg = CreateBarPart("Background", GetWhitePixelSprite(), health_bar_root, sorting_base, new Color(0.1f, 0.1f, 0.1f, 0.85f));
+        bg.transform.localPosition = Vector3.zero;
+        bg.transform.localScale = new Vector3(health_bar_width, thickness, 1f);
+
+        // 채움 바는 pivot을 왼쪽(0, 0.5)에 둔 전용 스프라이트를 써서, 폭이 줄어들 때
+        // 왼쪽 끝은 고정된 채 오른쪽 끝만 줄어들게 한다(가운데 pivot이면 양쪽이 다 줄어든다).
+        SpriteRenderer fill = CreateBarPart("Fill", GetLeftPivotPixelSprite(), health_bar_root, sorting_base + 1, Color.green);
+        fill.transform.localPosition = new Vector3(-health_bar_width * 0.5f, 0f, 0f); // 바 왼쪽 끝에 고정
+        health_bar_fill = fill.transform;
+
+        health_bar_root.gameObject.SetActive(false); // 초기값은 Init()에서 UpdateHealthBar()가 결정
+    }
+
+    private static SpriteRenderer CreateBarPart(string name, Sprite sprite, Transform parent, int sortingOrder, Color color)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = sprite;
+        sr.color = color;
+        sr.sortingOrder = sortingOrder;
+        return sr;
+    }
+
+    /// <summary>MaxHp 대비 현재 체력 비율에 맞춰 채움 바 폭을 갱신하고, 100% 미만일 때만 보이게 한다.</summary>
+    private void UpdateHealthBar()
+    {
+        if (health_bar_root == null) return;
+
+        float ratio = MaxHp > 0 ? Mathf.Clamp01((float)CurrentHp / MaxHp) : 0f;
+        bool should_show = ratio < 1f && ratio > 0f;
+
+        health_bar_root.gameObject.SetActive(should_show);
+        if (!should_show) return;
+
+        health_bar_fill.localScale = new Vector3(health_bar_width * ratio, health_bar_fill.localScale.y, 1f);
+        health_bar_fill.GetComponent<SpriteRenderer>().color = Color.Lerp(Color.red, Color.green, ratio);
+    }
+
+    /// <summary>Canvas 없이 SpriteRenderer로 단색 막대를 그리기 위한 1x1 흰색 스프라이트(pivot 중앙, 캐시).</summary>
+    private static Sprite GetWhitePixelSprite()
+    {
+        if (white_pixel_sprite == null) white_pixel_sprite = CreateWhitePixelSprite(new Vector2(0.5f, 0.5f));
+        return white_pixel_sprite;
+    }
+
+    /// <summary>채움 바 전용 - pivot이 왼쪽(0, 0.5)인 1x1 흰색 스프라이트(캐시).</summary>
+    private static Sprite GetLeftPivotPixelSprite()
+    {
+        if (white_pixel_sprite_left == null) white_pixel_sprite_left = CreateWhitePixelSprite(new Vector2(0f, 0.5f));
+        return white_pixel_sprite_left;
+    }
+
+    private static Sprite CreateWhitePixelSprite(Vector2 pivot)
+    {
+        Texture2D tex = new Texture2D(4, 4);
+        Color[] pixels = new Color[16];
+        for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.white;
+        tex.SetPixels(pixels);
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, 4, 4), pivot, 4f); // ppu=4 => 4px 텍스처가 1x1 유닛
     }
 
     /// <summary>
@@ -269,18 +382,27 @@ public class EnemyUnit : MonoBehaviour
     // AI 코어 경험치 + 골드를 필드 위의 픽업 오브젝트로 생성한다(플레이어가 다가가면 자동 흡수 -
     // RewardPickup 참고). 데이터테이블에 아직 몬스터별 경험치/골드 컬럼이 없어서(기획 확정 전)
     // MaxHp 비례 임시 공식을 사용한다. 실제 값 컬럼이 시트에 추가되면 이 공식을 그 값으로 교체한다.
+    //
+    // 이 나눗셈 상수는 체력 배율에 맞춰 같이 조정해야 한다(원래 값 10/20 기준).
+    // 2026-08-09 DPS 기준 체력 리밸런싱(좀비 30→180, 6배 - "3초" 기준을 절반인
+    // "1.5초"로 줄이면서 최종 6배가 됨)에 맞춰 6배(60/120)로 올렸다 - 그렇지 않으면
+    // 체력만 올린 것으로 경험치·골드가 그대로 같이 불어나 레벨업/골드 획득 속도가
+    // 의도치 않게 바뀐다. 체력을 다시 조정하면 이 상수도 같은 배율로 맞출 것.
+    private const int ExpPerMaxHp = 60;
+    private const int GoldPerMaxHp = 120;
+
     private void GrantKillRewards()
     {
         // 예전에는 처치할 때마다 경험치와 골드가 항상 하나씩 나와서, 60초 웨이브 한 번에
         // 픽업이 수백 개씩 쌓였다. 이제는 확률 드랍이다(사용자 지정: 경험치 1/2, 골드 1/3).
         if (Random.value < ExpDropChance)
         {
-            RewardPickupManager.SpawnReward(RewardType.Exp, Mathf.Max(1, MaxHp / 10), transform.position);
+            RewardPickupManager.SpawnReward(RewardType.Exp, Mathf.Max(1, MaxHp / ExpPerMaxHp), transform.position);
         }
 
         if (Random.value < GoldDropChance)
         {
-            RewardPickupManager.SpawnReward(RewardType.Gold, Mathf.Max(1, MaxHp / 20), transform.position);
+            RewardPickupManager.SpawnReward(RewardType.Gold, Mathf.Max(1, MaxHp / GoldPerMaxHp), transform.position);
         }
 
         TryDropPartBox();

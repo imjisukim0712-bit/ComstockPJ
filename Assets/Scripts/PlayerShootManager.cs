@@ -140,7 +140,16 @@ public class PlayerShootManager : MonoBehaviour
     [Tooltip("빔 무기(weapon_firemode=Beam)가 늘려서 사용할 Resources 폴더의 스프라이트 이름")]
     [SerializeField] private string beam_sprite_name = "Energy";
 
+    [Header("구르기(대시) 중 무기 자세")]
+    [Tooltip("구르는 동안 무기 리그 포인트를 옮길 위치(Player 로컬 기준, 머리 위)")]
+    [SerializeField] private Vector3 roll_rig_local_position = new Vector3(0f, 4.3f, 0f);
+    [Tooltip("두 무기가 완전히 겹쳐 보이지 않도록, 원래 좌/우 위치 부호(원래 x가 음수/양수였는지)에 " +
+             "따라 이 값만큼 좌우로 벌려서 배치한다")]
+    [SerializeField] private float roll_rig_lateral_spread = 0.5f;
+
     private PlayerRobotController player_stats; // 로봇 공격력/치명타 보정치를 가져오는 용도
+    private readonly Dictionary<int, Vector3> roll_home_local_position = new Dictionary<int, Vector3>();
+    private bool was_rolling;
     private readonly Dictionary<int, WeaponData> weapon_data_by_slot = new Dictionary<int, WeaponData>();
     private readonly Dictionary<int, WeaponRuntimeState> runtime_state_by_slot = new Dictionary<int, WeaponRuntimeState>();
 
@@ -194,6 +203,19 @@ public class PlayerShootManager : MonoBehaviour
         }
 
         SyncRunStateFromInspectorSlots();
+        CacheRollHomePositions();
+    }
+
+    // 구르는 동안 리그 포인트를 머리 위로 옮겼다가 되돌리려면 원래 위치를 기억해둬야 한다.
+    // 로테이션은 평소에도 매 프레임 새로 계산되므로(UpdateSlot) 따로 저장할 필요가 없다.
+    private void CacheRollHomePositions()
+    {
+        roll_home_local_position.Clear();
+        for (int i = 0; i < weapon_slots.Count; i++)
+        {
+            Transform pivot = weapon_slots[i].rig_point != null ? weapon_slots[i].rig_point : weapon_slots[i].muzzle_point;
+            if (pivot != null) roll_home_local_position[i] = pivot.localPosition;
+        }
     }
 
     /// <summary>
@@ -391,6 +413,22 @@ public class PlayerShootManager : MonoBehaviour
         // 조준/발사 모두 정지 - 정비 중에는 인게임이 완전히 멈춰 있어야 한다(사용자 확정 사항).
         if (GameOverManager.IsGameOver || GameWinManager.IsGameWon || GameFlowManager.IsIntermission) return;
 
+        // 구르는 동안에는 무기가 머리 위로 올라가 캐릭터와 함께 돌 뿐, 조준·발사는 완전히
+        // 멈춘다(빠르게 이동하는 대신 잠깐 공격을 못 하는 패널티 - 사용자 확정 사항).
+        bool rolling = player_stats != null && player_stats.IsDashing;
+        if (rolling)
+        {
+            ApplyRollPoseToAllSlots();
+            was_rolling = true;
+            return;
+        }
+
+        if (was_rolling)
+        {
+            RestoreRollHomePositions();
+            was_rolling = false;
+        }
+
         socket_modifiers = ModdingManager.Instance != null
             ? ModdingManager.Instance.GetWeaponSocketModifiers()
             : ModdingManager.SocketModifiers.Identity;
@@ -398,6 +436,32 @@ public class PlayerShootManager : MonoBehaviour
         for (int i = 0; i < weapon_slots.Count; i++)
         {
             UpdateSlot(i);
+        }
+    }
+
+    /// <summary>구르는 동안 모든 소켓의 리그 포인트를 머리 위로 옮기고, 캐릭터와 같은 각도로 돌린다.
+    /// 원래 좌/우 위치(x 부호)만큼 살짝 벌려서 두 무기가 완전히 겹쳐 보이지 않게 한다.</summary>
+    private void ApplyRollPoseToAllSlots()
+    {
+        float spin = player_stats.DashSpinDegrees;
+        for (int i = 0; i < weapon_slots.Count; i++)
+        {
+            Transform pivot = weapon_slots[i].rig_point != null ? weapon_slots[i].rig_point : weapon_slots[i].muzzle_point;
+            if (pivot == null) continue;
+
+            float side = roll_home_local_position.TryGetValue(i, out Vector3 home) ? Mathf.Sign(home.x) : 0f;
+            pivot.localPosition = roll_rig_local_position + new Vector3(side * roll_rig_lateral_spread, 0f, 0f);
+            pivot.rotation = Quaternion.Euler(0f, 0f, spin);
+        }
+    }
+
+    /// <summary>구르기가 끝난 직후 리그 포인트를 원래 위치로 되돌린다(회전은 다음 프레임 UpdateSlot이 알아서 다시 계산한다).</summary>
+    private void RestoreRollHomePositions()
+    {
+        for (int i = 0; i < weapon_slots.Count; i++)
+        {
+            Transform pivot = weapon_slots[i].rig_point != null ? weapon_slots[i].rig_point : weapon_slots[i].muzzle_point;
+            if (pivot != null && roll_home_local_position.TryGetValue(i, out Vector3 home)) pivot.localPosition = home;
         }
     }
 

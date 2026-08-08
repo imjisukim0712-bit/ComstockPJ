@@ -24,11 +24,15 @@ public class PlayerRobotController : MonoBehaviour
     /// <summary>구르기(대시) 중인지. 이 동안에는 무적이라 TakeDamage가 통째로 무시된다.</summary>
     public bool IsDashing { get; private set; }
 
+    /// <summary>구르기 중 캐릭터가 회전한 각도(도, 0~360). 무기도 이 값을 그대로 따라 돌아
+    /// 몸과 무기가 같이 구르는 것처럼 보이게 한다(PlayerShootManager가 읽음).</summary>
+    public float DashSpinDegrees { get; private set; }
+
     [Header("구르기 (Space) - 전부 밸런스 미확정 임시값")]
     [Tooltip("한 번 구를 때 이동하는 거리(유닛)")]
-    [SerializeField] private float dashDistance = 3.5f;
+    [SerializeField] private float dashDistance = 5f;
     [Tooltip("구르기가 지속되는 시간(초). 이 시간 동안 무적이다")]
-    [SerializeField] private float dashDuration = 0.18f;
+    [SerializeField] private float dashDuration = 0.28f;
     [Tooltip("구르기 재사용 대기시간(초)")]
     [SerializeField] private float dashCooldown = 1.2f;
 
@@ -51,6 +55,10 @@ public class PlayerRobotController : MonoBehaviour
     [SerializeField] private bool flipXOnRight = true;
     [Tooltip("뒤집을 SpriteRenderer. 비어 있으면 자신/자식에서 자동 탐색")]
     [SerializeField] private SpriteRenderer spriteRenderer;
+
+    [Header("구르기 연출")]
+    [Tooltip("구르는 동안 몸을 회전시킬 절차적 리그. 비어 있으면 자식에서 자동 탐색")]
+    [SerializeField] private ProceduralCharacterRig proceduralRig;
 
     private Rigidbody rb;
     private Vector3 moveInput;
@@ -103,6 +111,8 @@ public class PlayerRobotController : MonoBehaviour
         {
             Debug.LogWarning("SpriteRenderer를 찾을 수 없어 좌우 반전이 동작하지 않습니다.");
         }
+
+        if (proceduralRig == null) proceduralRig = GetComponentInChildren<ProceduralCharacterRig>();
 
         rb.isKinematic = false; // 물리 충돌이 필요하므로 false로
         rb.useGravity = false;
@@ -246,13 +256,31 @@ public class PlayerRobotController : MonoBehaviour
     }
 
     // 구르기 지속시간/쿨다운을 흘려보낸다. 지속시간이 끝나면 무적도 함께 풀린다.
+    // 구르는 동안에는 캐릭터가 실제로 한 바퀴(0~360도) 도는 것처럼 회전각을 계산해
+    // 절차적 리그(다리를 숨기고 몸통만 회전)와 무기(PlayerShootManager가 DashSpinDegrees를
+    // 읽어 같은 각도로 맞춘다)에 전달한다.
     private void UpdateDashTimers()
     {
         if (dashCooldownLeft > 0f) dashCooldownLeft -= Time.deltaTime;
 
-        if (!IsDashing) return;
+        if (!IsDashing)
+        {
+            DashSpinDegrees = 0f;
+            if (proceduralRig != null) proceduralRig.SetRoll(false, 0f);
+            return;
+        }
 
         dashTimeLeft -= Time.deltaTime;
+
+        // 굴러가는 방향(dashDirection.x)에 맞춰 회전 방향을 정한다 - 실제 바퀴처럼 오른쪽으로
+        // 구르면 시계방향(-), 왼쪽으로 구르면 반시계방향(+)으로 돌아야 진행 방향과 맞아 보인다.
+        // 순수 수직 이동(x=0에 가까움)은 기존처럼 시계방향을 기본값으로 쓴다.
+        float spinSign = dashDirection.x < -0.0001f ? 1f : -1f;
+
+        float progress01 = dashDuration > 0f ? 1f - Mathf.Clamp01(dashTimeLeft / dashDuration) : 1f;
+        DashSpinDegrees = spinSign * progress01 * 360f;
+        if (proceduralRig != null) proceduralRig.SetRoll(true, DashSpinDegrees);
+
         if (dashTimeLeft <= 0f) IsDashing = false;
     }
 
@@ -278,6 +306,8 @@ public class PlayerRobotController : MonoBehaviour
     {
         IsDashing = false;
         dashTimeLeft = 0f;
+        DashSpinDegrees = 0f;
+        if (proceduralRig != null) proceduralRig.SetRoll(false, 0f);
         moveInput = Vector3.zero;
 
         if (rb != null)
