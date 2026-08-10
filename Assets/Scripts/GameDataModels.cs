@@ -1,6 +1,15 @@
 using System;
 using UnityEngine;
 
+/// <summary>
+/// 몬스터(좀비) 1종의 스탯 데이터.
+///
+/// <b>2026-08-10 좀비 기획서 Ver04 반영 - 4개 필드 신규 추가</b>(monster_mass/monster_detect/
+/// monster_size/monster_ai). 이 필드들이 비어 있는(0/기본값) 기존 데이터(보스 등 - 시트에
+/// 없는 임시 데이터라 <see cref="WaveManager.SpawnBoss"/>에서 직접 구성)는 하위 호환을
+/// 위해 안전한 기본값으로 취급된다: monster_mass=0 → 기준 질량으로 취급(넉백 배율 1배),
+/// monster_detect=0 → "감지범위 무제한"으로 취급(항상 추격, 기존 동작과 동일).
+/// </summary>
 [Serializable]
 public struct MonsterData
 {
@@ -13,6 +22,24 @@ public struct MonsterData
     public float monster_range;
     public int monster_type;
     public float monster_atsp;
+
+    [Tooltip("질량 - 피격 넉백 저항에 쓰인다(질량이 높을수록 덜 밀려남, 기획서 p.22). 0이면 기준 질량(50)으로 취급")]
+    public float monster_mass;
+
+    [Tooltip("감지범위(월드 유닛, 기획 문서 수치 ÷ 50). 0이면 무제한(항상 추격)으로 취급 - 시트에 없는 임시 데이터용 하위 호환")]
+    public float monster_detect;
+
+    [Tooltip("규격(소형/중형/대형/초대형) - 이미지·콜라이더 크기를 결정한다")]
+    public MonsterSizeClass monster_size;
+
+    [Tooltip("AI 성격값(추격/압박/휴식/배회) - 기획서 p.10")]
+    public MonsterAiType monster_ai;
+
+    /// <summary>넉백 계산에 쓰는 유효 질량. 미설정(0) 데이터는 기준 질량으로 폴백한다.</summary>
+    public float EffectiveMass => monster_mass > 0f ? monster_mass : EnemyUnit.ReferenceMass;
+
+    /// <summary>AI 각성 판정에 쓰는 유효 감지범위. 미설정(0)이면 무제한(항상 감지)으로 취급한다.</summary>
+    public float EffectiveDetectRange => monster_detect > 0f ? monster_detect : float.MaxValue;
 }
 
 [Serializable]

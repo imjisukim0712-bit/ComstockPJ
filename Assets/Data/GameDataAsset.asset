@@ -15,22 +15,82 @@ MonoBehaviour:
   monsters:
   - monster_id: 200001
     monster_name: "\uC880\uBE44"
-    monster_hp: 180
+    monster_hp: 100
     monster_atk: 15
-    monster_def: 0
-    monster_speed: 3.2
-    monster_range: 1
+    monster_def: 1
+    monster_speed: 2.5
+    monster_range: 1.6
     monster_type: 1
-    monster_atsp: 1
+    monster_atsp: 0.75
+    monster_mass: 50
+    monster_detect: 13
+    monster_size: 0
+    monster_ai: 0
   - monster_id: 200002
     monster_name: "\uCC28\uC800"
-    monster_hp: 450
-    monster_atk: 10
+    monster_hp: 650
+    monster_atk: 85
+    monster_def: 10
+    monster_speed: 3
+    monster_range: 6
+    monster_type: 1
+    monster_atsp: 0.5
+    monster_mass: 250
+    monster_detect: 16
+    monster_size: 2
+    monster_ai: 0
+  - monster_id: 200003
+    monster_name: "\uC2A4\uD53C\uD130"
+    monster_hp: 75
+    monster_atk: 20
     monster_def: 0
-    monster_speed: 2.4
-    monster_range: 1
+    monster_speed: 1.5
+    monster_range: 6
+    monster_type: 1
+    monster_atsp: 0.8
+    monster_mass: 55
+    monster_detect: 15
+    monster_size: 0
+    monster_ai: 0
+  - monster_id: 200004
+    monster_name: "\uC2A4\uD504\uB9B0\uD130"
+    monster_hp: 120
+    monster_atk: 35
+    monster_def: 5
+    monster_speed: 5
+    monster_range: 1.6
+    monster_type: 1
+    monster_atsp: 1.5
+    monster_mass: 40
+    monster_detect: 24
+    monster_size: 0
+    monster_ai: 1
+  - monster_id: 200005
+    monster_name: "\uB514\uC2A4\uB7ED\uD130"
+    monster_hp: 150
+    monster_atk: 100
+    monster_def: 5
+    monster_speed: 1.6
+    monster_range: 2.4
+    monster_type: 1
+    monster_atsp: 1
+    monster_mass: 120
+    monster_detect: 12
+    monster_size: 1
+    monster_ai: 3
+  - monster_id: 200006
+    monster_name: "\uB9AC\uB354"
+    monster_hp: 600
+    monster_atk: 25
+    monster_def: 10
+    monster_speed: 2.5
+    monster_range: 2.4
     monster_type: 1
     monster_atsp: 1.2
+    monster_mass: 200
+    monster_detect: 24
+    monster_size: 2
+    monster_ai: 2
   robots:
   - robot_id: 100001
     robot_name: "\uCEF4\uC2A4\uD1A1 MK-1"

@@ -26,11 +26,25 @@ public class EnemySpawner : MonoBehaviour
     [Tooltip("스폰할 몬스터ID 목록(항상 후보). 매 스폰마다 이 중 하나를 무작위로 골라 소환한다")]
     [SerializeField] private List<int> spawnMonsterIds = new List<int> { 200001 }; // 기본: 좀비
 
-    [Header("상위 몬스터 해금")]
-    [Tooltip("이 몬스터ID들은 advancedUnlockWave 웨이브에 도달하기 전까지는 스폰 후보에서 제외된다(예: 차저를 초반부터 섞지 않기 위함)")]
-    [SerializeField] private List<int> advancedMonsterIds = new List<int>();
-    [Tooltip("advancedMonsterIds가 스폰 후보에 합류하는 웨이브 번호")]
-    [SerializeField] private int advancedUnlockWave = 4;
+    [Serializable]
+    public struct MonsterUnlockEntry
+    {
+        public int monsterId;
+        [Tooltip("이 웨이브 번호에 도달하면 스폰 후보에 합류한다")]
+        public int unlockWave;
+    }
+
+    [Header("상위 몬스터 해금 (좀비 기획서 Ver04 - 6종 단계적 등장)")]
+    [Tooltip("웨이브별로 스폰 후보에 합류하는 몬스터ID들. spawnMonsterIds(기본 항상 스폰)에는 없는 상위 몬스터를 여기 등록한다")]
+    [SerializeField]
+    private List<MonsterUnlockEntry> unlockSchedule = new List<MonsterUnlockEntry>
+    {
+        new MonsterUnlockEntry { monsterId = 200003, unlockWave = 3 },  // 스피터
+        new MonsterUnlockEntry { monsterId = 200002, unlockWave = 4 },  // 차저
+        new MonsterUnlockEntry { monsterId = 200004, unlockWave = 5 },  // 스프린터
+        new MonsterUnlockEntry { monsterId = 200005, unlockWave = 8 },  // 디스럭터
+        new MonsterUnlockEntry { monsterId = 200006, unlockWave = 10 }, // 리더
+    };
 
     private int currentWave = 1;
     private readonly List<int> spawn_pool_buffer = new List<int>();
@@ -57,6 +71,15 @@ public class EnemySpawner : MonoBehaviour
 
     [Tooltip("동시에 살아있을 수 있는 최대 몬스터 수 (0이면 제한 없음)")]
     [SerializeField] private int maxAliveEnemies = 30;
+
+    [Header("리더 무리 (좀비 기획서 Ver04 p.20/p.22)")]
+    [Tooltip("리더와 함께 스폰할 팔로워 몬스터ID(기본: 일반 좀비). 어떤 몬스터ID가 '리더'인지는 " +
+             "몬스터ID→행동 컴포넌트 매핑(MonsterComponentTypes)에서 LeaderUnit으로 등록된 것을 기준으로 자동 판별한다")]
+    [SerializeField] private int leaderPackMonsterId = 200001;
+    [Tooltip("리더 한 마리당 함께 스폰할 팔로워 수")]
+    [SerializeField] private int leaderPackSize = 3;
+    [Tooltip("팔로워가 리더 주위에 흩어져 스폰되는 반경(월드 유닛)")]
+    [SerializeField] private float leaderPackSpawnRadius = 2.5f;
 
     private Dictionary<int, GameObject> prefabMap;
     private readonly List<EnemyUnit> alive_enemies = new List<EnemyUnit>();
@@ -123,7 +146,10 @@ public class EnemySpawner : MonoBehaviour
 
             spawn_pool_buffer.Clear();
             spawn_pool_buffer.AddRange(spawnMonsterIds);
-            if (currentWave >= advancedUnlockWave) spawn_pool_buffer.AddRange(advancedMonsterIds);
+            foreach (MonsterUnlockEntry entry in unlockSchedule)
+            {
+                if (currentWave >= entry.unlockWave) spawn_pool_buffer.Add(entry.monsterId);
+            }
             if (spawn_pool_buffer.Count == 0) continue;
 
             for (int i = 0; i < Mathf.Max(1, spawnBatchSize); i++)
@@ -134,9 +160,37 @@ public class EnemySpawner : MonoBehaviour
                 Vector3 position = GetRandomSpawnPosition();
 
                 EnemyUnit unit = SpawnMonster(monsterId, position);
-                if (unit != null) alive_enemies.Add(unit);
+                if (unit == null) continue;
+
+                alive_enemies.Add(unit);
+                if (unit is LeaderUnit leader) SpawnLeaderPack(leader, position);
             }
         }
+    }
+
+    /// <summary>
+    /// 리더가 스폰되면 곧바로 무리(팔로워)를 함께 스폰해 등록한다(좀비 기획서 Ver04 p.20 "다른
+    /// 좀비 무리를 이끌고 다니는 우두머리" / p.22 "무리가 전멸하면 리더는 도주").
+    /// 팔로워는 maxAliveEnemies 제한을 우회한다 - 리더 등장 자체가 하나의 "이벤트"라
+    /// 무리가 쪼개져서 나오면 리더 혼자 덩그러니 나오는 것보다 부자연스럽기 때문이다.
+    /// </summary>
+    private void SpawnLeaderPack(LeaderUnit leader, Vector3 center)
+    {
+        var followers = new List<EnemyUnit>();
+
+        for (int i = 0; i < leaderPackSize; i++)
+        {
+            Vector2 offset = UnityEngine.Random.insideUnitCircle * leaderPackSpawnRadius;
+            Vector3 position = center + new Vector3(offset.x, offset.y, 0f);
+
+            EnemyUnit follower = SpawnMonster(leaderPackMonsterId, position);
+            if (follower == null) continue;
+
+            followers.Add(follower);
+            alive_enemies.Add(follower);
+        }
+
+        leader.SetPack(followers);
     }
 
     /// <summary>
@@ -150,8 +204,7 @@ public class EnemySpawner : MonoBehaviour
     /// </summary>
     private Vector3 GetRandomSpawnPosition()
     {
-        Transform center = ResolveSpawnCenter();
-        Vector3 origin = center.position;
+        Vector3 origin = ResolveSpawnOrigin();
 
         if (!TryGetCameraHalfExtents(out float halfWidth, out float halfHeight))
         {
@@ -218,15 +271,52 @@ public class EnemySpawner : MonoBehaviour
         return halfHeight > 0.01f;
     }
 
-    private Transform ResolveSpawnCenter()
+    /// <summary>
+    /// 화면 밖 테두리를 계산할 기준점.
+    ///
+    /// <b>플레이어가 아니라 카메라 위치를 기준으로 삼는다.</b> 이 계산의 목적 자체가
+    /// "지금 화면에 보이는 사각형의 바깥"이기 때문이다. 예전에는 플레이어를 기준으로 삼았고
+    /// 카메라가 항상 플레이어를 정확히 따라다녔으므로 둘이 같았지만, 2026-08-10에 카메라를
+    /// 맵 안으로 제한하면서(CameraFollow.clampToMap) 플레이어가 맵 가장자리로 가면 화면 중심과
+    /// 플레이어가 최대 15유닛까지 어긋나게 됐다. 그대로 두면 플레이어 반대편 스폰 지점이
+    /// 화면 안쪽에 들어와 적이 화면 한복판에서 튀어나온다.
+    ///
+    /// 인스펙터에서 spawnCenter를 명시적으로 지정했다면 그 의도를 존중해 그대로 쓴다.
+    /// </summary>
+    private Vector3 ResolveSpawnOrigin()
     {
-        if (spawnCenter != null) return spawnCenter;
+        if (spawnCenter != null) return spawnCenter.position;
+
+        Camera cam = Camera.main;
+        if (cam != null)
+        {
+            Vector3 camPos = cam.transform.position;
+            camPos.z = 0f; // 게임 평면
+            return camPos;
+        }
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null) return player.transform;
+        if (player != null) return player.transform.position;
 
-        return transform;
+        return transform.position;
     }
+
+    /// <summary>
+    /// 몬스터ID별로 붙일 행동 컴포넌트 타입(2026-08-10 좀비 기획서 Ver04 - 6종 공격 방식).
+    /// 여기 없는 ID(예: 200001 좀비)는 기본 EnemyUnit(근접 접촉)을 그대로 쓴다.
+    /// 프리팹 자체에는 행동 컴포넌트를 바로 넣지 않는다 - Zombie/Charger가 원래부터 그랬듯
+    /// Transform+SpriteRenderer+Collider+Rigidbody만 있는 셸이고, 스폰 시점에 이 표를 보고
+    /// AddComponent한다(씬을 재시작해도 컴포넌트 참조가 꼬이지 않고, 프리팹을 몬스터ID와
+    /// 완전히 분리해 재사용할 수 있다).
+    /// </summary>
+    private static readonly Dictionary<int, Type> MonsterComponentTypes = new Dictionary<int, Type>
+    {
+        { 200002, typeof(ChargerUnit) },
+        { 200003, typeof(SpitterUnit) },
+        { 200004, typeof(SprinterUnit) },
+        { 200005, typeof(DisruptorUnit) },
+        { 200006, typeof(LeaderUnit) },
+    };
 
     public EnemyUnit SpawnMonster(int monsterId, Vector3 position)
     {
@@ -243,8 +333,11 @@ public class EnemySpawner : MonoBehaviour
         }
 
         GameObject obj = Instantiate(prefab, position, Quaternion.identity);
-        EnemyUnit unit = obj.GetComponent<EnemyUnit>();
-        if (unit == null) unit = obj.AddComponent<EnemyUnit>();
+
+        Type componentType = MonsterComponentTypes.TryGetValue(monsterId, out Type mapped) ? mapped : typeof(EnemyUnit);
+        EnemyUnit unit = obj.GetComponent(componentType) as EnemyUnit;
+        if (unit == null) unit = (EnemyUnit)obj.AddComponent(componentType);
+
         unit.Init(data);
         return unit;
     }

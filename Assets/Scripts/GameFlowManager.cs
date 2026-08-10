@@ -124,15 +124,30 @@ public class GameFlowManager : MonoBehaviour
 
     /// <summary>
     /// 정비 화면에 들어가기 전 필드를 깨끗하게 만든다.
-    /// 남은 보상 픽업은 그냥 지우면 플레이어가 못 주운 골드/경험치가 증발해 손해이므로,
-    /// 지우기 전에 자동으로 수령 처리한다(기획서 p.12 "레벨업, 로봇 파츠 획득 일괄 처리").
+    ///
+    /// 골드·경험치는 그냥 지우면 플레이어가 못 주운 보상이 증발해 손해이므로 지우기 전에
+    /// 자동으로 수령 처리한다(= 자석 흡수).
+    ///
+    /// <b>단, 부품 상자는 자석 흡수 대상이 아니다</b>(2026-08-10 사용자 지정) - 상자는
+    /// 직접 가서 주워야 얻는 보상이라, 웨이브가 끝날 때까지 줍지 못했으면 그냥 사라진다.
+    /// 화면 밖 상자를 화살표로 안내하는 <see cref="PartBoxIndicatorUI"/>가 의미를 갖는 것도
+    /// 이 규칙 때문이다(자동으로 받아지면 굳이 찾아갈 이유가 없다).
     /// </summary>
     private void ResetFieldForIntermission()
     {
         int collectedRewards = 0;
+        int discardedPartBoxes = 0;
         foreach (RewardPickup pickup in FindObjectsByType<RewardPickup>(FindObjectsSortMode.None))
         {
             if (pickup == null) continue;
+
+            if (pickup.Type == RewardType.PartBox)
+            {
+                Destroy(pickup.gameObject); // 수령하지 않고 버린다 - 직접 주웠어야 하는 보상
+                discardedPartBoxes++;
+                continue;
+            }
+
             pickup.CollectImmediately();
             collectedRewards++;
         }
@@ -156,10 +171,11 @@ public class GameFlowManager : MonoBehaviour
         PlayerRobotController player = FindFirstObjectByType<PlayerRobotController>();
         if (player != null) player.ReturnToStartPosition();
 
-        if (collectedRewards > 0 || collectedItems > 0 || clearedProjectiles > 0)
+        if (collectedRewards > 0 || collectedItems > 0 || clearedProjectiles > 0 || discardedPartBoxes > 0)
         {
             Debug.Log($"정비 진입 - 필드 초기화 (보상 픽업 {collectedRewards}개 자동 수령, " +
-                      $"아이템 {collectedItems}개 자동 수령, 투사체 {clearedProjectiles}개 정리)");
+                      $"아이템 {collectedItems}개 자동 수령, 투사체 {clearedProjectiles}개 정리, " +
+                      $"못 주운 부품 상자 {discardedPartBoxes}개 소멸)");
         }
     }
 

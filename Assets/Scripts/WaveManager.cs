@@ -14,6 +14,13 @@ using UnityEngine;
 /// 웨이브 제한시간도 다 지나야" 승리로 처리한다(둘 중 하나만 먼저 끝나도 승리하지 않음 -
 /// 사용자 확정 사항). 시간이 먼저 끝나도 보스가 살아있으면 계속 기다리고, 보스를 먼저 잡아도
 /// 시간이 남았으면 그만큼 더 기다린다.
+///
+/// <b>보스 웨이브가 아닌 웨이브는 제한시간이 끝나는 즉시 종료된다</b>(2026-08-10 사용자 지정).
+/// 예전에는 "스폰만 멈추고 남은 적을 전부 처치할 때까지 대기 → 2초 여유" 규칙이었는데,
+/// 잔적을 쫓아다니는 시간이 길어져 템포가 늘어졌다. 지금은 남은 적을 EndWave()가 그대로
+/// 소멸시키며(EnemySpawner.DespawnAllAliveEnemies는 Die()를 거치지 않으므로 보상/아이템이
+/// 드랍되지 않는다), 이미 필드에 떨어져 있던 보상·아이템은 GameFlowManager가 정비 진입 시
+/// 전부 자동 수령(자석 흡수) 처리한다.
 /// </summary>
 public class WaveManager : MonoBehaviour
 {
@@ -23,12 +30,6 @@ public class WaveManager : MonoBehaviour
     [Header("웨이브 제한시간 (초) - 기획서: 웨이브당 약 1분")]
     [SerializeField] private float firstWaveDuration = 60f;
     [SerializeField] private float waveDurationIncreasePerWave = 0f;
-
-    [Header("웨이브 종료 처리")]
-    [Tooltip("제한시간이 끝나면 스폰을 멈추고 남은 적을 전부 처치할 때까지 기다린다. 다 잡은 뒤 이 시간만큼 더 있다가 정비로 넘어간다")]
-    [SerializeField] private float clearedGraceSeconds = 2f;
-    [Tooltip("남은 적을 기다리는 최대 시간(안전장치). 적이 어딘가에 끼어 영원히 안 죽는 상황에서 게임이 멈추지 않도록 이 시간이 지나면 강제로 정리하고 넘어간다")]
-    [SerializeField] private float maxClearWaitSeconds = 45f;
 
     [Header("웨이브별 스폰 압력")]
     [Tooltip("웨이브가 오를 때마다 스폰 간격에 곱해지는 감소율 (예: 0.96 = 매 웨이브 4%씩 빨라짐). 20웨이브 기준")]
@@ -66,10 +67,11 @@ public class WaveManager : MonoBehaviour
     public float RemainingSeconds { get; private set; }
 
     /// <summary>
-    /// HUD 표시용 - 제한시간은 끝났고 남은 적을 처치하는 중인지.
-    /// 이때는 남은 초 대신 "잔적 처치" 상태를 보여준다.
+    /// HUD 표시용 - 보스 웨이브에서 제한시간은 끝났지만 보스가 아직 살아있어 기다리는 중인지.
+    /// 이때는 남은 초(0:00에서 멈춘 것처럼 보인다) 대신 "보스 처치" 상태를 보여준다.
+    /// 보스 웨이브가 아닌 웨이브는 제한시간이 끝나는 즉시 종료되므로 항상 false다.
     /// </summary>
-    public bool IsClearingRemainingEnemies { get; private set; }
+    public bool IsWaitingForBossDefeat { get; private set; }
 
     private Coroutine wave_timer_routine;
     private bool boss_spawned_this_wave;
@@ -185,7 +187,7 @@ public class WaveManager : MonoBehaviour
 
     private IEnumerator WaveTimer(float duration)
     {
-        IsClearingRemainingEnemies = false;
+        IsWaitingForBossDefeat = false;
 
         float elapsed = 0f;
         while (elapsed < duration)
@@ -196,18 +198,20 @@ public class WaveManager : MonoBehaviour
         }
         RemainingSeconds = 0f;
 
-        // 제한시간이 끝나면 더 이상 새로 스폰하지 않는다. 이미 나와 있는 적은 그대로 두고
-        // 플레이어가 정리하게 한다(사용자 확정 사항: "1분 종료 후 남은 좀비가 없으면 2초 뒤 끝난다").
         if (enemySpawner != null) enemySpawner.SetSpawningEnabled(false);
 
         if (RunState.WaveNumber == finalWaveNumber)
         {
-            // 시간은 다 됐지만 보스가 아직 살아있으면, 처치할 때까지 계속 기다린다
-            // (사용자 확정 사항: 처치와 시간 종료 둘 다 필요).
+            // 보스 웨이브만 예외다. 시간은 다 됐지만 보스가 아직 살아있으면 처치할 때까지 계속
+            // 기다린다(사용자 확정 사항: 처치와 시간 종료 둘 다 필요).
+            IsWaitingForBossDefeat = true;
+
             while (boss_spawned_this_wave && !boss_defeated_this_wave && !GameOverManager.IsGameOver)
             {
                 yield return null;
             }
+
+            IsWaitingForBossDefeat = false;
 
             if (GameOverManager.IsGameOver) yield break; // 보스전 도중 플레이어가 죽었으면 승리로도 정비로도 진행하지 않음
 
@@ -215,45 +219,12 @@ public class WaveManager : MonoBehaviour
             yield break; // 정비/상점으로 넘어가는 일반 EndWave() 흐름을 타지 않는다
         }
 
-        IsClearingRemainingEnemies = true;
-
-        // 남은 적을 전부 처치할 때까지 대기. 적이 어딘가에 끼어 영영 안 죽는 상황에서
-        // 게임이 멈춰버리지 않도록 maxClearWaitSeconds를 넘기면 강제로 진행한다.
-        float waited = 0f;
-        while (CountAliveEnemies() > 0 && !GameOverManager.IsGameOver && waited < maxClearWaitSeconds)
-        {
-            waited += Time.deltaTime;
-            yield return null;
-        }
-
-        if (GameOverManager.IsGameOver) { IsClearingRemainingEnemies = false; yield break; }
-
-        if (waited >= maxClearWaitSeconds)
-            Debug.LogWarning($"웨이브 {RunState.WaveNumber}: 남은 적을 {maxClearWaitSeconds:F0}초 동안 정리하지 못해 강제로 종료합니다.");
-
-        // 다 잡은 뒤 잠깐(기본 2초) 여유를 두고 정비로 넘어간다 - 마지막 처치 연출과
-        // 보상 픽업을 주울 시간을 준다.
-        float grace = 0f;
-        while (grace < clearedGraceSeconds && !GameOverManager.IsGameOver)
-        {
-            grace += Time.deltaTime;
-            yield return null;
-        }
-
-        IsClearingRemainingEnemies = false;
         if (GameOverManager.IsGameOver) yield break;
 
+        // 보스 웨이브가 아니면 제한시간이 끝나는 즉시 종료한다(2026-08-10 사용자 지정).
+        // 남은 적은 EndWave()의 DespawnAllAliveEnemies()가 Die()를 거치지 않고 통째로 소멸시키므로
+        // 경험치·골드·부품 상자·아이템이 전혀 드랍되지 않는다.
         EndWave();
-    }
-
-    private static int CountAliveEnemies()
-    {
-        int count = 0;
-        foreach (EnemyUnit enemy in EnemyUnit.Alive)
-        {
-            if (enemy != null && !enemy.IsDead) count++;
-        }
-        return count;
     }
 
     private void WinGame()
@@ -272,13 +243,17 @@ public class WaveManager : MonoBehaviour
     {
         int wave = RunState.WaveNumber;
 
+        // 남은 적은 여기서 통째로 소멸한다. Destroy만 하고 EnemyUnit.Die()를 부르지 않으므로
+        // 보상 픽업/드랍 아이템이 생기지 않는다("남은 좀비는 아이템 드랍 없이 사라진다").
         if (enemySpawner != null)
         {
             enemySpawner.SetSpawningEnabled(false);
             enemySpawner.DespawnAllAliveEnemies();
         }
 
-        Debug.Log($"웨이브 {wave} 종료");
+        // 이미 필드에 떨어져 있던 보상·아이템은 이 이벤트를 받은 GameFlowManager가
+        // ResetFieldForIntermission()에서 전부 자동 수령(자석 흡수) 처리한다.
+        Debug.Log($"웨이브 {wave} 종료 (제한시간 종료 즉시)");
         OnWaveEnded?.Invoke(wave);
     }
 }

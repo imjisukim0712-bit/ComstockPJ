@@ -56,11 +56,16 @@ public class PlayerRobotController : MonoBehaviour
     [Tooltip("뒤집을 SpriteRenderer. 비어 있으면 자신/자식에서 자동 탐색")]
     [SerializeField] private SpriteRenderer spriteRenderer;
 
+    [Header("맵 경계")]
+    [Tooltip("맵(배경 스프라이트) 가장자리에서 이만큼 안쪽까지만 이동할 수 있다. 몸이 배경 밖으로 반쯤 걸치지 않도록 하는 여유값")]
+    [SerializeField] private float mapEdgeMargin = 0.8f;
+
     [Header("구르기 연출")]
     [Tooltip("구르는 동안 몸을 회전시킬 절차적 리그. 비어 있으면 자식에서 자동 탐색")]
     [SerializeField] private ProceduralCharacterRig proceduralRig;
 
     private Rigidbody rb;
+    private HitFlash hitFlash;
     private Vector3 moveInput;
     private bool hasIsMovingParam;
     private bool wasMoving;
@@ -85,8 +90,10 @@ public class PlayerRobotController : MonoBehaviour
         RunState.Reset();
         EnemyUnit.Alive.Clear();
         EnemyUnit.ResetStaticCaches();
-        RewardPickup.AlivePartBoxes.Clear();
+        RewardPickup.ResetStaticCaches();
         GameFlowManager.ResetStaticState();
+        MapBounds.ResetCache();
+        HitFlash.ResetStaticCaches();
 
         startPosition = transform.position;
 
@@ -113,6 +120,11 @@ public class PlayerRobotController : MonoBehaviour
         }
 
         if (proceduralRig == null) proceduralRig = GetComponentInChildren<ProceduralCharacterRig>();
+
+        // 피격 시 0.25초 흰색. 절차적 리그가 몸통/다리 스프라이트를 런타임에 만들어 붙이므로
+        // HitFlash는 첫 피격 때 대상 렌더러를 다시 수집한다(HitFlash.Play() 참고).
+        hitFlash = GetComponent<HitFlash>();
+        if (hitFlash == null) hitFlash = gameObject.AddComponent<HitFlash>();
 
         rb.isKinematic = false; // 물리 충돌이 필요하므로 false로
         rb.useGravity = false;
@@ -205,6 +217,8 @@ public class PlayerRobotController : MonoBehaviour
 
         int dmg = Mathf.Max(0, enemyAtk - Def);
         CurrentHp = Mathf.Max(0, CurrentHp - dmg);
+
+        if (hitFlash != null) hitFlash.Play(); // 피격 시 0.25초 흰색
 
         if (CurrentHp <= 0) Die();
     }
@@ -359,9 +373,37 @@ public class PlayerRobotController : MonoBehaviour
         if (IsDashing && dashDuration > 0f)
         {
             rb.linearVelocity = dashDirection * (dashDistance / dashDuration);
-            return;
+        }
+        else
+        {
+            rb.linearVelocity = moveInput * MoveSpeed; // MovePosition 대신 이걸로 교체
         }
 
-        rb.linearVelocity = moveInput * MoveSpeed; // MovePosition 대신 이걸로 교체
+        ClampToMap();
+    }
+
+    /// <summary>
+    /// 플레이어를 맵(배경 스프라이트) 안으로 가둔다. 배경 밖은 아무것도 그려지지 않은 빈
+    /// 공간이라 나가면 곧바로 화면이 비어 보인다(2026-08-10 배경을 원본 스케일로 되돌리며 신설).
+    ///
+    /// 속도를 미리 자르지 않고 <b>위치를 잘라낸 뒤 그 축의 속도를 죽이는</b> 방식을 쓴다 -
+    /// 구르기는 속도를 통째로 덮어쓰기 때문에 속도 쪽에서 막으면 벽에 붙은 채로 계속
+    /// 밀리는 상태가 되고, 위치를 자르면 어떤 이동 수단이든 똑같이 막힌다.
+    /// </summary>
+    private void ClampToMap()
+    {
+        if (!MapBounds.HasBounds) return;
+
+        Vector3 current = rb.position;
+        Vector3 clamped = MapBounds.ClampPosition(current, mapEdgeMargin);
+        if (clamped == current) return;
+
+        // 경계에 닿은 축의 속도만 0으로 만들어 미끄러짐(벽을 따라 흐르는 이동)은 그대로 살린다.
+        Vector3 v = rb.linearVelocity;
+        if (!Mathf.Approximately(clamped.x, current.x)) v.x = 0f;
+        if (!Mathf.Approximately(clamped.y, current.y)) v.y = 0f;
+        rb.linearVelocity = v;
+
+        rb.position = clamped;
     }
 }

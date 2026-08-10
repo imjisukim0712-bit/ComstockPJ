@@ -2553,9 +2553,26 @@ MonoBehaviour:
     prefab: {fileID: 5875351990651437859, guid: 56f51d7b932e4b34cbb5bc736de78dcc, type: 3}
   - monsterId: 200002
     prefab: {fileID: 5875351990651437859, guid: 54e232e9a729fa047a0c9721b5b19007, type: 3}
+  - monsterId: 200003
+    prefab: {fileID: 6254099425817416977, guid: 76a12579a26b4c744bcb9f72ef497f24, type: 3}
+  - monsterId: 200004
+    prefab: {fileID: 7944292109638924263, guid: 771475a4d6f0b374a86907ed3795e33a, type: 3}
+  - monsterId: 200005
+    prefab: {fileID: 3983245824654094790, guid: 2f0f576f2524a4542bd7a2f87b35f126, type: 3}
+  - monsterId: 200006
+    prefab: {fileID: 7192514787622259345, guid: c8363e0af5ed2974686683cb136b1a28, type: 3}
   spawnMonsterIds: 410d0300
-  advancedMonsterIds: 420d0300
-  advancedUnlockWave: 4
+  unlockSchedule:
+  - monsterId: 200003
+    unlockWave: 3
+  - monsterId: 200002
+    unlockWave: 4
+  - monsterId: 200004
+    unlockWave: 5
+  - monsterId: 200005
+    unlockWave: 8
+  - monsterId: 200006
+    unlockWave: 10
   spawnBatchSize: 2
   spawnInterval: 1
   spawnCenter: {fileID: 0}
@@ -2563,6 +2580,9 @@ MonoBehaviour:
   offScreenMarginJitter: 2.5
   fallbackSpawnRadius: 12
   maxAliveEnemies: 18
+  leaderPackMonsterId: 200001
+  leaderPackSize: 3
+  leaderPackSpawnRadius: 2.5
 --- !u!4 &379423241
 Transform:
   m_ObjectHideFlags: 0
@@ -3064,7 +3084,7 @@ GameObject:
   m_Component:
   - component: {fileID: 462372026}
   - component: {fileID: 462372025}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: PartBoxIndicators
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3084,9 +3104,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PartBoxIndicatorUI
   maxIndicators: 8
-  edgeMargin: 60
-  arrowSize: 36
+  referenceScreenHeight: 1080
+  edgeMargin: 90
+  arrowSize: 72
+  iconSize: 56
   arrowColor: {r: 1, g: 0.72, b: 0.15, a: 1}
+  iconResourceName: ItemBox
 --- !u!224 &462372026
 RectTransform:
   m_ObjectHideFlags: 0
@@ -7649,7 +7672,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 28
+  m_fontSize: 32
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -8298,7 +8321,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 28
+  m_fontSize: 32
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -9229,6 +9252,7 @@ MonoBehaviour:
   offset: {x: 0, y: 0, z: -15}
   smoothTime: 0
   lockZ: 1
+  clampToMap: 1
 --- !u!1 &1408040269
 GameObject:
   m_ObjectHideFlags: 0
@@ -10630,8 +10654,6 @@ MonoBehaviour:
   enemySpawner: {fileID: 379423240}
   firstWaveDuration: 60
   waveDurationIncreasePerWave: 0
-  clearedGraceSeconds: 2
-  maxClearWaitSeconds: 45
   spawnIntervalDecayPerWave: 0.96
   minSpawnInterval: 0.3
   maxAliveIncreasePerWave: 4
@@ -11592,6 +11614,7 @@ MonoBehaviour:
   flipSprite: 1
   flipXOnRight: 1
   spriteRenderer: {fileID: 1786583640}
+  mapEdgeMargin: 0.8
   proceduralRig: {fileID: 0}
 --- !u!95 &1786583645
 Animator:
@@ -13102,7 +13125,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: -1}
-  m_LocalScale: {x: 6.4814816, y: 6.4814816, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -13345,7 +13368,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 17.3
+  m_fontSize: 32
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1

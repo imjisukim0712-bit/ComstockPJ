@@ -26,6 +26,12 @@ public class RewardPickup : MonoBehaviour
 
     private bool collected;
 
+    /// <summary>
+    /// 씬을 다시 시작할 때 이전 판의 파괴된 픽업이 목록에 남지 않도록 비운다
+    /// (EnemyUnit.ResetStaticCaches()와 같은 이유). PlayerRobotController.Awake()가 호출한다.
+    /// </summary>
+    public static void ResetStaticCaches() => AlivePartBoxes.Clear();
+
     public void Init(RewardType type, int amount)
     {
         Type = type;
@@ -33,6 +39,10 @@ public class RewardPickup : MonoBehaviour
 
         if (Type == RewardType.PartBox) AlivePartBoxes.Add(this);
     }
+
+    // 수령을 거치지 않고 파괴되는 경로(씬 전환, 웨이브 종료 정리 등)에서도 목록이 새지 않도록
+    // 여기서 한 번 더 지운다. CollectImmediately()에서 이미 지운 경우 Remove는 아무 일도 하지 않는다.
+    private void OnDestroy() => AlivePartBoxes.Remove(this);
 
     private void OnTriggerEnter(Collider other)
     {

@@ -121,15 +121,16 @@ public class GameHUD : MonoBehaviour
         partBoxText.text = $"부품 상자 {RunState.UnopenedPartBoxCount}/{capacity}";
     }
 
-    // 웨이브 남은 초. 제한시간이 끝난 뒤에는 남은 적을 다 잡아야 웨이브가 끝나므로,
-    // 그 구간에서는 초 대신 "잔적 처치"를 보여준다(0초에서 멈춰 있으면 멈춘 것처럼 보인다).
+    // 웨이브 남은 초. 일반 웨이브는 제한시간이 끝나는 즉시 종료되지만, 보스 웨이브만은
+    // 보스를 처치해야 끝나므로 그 구간에서는 초 대신 "보스 처치"를 보여준다
+    // (0:00에서 멈춰 있으면 게임이 멈춘 것처럼 보인다).
     private void UpdateWaveTime()
     {
         if (waveTimeText == null || waveManager == null) return;
 
-        if (waveManager.IsClearingRemainingEnemies)
+        if (waveManager.IsWaitingForBossDefeat)
         {
-            waveTimeText.text = "잔적 처치";
+            waveTimeText.text = "보스 처치";
             return;
         }
 
