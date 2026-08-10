@@ -46,25 +46,38 @@ public class ProceduralCharacterRig : MonoBehaviour
     [Header("리그 전체")]
     [Tooltip("스프라이트 원본이 커서(몸통 250px) 그대로 쓰면 화면을 덮는다. 리그 루트에 곱하는 배율")]
     [SerializeField] private float rigScale = 0.55f;
-    [Tooltip("다리 파츠(허벅지/정강이/신발)에만 곱하는 배율. 몸통에는 곱하지 않는다.\n" +
-             "원본 픽셀 크기 그대로 조립하면 다리가 몸통보다 길어진다. 레퍼런스 GIF 실측 기준\n" +
-             "'다리 길이 ÷ 몸통 높이 = 0.41'을 맞추는 값이 약 0.30이다")]
-    [SerializeField] private float legScale = 0.30f;
+    [Tooltip("다리 파츠 전체에 한 번 더 곱하는 배율. 기본 1 = 파츠별 배율을 그대로 쓴다.\n" +
+             "다리를 통째로 키우거나 줄여보고 싶을 때만 건드린다(데모 슬라이더용)")]
+    [SerializeField] private float legScale = 1.0f;
+
+    [Header("파츠별 배율 — 원본 이미지의 '외곽선 두께'를 몸통과 맞추는 값")]
+    [Tooltip("파츠마다 원본 PNG의 해상도가 달라서(몸통 250px / 허벅지 98px / 정강이 74px / 신발 117px)\n" +
+             "전부 같은 배율로 그리면 외곽선(검은 테두리) 두께가 제각각이 된다. 원본 이미지는 외곽선\n" +
+             "두께가 같아 보이도록 그려졌으므로, 각 파츠를 '외곽선 두께가 몸통과 같아지는 배율'로\n" +
+             "그려야 원래 의도한 크기가 된다.\n\n" +
+             "기본값은 원본 PNG의 외곽선 두께를 픽셀 단위로 실측해 역산한 값이다(2026-08-10):\n" +
+             "  몸통 4.27px / 허벅지 9.06px / 정강이 7.42px / 신발 9.84px\n" +
+             "  → 허벅지 4.27/9.06=0.471, 정강이 4.27/7.42=0.576, 신발 4.27/9.84=0.434\n" +
+             "예전에는 이 셋을 legScale 하나(0.30)로 뭉뚱그려서 다리가 의도보다 훨씬 얇고 작았다.")]
+    [SerializeField] private float thighScale = 0.471f;
+    [SerializeField] private float shinScale = 0.576f;
+    [SerializeField] private float footScale = 0.434f;
     [Tooltip("두 고관절 사이의 거리(유닛, 몸통과 같은 로컬 스케일 = 몸통 폭 2.5유닛 기준).\n" +
-             "레퍼런스 GIF는 걷는 동작이라 보폭에 따라 다리 벌어짐이 프레임마다 달라져서\n" +
-             "고정 비율을 픽셀로 뽑을 수 없었다(시도했다가 실패 - 작업.md 참고). 화면으로\n" +
-             "직접 비교하며 눈대중으로 잡은 값이다. 몸통 폭 대비 약 28%")]
-    [SerializeField] private float hipSeparation = 0.7f;
+             "2026-08-10 파츠 배율을 원본 기준으로 바로잡으면서 다리가 커져, 예전 값(0.7)으로는\n" +
+             "발이 몸통 폭 밖으로 벌어졌다. 사용자 레퍼런스처럼 두 다리가 몸통 아래에 나란히\n" +
+             "오도록 0.55로 줄였다")]
+    [SerializeField] private float hipSeparation = 0.55f;
     [Tooltip("다리뼈(허벅지+정강이)를 완전히 폈을 때 대비 골반 높이 비율. 1보다 작으면 무릎이 굽는다.\n" +
              "발목~밑창 높이는 항상 그대로 더해지므로 이 값은 순수하게 '무릎을 얼마나 굽힐지'만 정한다.\n" +
              "1에 가까울수록 다리가 곧게 서지만, 그만큼 발을 앞뒤로 뻗을 여유가 줄어 보폭이 잘린다")]
-    [SerializeField] private float hipHeightRatio = 0.90f;
-    [Tooltip("대기 자세에서 두 발을 앞뒤로 벌리는 폭. 다리 길이에 대한 배수다")]
-    [SerializeField] private float idleStanceRatio = 0.2f;
+    [SerializeField] private float hipHeightRatio = 0.96f;
+    [Tooltip("대기 자세에서 두 발을 앞뒤로 벌리는 폭. 다리 길이에 대한 배수다.\n" +
+             "보행 중에는 쓰이지 않으므로(gaitBlend=0일 때만 적용) 보폭에 영향을 주지 않는다")]
+    [SerializeField] private float idleStanceRatio = 0.05f;
     [Tooltip("앞쪽 다리(Leg_Front)의 고관절(다리 뿌리) 자체를 뒤쪽 다리 쪽(중심)으로 살짝\n" +
              "당긴다. hipSeparation과 같은 로컬 단위. 뒤쪽 다리는 건드리지 않는다 - 대기/보행\n" +
              "구분 없이 다리 전체(뼈·발 모두)가 그만큼 이동한다")]
-    [SerializeField] private float frontLegPullBack = 0.1f;
+    [SerializeField] private float frontLegPullBack = 0.06f;
     [Tooltip("발 스프라이트의 발끝이 왼쪽을 향하도록 그려져 있어, 기본 방향(+X)에 맞추려면 뒤집어야 한다.\n" +
              "두 발 모두 항상 이 방향(=진행 방향)을 향한다 — 사람처럼 두 발이 서로 다른 쪽을 보지 않는다")]
     [SerializeField] private bool footSpriteFlipX = true;
@@ -84,8 +97,11 @@ public class ProceduralCharacterRig : MonoBehaviour
     [SerializeField] private Vector2 shinKneeAnchor = new Vector2(0.48f, 0.82f);
     [Tooltip("정강이에서 발목(아랫끝)")]
     [SerializeField] private Vector2 shinAnkleAnchor = new Vector2(0.48f, 0.15f);
-    [Tooltip("발에서 발목(신발 목 부분의 중심)")]
-    [SerializeField] private Vector2 footAnkleAnchor = new Vector2(0.55f, 0.88f);
+    [Tooltip("발에서 발목(정강이가 꽂히는 지점). 신발 스프라이트 안에서 이 지점에 정강이 끝이 온다.\n" +
+             "값이 높으면(≈0.88 = 신발 입구) 정강이와 신발이 '따로 떨어져' 보이고, 값을 낮춰 신발 안쪽에\n" +
+             "두면 정강이 끝이 신발 통에 파묻혀 '신발을 신은' 모습이 된다(신발이 정강이보다 위에 그려짐).\n" +
+             "2026-08-10 사용자 지정으로 0.88 → 0.62")]
+    [SerializeField] private Vector2 footAnkleAnchor = new Vector2(0.55f, 0.62f);
     [Tooltip("발 스프라이트에서 바닥에 닿는 밑창 높이")]
     [SerializeField] private float footSoleY = 0.16f;
 
@@ -175,6 +191,12 @@ public class ProceduralCharacterRig : MonoBehaviour
 
     /// <summary>고관절에서 밑창까지의 거리. 배수 파라미터의 기준값이다.</summary>
     public float LegLength => legLength;
+
+    // 실제로 각 다리 파츠에 적용되는 최종 배율. 파츠별 배율(외곽선 두께 맞춤) x 전체 배율.
+    // 스프라이트 크기와 뼈 길이가 반드시 같은 값을 써야 관절이 어긋나지 않으므로 여기 하나로 모은다.
+    private float ThighScale => thighScale * legScale;
+    private float ShinScale => shinScale * legScale;
+    private float FootScale => footScale * legScale;
 
     /// <summary>데모/툴에서 슬라이더로 만지기 위한 접근자.</summary>
     public float StrideRatio { get => strideRatio; set => strideRatio = Mathf.Max(0.05f, value); }
@@ -280,10 +302,10 @@ public class ProceduralCharacterRig : MonoBehaviour
         Vector2 shinKnee = AnchorToLocal(shinSprite, shinKneeAnchor);
         Vector2 shinAnkle = AnchorToLocal(shinSprite, shinAnkleAnchor);
 
-        // legScale은 다리 파츠에만 곱한다(몸통은 원본 크기 유지). 그림 원본 그대로 조립하면
-        // 다리가 몸통보다 길어져 레퍼런스와 비율이 전혀 다른 캐릭터가 나온다.
-        thighLength = Vector2.Distance(thighHip, thighKnee) * legScale;
-        shinLength = Vector2.Distance(shinKnee, shinAnkle) * legScale;
+        // 파츠별 배율을 각자에게 곱한다(몸통은 원본 크기 유지). 뼈 길이도 같은 배율로 재므로
+        // 스프라이트와 관절 위치가 항상 일치한다.
+        thighLength = Vector2.Distance(thighHip, thighKnee) * ThighScale;
+        shinLength = Vector2.Distance(shinKnee, shinAnkle) * ShinScale;
 
         // 스프라이트가 비스듬히 그려져 있어도(허벅지가 약 19도 기울어 있다) 뼈 축이 정확히
         // 아래(-Y)를 향하도록 보정각을 역산한다. 두 다리 모두 이 값을 그대로 쓴다 — 사람처럼
@@ -293,7 +315,7 @@ public class ProceduralCharacterRig : MonoBehaviour
 
         Vector2 footAnkle = AnchorToLocal(footSprite, MaybeMirrorX(footAnkleAnchor));
         Vector2 footSole = AnchorToLocal(footSprite, MaybeMirrorX(new Vector2(footAnkleAnchor.x, footSoleY)));
-        ankleToSole = Mathf.Abs(footAnkle.y - footSole.y) * legScale;
+        ankleToSole = Mathf.Abs(footAnkle.y - footSole.y) * FootScale;
 
         boneReach = thighLength + shinLength;
         legLength = boneReach + ankleToSole;
@@ -355,19 +377,19 @@ public class ProceduralCharacterRig : MonoBehaviour
         leg.hip.localPosition = new Vector3(sideX, standHipY, 0f);
         // 정강이가 허벅지보다 먼저 그려지고, 무릎 공(허벅지)과 신발이 그 위를 덮는다
         leg.thighRenderer = AttachVisual(leg.hip, "Thigh", thighSprite, thighHip, thighTilt,
-                                         sortingBase + 1, tint, false, legScale);
+                                         sortingBase + 1, tint, false, ThighScale);
 
         leg.knee = new GameObject("Knee").transform;
         leg.knee.SetParent(leg.hip, false);
         leg.knee.localPosition = new Vector3(0f, -thighLength, 0f);
         leg.shinRenderer = AttachVisual(leg.knee, "Shin", shinSprite, shinKnee, shinTilt,
-                                        sortingBase, tint, false, legScale);
+                                        sortingBase, tint, false, ShinScale);
 
         leg.ankle = new GameObject("Ankle").transform;
         leg.ankle.SetParent(leg.knee, false);
         leg.ankle.localPosition = new Vector3(0f, -shinLength, 0f);
         leg.footRenderer = AttachVisual(leg.ankle, "Foot", footSprite, footAnkle, 0f,
-                                        sortingBase + 2, tint, footSpriteFlipX, legScale);
+                                        sortingBase + 2, tint, footSpriteFlipX, FootScale);
 
         return leg;
     }

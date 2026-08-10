@@ -10,7 +10,8 @@ using UnityEngine;
 public static class RewardPickupManager
 {
     private const float PickupRange = 2f;    // 이 거리 안으로 플레이어가 들어오면 자동 습득
-    private const float VisualWorldSize = 0.7f; // 아이템 상자(1.2)보다 조금 작게 표시
+    // 2026-08-10 "인게임 모든 이미지 1/2" 지시로 0.7 → 0.35 (아이템 상자 0.6보다 조금 작게 표시)
+    private const float VisualWorldSize = 0.35f;
     private const int SortingOrder = 5;      // 바닥/캐릭터에 가려지지 않도록
 
     private const string GoldResourceName = "Gold";

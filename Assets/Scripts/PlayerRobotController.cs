@@ -36,6 +36,11 @@ public class PlayerRobotController : MonoBehaviour
     [Tooltip("구르기 재사용 대기시간(초)")]
     [SerializeField] private float dashCooldown = 1.2f;
 
+    [Header("적 밀어내기")]
+    [Tooltip("이동 중 몸이 겹친 적을 밀어내는 속도(내 이동 속도에 대한 배율).\n" +
+             "1이면 내가 가는 속도만큼 밀어낸다. 좀비가 다시 다가오는 속도보다 커야 실제로 밀린다")]
+    [SerializeField] private float enemyPushSpeedRatio = 1.2f;
+
     [Header("테스트용 설정 (로봇 선택 씬 없이 이 씬만 실행할 때 사용)")]
     [Tooltip("PlayerSession.SelectedRobotId가 -1(미선택)일 때 대신 사용할 로봇 ID")]
     [SerializeField] private int fallbackRobotIdForTesting = 0;
@@ -379,7 +384,55 @@ public class PlayerRobotController : MonoBehaviour
             rb.linearVelocity = moveInput * MoveSpeed; // MovePosition 대신 이걸로 교체
         }
 
+        PushOverlappingEnemies();
         ClampToMap();
+    }
+
+    /// <summary>
+    /// 이동 중 몸이 겹친 적을 밀어낸다(2026-08-10 사용자 요청: "로봇은 이동할 때 좀비를 밀어낼
+    /// 수 있어야 함").
+    ///
+    /// <b>물리 충돌만으로는 절대 밀리지 않는다.</b> <see cref="EnemyUnit.FixedUpdate"/>가 매
+    /// 프레임 Rigidbody 속도를 통째로 덮어쓰기 때문에, 충돌로 밀려나도 바로 다음 프레임에
+    /// 원래대로 돌아간다. 그래서 적의 이동 속도에 더해질 성분(<see cref="EnemyUnit.ApplyPlayerPush"/>)
+    /// 으로 직접 넣어준다.
+    ///
+    /// 겹친 깊이에 비례해 밀어내므로 살짝 스치면 약하게, 깊이 파고들면 강하게 밀린다.
+    /// 구르기 중에도 그대로 적용되어 좀비 무리를 뚫고 지나갈 수 있다.
+    /// </summary>
+    private void PushOverlappingEnemies()
+    {
+        Vector3 velocity = rb.linearVelocity;
+        if (velocity.sqrMagnitude < 0.0001f) return; // 멈춰 있으면 밀지 않는다
+
+        float myRadius = PushBodyRadius();
+        float pushSpeed = velocity.magnitude * enemyPushSpeedRatio;
+
+        foreach (EnemyUnit enemy in EnemyUnit.Alive)
+        {
+            if (enemy == null || enemy.IsDead) continue;
+
+            Vector3 diff = enemy.transform.position - transform.position;
+            diff.z = 0f;
+
+            float dist = diff.magnitude;
+            float minDist = myRadius + enemy.BodyRadius;
+            if (dist >= minDist) continue; // 몸이 안 닿았으면 밀지 않는다
+
+            // 완전히 겹쳐 방향을 못 구하면 진행 방향으로 밀어낸다.
+            Vector3 dir = dist > 0.0001f ? diff / dist : velocity.normalized;
+            float depth = (minDist - dist) / minDist; // 파고든 비율 0~1
+
+            enemy.ApplyPlayerPush(dir * (pushSpeed * depth));
+        }
+    }
+
+    /// <summary>밀어내기 판정에 쓰는 내 몸 반지름. EnemyUnit.BodyRadius와 같은 기준(짧은 축)을 쓴다.</summary>
+    private float PushBodyRadius()
+    {
+        Collider col = GetComponent<Collider>();
+        if (col == null) return 0.5f;
+        return Mathf.Max(0.05f, Mathf.Min(col.bounds.extents.x, col.bounds.extents.y));
     }
 
     /// <summary>

@@ -171,11 +171,25 @@ public class EnemyUnit : MonoBehaviour
         to_player.z = 0f; // X-Y 평면만 사용
         float distance = to_player.magnitude;
 
-        if (distance <= AttackRange + BodyContactRadius())
+        if (distance <= EffectiveAttackRange())
         {
             TryAttack();
         }
     }
+
+    /// <summary>
+    /// 실제 공격이 닿는 중심간 거리.
+    ///
+    /// <b>예전에는 `AttackRange + BodyContactRadius()`로 둘을 더했는데, 이게 이중 계산이라
+    /// 사거리가 비정상적으로 길었다</b>(2026-08-10 사용자 지적). 좀비 기준 실측:
+    /// monster_range 1.6 + 몸통 반지름 합 1.285 = <b>2.885유닛</b>으로, 두 몸이 실제로 맞닿는
+    /// 거리(1.285)의 2.2배나 떨어져서도 공격이 들어갔다.
+    ///
+    /// `monster_range`는 이미 '중심 기준' 사거리이므로 몸 반지름을 더하면 안 된다.
+    /// 몸 반지름은 <b>하한</b>으로만 쓴다 - 몸집이 커서 실제로는 맞닿았는데 사거리가 그보다
+    /// 짧아 판정이 안 나는 경우만 구제하려는 것이 원래 의도였다.
+    /// </summary>
+    protected float EffectiveAttackRange() => Mathf.Max(AttackRange, BodyContactRadius());
 
     // 콜라이더끼리 물리적으로 맞닿았을 때도(= "들이박았을 때") 확실히 공격이 들어가도록
     // 물리 충돌 이벤트를 보조 트리거로 함께 사용한다.
@@ -193,15 +207,19 @@ public class EnemyUnit : MonoBehaviour
     // 근사해서, 몸집 때문에 실제로는 닿았는데 monster_range보다 멀어서 공격 판정이 안 나는 문제를 막는다.
     protected float BodyContactRadius()
     {
+        // extents의 x/y 중 <b>짧은 쪽</b>을 쓴다. 긴 쪽을 쓰면 몸을 원으로 근사할 때 짧은 축
+        // 방향으로 몸 밖까지 판정이 튀어나간다 - ComputeBodyRadius()가 같은 이유로 Min을 쓰는데,
+        // 여기만 Max여서 기준이 어긋나 있었다(2026-08-10 사용자 지적 "공격 사거리가 비정상적으로 김").
+        // 좀비 기준 실측: Max이면 1.75유닛, Min이면 1.225유닛.
         float self_radius = 0.6f;
         Collider self_collider = GetComponent<Collider>();
-        if (self_collider != null) self_radius = Mathf.Max(self_collider.bounds.extents.x, self_collider.bounds.extents.y);
+        if (self_collider != null) self_radius = Mathf.Min(self_collider.bounds.extents.x, self_collider.bounds.extents.y);
 
         float player_radius = 0.8f;
         if (player != null)
         {
             Collider player_collider = player.GetComponent<Collider>();
-            if (player_collider != null) player_radius = Mathf.Max(player_collider.bounds.extents.x, player_collider.bounds.extents.y);
+            if (player_collider != null) player_radius = Mathf.Min(player_collider.bounds.extents.x, player_collider.bounds.extents.y);
         }
 
         return self_radius + player_radius;
@@ -455,7 +473,7 @@ public class EnemyUnit : MonoBehaviour
 
         Vector3 to_player = player_transform.position - transform.position;
         to_player.z = 0f;
-        return to_player.magnitude <= AttackRange + BodyContactRadius();
+        return to_player.magnitude <= EffectiveAttackRange();
     }
 
     // 다른 몬스터를 밀어내는 세기. 매 프레임 velocity를 "플레이어 방향"으로만 강제로
@@ -474,6 +492,11 @@ public class EnemyUnit : MonoBehaviour
     // extents의 x/y 중 <b>작은 쪽</b>을 쓴다 - 원으로 근사하는 이상 큰 쪽을 쓰면 짧은 축에서
     // 몸 밖까지 판정이 나가기 때문이다("몸 크기에서 벗어나지 않아야 한다"는 요구사항).
     private float body_radius = 0.5f;
+
+    // 겹침 방지 반지름에 곱하는 계수. 몸 반지름 합을 그대로 쓰면(=1.0) 콜라이더가 그림보다
+    // 넉넉한 탓에 좀비들이 실제 몸 크기보다 훨씬 넓게 벌어져 서 있었다.
+    // 2026-08-10 사용자 지정: "그 간격이 지나치게 넓음. 현재의 1/3으로 줄여도 무방."
+    private const float SeparationRadiusScale = 1f / 3f;
 
     // OverlapSphere 검색 반경을 정하려면 "가장 큰 이웃"의 반지름을 알아야 한다(보스처럼 큰
     // 유닛이 작은 좀비를 밀어내는 경우). 스폰될 때마다 갱신되는 전역 최댓값을 쓴다.
@@ -501,6 +524,20 @@ public class EnemyUnit : MonoBehaviour
     // 넉백으로 밀려나는 속도(유닛/초)와 초당 감쇠량. ApplyKnockback이 채우고 FixedUpdate가 소비한다.
     private Vector3 knockback_velocity;
     private const float KnockbackDecay = 40f;
+
+    // 플레이어 로봇의 몸에 밀려나는 속도. PlayerRobotController가 매 FixedUpdate에 채우고
+    // 이쪽 FixedUpdate가 소비한 뒤 비운다(넉백과 달리 감쇠 없이 '닿아 있는 동안만' 작용).
+    private Vector3 player_push_velocity;
+
+    /// <summary>
+    /// 플레이어 로봇이 이동하면서 몸으로 밀어낼 때 호출한다(<see cref="PlayerRobotController"/>).
+    ///
+    /// 좀비는 매 FixedUpdate에 <see cref="rb"/>의 속도를 통째로 덮어쓰기 때문에, 물리 충돌만으로는
+    /// 절대 밀리지 않는다(밀려나도 다음 프레임에 원래 속도로 되돌아간다). 그래서 이동 속도에
+    /// 더해질 별도 성분으로 받아둔다(2026-08-10 사용자 요청: "로봇은 이동할 때 좀비를 밀어낼 수
+    /// 있어야 함").
+    /// </summary>
+    public void ApplyPlayerPush(Vector3 velocity) => player_push_velocity = velocity;
 
     protected virtual void FixedUpdate()
     {
@@ -534,7 +571,11 @@ public class EnemyUnit : MonoBehaviour
         // 넉백 속도를 시간에 따라 줄이면서 이동 속도에 더한다(덮어쓰지 않는다 - ApplyKnockback 주석 참고)
         knockback_velocity = Vector3.MoveTowards(knockback_velocity, Vector3.zero, KnockbackDecay * Time.fixedDeltaTime);
 
-        rb.linearVelocity = move_velocity + knockback_velocity;
+        rb.linearVelocity = move_velocity + knockback_velocity + player_push_velocity;
+
+        // 플레이어가 계속 밀고 있으면 매 프레임 다시 채워준다. 여기서 비우므로 떨어지는 순간
+        // 곧바로 멈춘다(넉백처럼 여운이 남지 않는다).
+        player_push_velocity = Vector3.zero;
     }
 
     private const float FacingVelocityThreshold = 0.01f;
@@ -564,8 +605,20 @@ public class EnemyUnit : MonoBehaviour
 
         Vector3 to_player = player_transform.position - transform.position;
         to_player.z = 0f;
+
+        // 이미 공격이 닿는 거리면 더 파고들지 않는다.
+        // 예전에는 사거리 안에 들어와도 계속 전진해서, 공격 한 번 하고 나면 쿨다운 동안
+        // 플레이어 몸속까지 밀고 들어왔다(2026-08-10 사용자 지적). 사거리보다 살짝 안쪽
+        // (StopDistanceRatio)에서 멈춰, 미세하게 앞뒤로 떠는 것도 막는다.
+        float stop_distance = EffectiveAttackRange() * StopDistanceRatio;
+        if (to_player.sqrMagnitude <= stop_distance * stop_distance) return Vector3.zero;
+
         return to_player;
     }
+
+    // 공격 사거리의 몇 %까지 접근하고 멈출지. 1.0으로 두면 사거리 경계에서 멈췄다 나갔다를
+    // 반복하며 떨 수 있어 살짝 안쪽으로 들어와 자리를 잡게 한다.
+    private const float StopDistanceRatio = 0.9f;
 
     // 몸이 실제로 겹치는 이웃들로부터 밀려나는 방향을 합산한다.
     // 예전에는 고정 반경(1.3) 안에 들어오기만 하면 거리 역수(1/dist)로 계속 밀어냈지만,
@@ -576,7 +629,7 @@ public class EnemyUnit : MonoBehaviour
         Vector3 push = Vector3.zero;
 
         // 나와 "가장 큰 이웃"이 닿을 수 있는 최대 거리까지만 검색하면 충분하다.
-        float searchRadius = body_radius + max_body_radius;
+        float searchRadius = (body_radius + max_body_radius) * SeparationRadiusScale;
 
         Collider[] nearby = Physics.OverlapSphere(transform.position, searchRadius);
         foreach (Collider col in nearby)
@@ -589,7 +642,10 @@ public class EnemyUnit : MonoBehaviour
             diff.z = 0f;
 
             float dist = diff.magnitude;
-            float minDist = body_radius + other.body_radius; // 두 몸이 딱 맞닿는 중심간 거리
+            // 두 몸이 딱 맞닿는 중심간 거리 x SeparationRadiusScale.
+            // 반지름 합 그대로 쓰면 콜라이더가 스프라이트보다 넉넉해서 실제 그림보다 훨씬
+            // 멀찍이 벌어져 보였다(2026-08-10 사용자 지정으로 1/3).
+            float minDist = (body_radius + other.body_radius) * SeparationRadiusScale;
             if (dist >= minDist) continue;                   // 아직 안 겹쳤으면 밀어내지 않는다
 
             // 완전히 겹쳐 방향을 못 구하는 경우(거의 같은 좌표)에는 임의 방향으로 살짝 흩는다.

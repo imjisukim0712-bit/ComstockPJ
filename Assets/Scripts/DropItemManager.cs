@@ -13,7 +13,9 @@ using UnityEngine;
 public static class DropItemManager
 {
     private const float PickupRange = 2f;   // 이 거리 안으로 플레이어가 들어오면 자동 습득
-    private const float BoxWorldSize = 1.2f; // 아이템 상자 스프라이트의 월드 크기(변 길이, 유닛)
+    // 2026-08-10 "인게임 모든 이미지 1/2" 지시로 1.2 → 0.6. 습득 거리(PickupRange)는 그림이 아니라
+    // 조작 편의 값이라 함께 줄이지 않았다.
+    private const float BoxWorldSize = 0.6f; // 아이템 상자 스프라이트의 월드 크기(변 길이, 유닛)
     private const int SortingOrder = 5;      // 바닥/캐릭터에 가려지지 않도록
 
     // Assets/Resources 안에 있는 스프라이트 이름 (확장자 제외) - Resources.Load로 바로 불러온다

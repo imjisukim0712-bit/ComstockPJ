@@ -63,11 +63,12 @@ public static class WeaponTableGenerator
 
         public float atk;             // 일반 등급 공격력 (상위 등급은 x1.15^g)
         public float atsp;            // 초당 공격 횟수 (대기시간 = 1/atsp, 발사 종료 후부터)
-        public float range;           // 사거리(유닛) = 기획 수치 / 50
+        public float range;           // 사거리(유닛) = 기획 수치 / 100 (2026-08-10 이전에는 / 50)
         public float detect;          // 감지거리(유닛)
-        public float speed;           // 투사체 속도
+        public float speed;           // 투사체 속도(유닛/초) - 거리 단위를 포함하므로 range와 같은 환산을 쓴다
         public float rotspeed;        // 조준 회전 속도
-        public float atsize;          // 투사체 크기 (빔은 반폭)
+        public float atsize;          // 투사체 크기 (빔은 반폭). 2026-08-10 "인게임 모든 이미지 1/2"로 원거리 10종 절반
+                                      // (근접 3종의 1f는 MeleeSwing이 쓰지 않는 미사용 값이라 그대로 뒀다)
         public float aim;             // 탄퍼짐 반각
         public float rebound;         // 다중탄 각도 간격
         public int projectiles;
@@ -89,8 +90,19 @@ public static class WeaponTableGenerator
     }
 
     /// <summary>
-    /// 사람이 편집하는 유일한 곳. 거리 값은 전부 <b>기획 문서 수치 ÷ 50</b>(1유닛 = 50)이며,
-    /// 근접 3종만 적 몸통 접촉 거리(약 1.4유닛)를 넘기도록 +1.0유닛 오프셋을 줬다.
+    /// 사람이 편집하는 유일한 곳.
+    ///
+    /// <b>거리 환산 (2026-08-10 변경)</b>: 원거리 10종의 range/detect/speed는 <b>기획 문서 수치 ÷ 100</b>이다.
+    /// 예전에는 ÷50이었는데, 카메라를 FHD 기준(orthographicSize=5.4)으로 맞추면서 화면의 실제 환산이
+    /// <b>1유닛 = 100px</b>(배경 스프라이트 PPU와 동일)이 되었기 때문이다. 이제 <b>기획 수치 1 = 화면 1픽셀</b>이다.
+    /// speed(유닛/초)도 거리 단위를 포함하므로 같은 배율로 함께 나눴다 - 안 그러면 탄 비행 시간이 절반이 된다.
+    ///
+    /// <b>근접 3종(kind 11~13)은 환산에서 제외한다.</b> 이 값들은 화면이 아니라 "적 몸통에 닿는 거리"에
+    /// 종속된 값이라(원래도 기획 수치에 +1.0유닛 접촉 오프셋을 얹은 값이다), 적 몸 크기가 그대로인 이상
+    /// 절반으로 줄이면 좀비의 공격 사거리(1.6유닛)보다 짧아져 일방적으로 맞기만 하게 된다.
+    ///
+    /// splash(폭발 반경)·atsize(투사체 크기)·knockback도 같은 이유로 건드리지 않았다 -
+    /// "적 몇 마리를 휩쓰는가"로 의미가 정해지는 값이고 적 크기는 변하지 않았다.
     ///
     /// 공격력 기준(플레이 실측으로 잡은 값):
     /// 웨이브 1의 스폰 압력이 <b>초당 3.75마리</b>(배치 3마리 / 0.8초)이므로, 소켓 2정으로
@@ -104,8 +116,8 @@ public static class WeaponTableGenerator
         // ===== 중무장 5종 =====
         new WeaponDef {
             kind = 1, name = "중기관총", wclass = WeaponClass.Heavy, wtype = WeaponType.RapidFire,
-            atk = 9f, atsp = 10f, range = 7.0f, detect = 6.0f, speed = 22f, rotspeed = RotNormal,
-            atsize = 0.25f, aim = AimNormal, rebound = 0f, projectiles = 1,
+            atk = 9f, atsp = 10f, range = 3.5f, detect = 3.0f, speed = 11f, rotspeed = RotNormal,
+            atsize = 0.125f, aim = AimNormal, rebound = 0f, projectiles = 1,
             pierce = 0, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 0f, duration = 0f,
             firemode = WeaponFireMode.Projectile,
             imgscale = 1.15f, weight = 5.0f, basePrice = 45,
@@ -113,8 +125,8 @@ public static class WeaponTableGenerator
         },
         new WeaponDef {
             kind = 2, name = "전투산탄총", wclass = WeaponClass.Heavy, wtype = WeaponType.Shotgun,
-            atk = 14f, atsp = 0.8f, range = 4.0f, detect = 3.0f, speed = 18f, rotspeed = RotHigh,
-            atsize = 0.2f, aim = AimHigh, rebound = 4f, projectiles = 8,
+            atk = 14f, atsp = 0.8f, range = 2.0f, detect = 1.5f, speed = 9f, rotspeed = RotHigh,
+            atsize = 0.1f, aim = AimHigh, rebound = 4f, projectiles = 8,
             pierce = 1, pierceChance = 0.6f, splash = 0f, defignore = 0f, knockback = 0f, duration = 0f,
             firemode = WeaponFireMode.Projectile,
             imgscale = 1.15f, weight = 4.5f, basePrice = 45,
@@ -122,8 +134,8 @@ public static class WeaponTableGenerator
         },
         new WeaponDef {
             kind = 3, name = "대물저격총", wclass = WeaponClass.Heavy, wtype = WeaponType.Precision,
-            atk = 120f, atsp = 0.25f, range = 15.0f, detect = 8.0f, speed = 40f, rotspeed = RotSlightlyLow,
-            atsize = 0.3f, aim = AimVeryLow, rebound = 0f, projectiles = 1,
+            atk = 120f, atsp = 0.25f, range = 7.5f, detect = 4.0f, speed = 20f, rotspeed = RotSlightlyLow,
+            atsize = 0.15f, aim = AimVeryLow, rebound = 0f, projectiles = 1,
             pierce = 3, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 0f, duration = 0f,
             firemode = WeaponFireMode.Projectile,
             imgscale = 1.15f, weight = 5.5f, basePrice = 55,
@@ -133,8 +145,8 @@ public static class WeaponTableGenerator
             // 3초 동안 총 90 데미지를 나눠 넣고(빔), 발사가 끝난 뒤 2초를 쉰다(atsp 0.5 = 대기 2초).
             // 대기시간이 발사 종료 후부터 흐르므로 빔이 여러 개 겹치지 않는다.
             kind = 4, name = "플라즈마캐논", wclass = WeaponClass.Heavy, wtype = WeaponType.Energy,
-            atk = 150f, atsp = 0.5f, range = 8.0f, detect = 7.0f, speed = 0f, rotspeed = RotLow,
-            atsize = 0.5f, aim = AimVeryLow, rebound = 0f, projectiles = 1,
+            atk = 150f, atsp = 0.5f, range = 4.0f, detect = 3.5f, speed = 0f, rotspeed = RotLow,
+            atsize = 0.25f, aim = AimVeryLow, rebound = 0f, projectiles = 1,
             pierce = -1, pierceChance = 0f, splash = 0f, defignore = 0.5f, knockback = 0f, duration = 3.0f,
             firemode = WeaponFireMode.Beam,
             imgscale = 1.15f, weight = 6.0f, basePrice = 60,
@@ -142,8 +154,8 @@ public static class WeaponTableGenerator
         },
         new WeaponDef {
             kind = 5, name = "로켓런처", wclass = WeaponClass.Heavy, wtype = WeaponType.Explosive,
-            atk = 75f, atsp = 0.4f, range = 7.0f, detect = 4.8f, speed = 14f, rotspeed = RotSlightlyHigh,
-            atsize = 0.3f, aim = AimVeryLow, rebound = 0f, projectiles = 1,
+            atk = 75f, atsp = 0.4f, range = 3.5f, detect = 2.4f, speed = 7f, rotspeed = RotSlightlyHigh,
+            atsize = 0.15f, aim = AimVeryLow, rebound = 0f, projectiles = 1,
             pierce = 0, pierceChance = 0f, splash = 2.4f, defignore = 0f, knockback = 0f, duration = 0f,
             firemode = WeaponFireMode.Projectile,
             imgscale = 1.15f, weight = 5.5f, basePrice = 55,
@@ -153,8 +165,8 @@ public static class WeaponTableGenerator
         // ===== 경무장 5종 =====
         new WeaponDef {
             kind = 6, name = "소드오프샷건", wclass = WeaponClass.Light, wtype = WeaponType.Shotgun,
-            atk = 8f, atsp = 1.2f, range = 3.6f, detect = 2.6f, speed = 18f, rotspeed = RotVeryHigh,
-            atsize = 0.2f, aim = AimHigh, rebound = 5f, projectiles = 6,
+            atk = 8f, atsp = 1.2f, range = 1.8f, detect = 1.3f, speed = 9f, rotspeed = RotVeryHigh,
+            atsize = 0.1f, aim = AimHigh, rebound = 5f, projectiles = 6,
             pierce = 1, pierceChance = 0.4f, splash = 0f, defignore = 0f, knockback = 0f, duration = 0f,
             firemode = WeaponFireMode.Projectile,
             imgscale = 1.0f, weight = 2.0f, basePrice = 25,
@@ -162,8 +174,8 @@ public static class WeaponTableGenerator
         },
         new WeaponDef {
             kind = 7, name = "레이저피스톨", wclass = WeaponClass.Light, wtype = WeaponType.Energy,
-            atk = 30f, atsp = 2f, range = 6.0f, detect = 5.0f, speed = 30f, rotspeed = RotVeryHigh,
-            atsize = 0.2f, aim = AimVeryLow, rebound = 0f, projectiles = 1,
+            atk = 30f, atsp = 2f, range = 3.0f, detect = 2.5f, speed = 15f, rotspeed = RotVeryHigh,
+            atsize = 0.1f, aim = AimVeryLow, rebound = 0f, projectiles = 1,
             pierce = 1, pierceChance = 0.5f, splash = 0f, defignore = 0.25f, knockback = 0f, duration = 0f,
             firemode = WeaponFireMode.Projectile,
             imgscale = 0.85f, weight = 1.5f, basePrice = 25,
@@ -171,8 +183,8 @@ public static class WeaponTableGenerator
         },
         new WeaponDef {
             kind = 8, name = "지정사수소총", wclass = WeaponClass.Light, wtype = WeaponType.Precision,
-            atk = 55f, atsp = 0.55f, range = 10.0f, detect = 7.0f, speed = 32f, rotspeed = RotNormal,
-            atsize = 0.25f, aim = AimVeryLow, rebound = 0f, projectiles = 1,
+            atk = 55f, atsp = 0.55f, range = 5.0f, detect = 3.5f, speed = 16f, rotspeed = RotNormal,
+            atsize = 0.125f, aim = AimVeryLow, rebound = 0f, projectiles = 1,
             pierce = 1, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 0f, duration = 0f,
             firemode = WeaponFireMode.Projectile,
             imgscale = 1.0f, weight = 3.0f, basePrice = 40,
@@ -181,8 +193,8 @@ public static class WeaponTableGenerator
         new WeaponDef {
             // 기존 기관단총 스프라이트(LeftSMG/RightSMG)를 그대로 재사용한다 - 신규 리소스와 바이트가 동일
             kind = 9, name = "기관단총", wclass = WeaponClass.Light, wtype = WeaponType.RapidFire,
-            atk = 10f, atsp = 2f, range = 6.4f, detect = 5.6f, speed = 22f, rotspeed = RotHigh,
-            atsize = 0.22f, aim = AimSlightlyHigh, rebound = 3f, projectiles = 3,
+            atk = 10f, atsp = 2f, range = 3.2f, detect = 2.8f, speed = 11f, rotspeed = RotHigh,
+            atsize = 0.11f, aim = AimSlightlyHigh, rebound = 3f, projectiles = 3,
             pierce = 0, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 0f, duration = 0f,
             firemode = WeaponFireMode.Projectile,
             imgscale = 0.85f, weight = 2.5f, basePrice = 30,
@@ -190,8 +202,8 @@ public static class WeaponTableGenerator
         },
         new WeaponDef {
             kind = 10, name = "유탄발사기", wclass = WeaponClass.Light, wtype = WeaponType.Explosive,
-            atk = 40f, atsp = 0.5f, range = 5.0f, detect = 4.0f, speed = 12f, rotspeed = RotHigh,
-            atsize = 0.3f, aim = AimVeryLow, rebound = 0f, projectiles = 1,
+            atk = 40f, atsp = 0.5f, range = 2.5f, detect = 2.0f, speed = 6f, rotspeed = RotHigh,
+            atsize = 0.15f, aim = AimVeryLow, rebound = 0f, projectiles = 1,
             pierce = 0, pierceChance = 0f, splash = 1.5f, defignore = 0f, knockback = 0f, duration = 0f,
             firemode = WeaponFireMode.Projectile,
             imgscale = 1.0f, weight = 3.0f, basePrice = 35,
@@ -199,6 +211,8 @@ public static class WeaponTableGenerator
         },
 
         // ===== 근접 3종 (이미지가 방향별로 없어 좌우 공용) =====
+        // range/detect는 ÷100 환산에서 제외한다 - 화면이 아니라 "적 몸통에 닿는 거리" 기준 값이라
+        // 절반으로 줄이면 좀비 공격 사거리(1.6유닛)보다 짧아져 일방적으로 맞기만 한다(위 주석 참고).
         new WeaponDef {
             kind = 11, name = "생존단검", wclass = WeaponClass.Melee, wtype = WeaponType.Melee,
             atk = 33f, atsp = 1.8f, range = 2.2f, detect = 2.2f, speed = 0f, rotspeed = RotVeryHigh,

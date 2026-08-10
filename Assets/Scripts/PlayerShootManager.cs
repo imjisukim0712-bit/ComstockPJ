@@ -134,8 +134,10 @@ public class PlayerShootManager : MonoBehaviour
 
     [Header("감지거리 상한")]
     [Tooltip("소켓 파츠 배율까지 곱한 뒤에도 이 거리(유닛)를 넘겨 적을 조준하지 않는다. " +
-             "화면 밖의 보이지 않는 적과 교전하는 것을 막기 위한 값으로, 직교 카메라 세로 가시 반경(8.66)에 맞춘다")]
-    [SerializeField] private float max_detect_range = 8.5f;
+             "화면 밖의 보이지 않는 적과 교전하는 것을 막기 위한 값으로, 직교 카메라 세로 가시 반경에 맞춘다.\n" +
+             "2026-08-10 카메라를 FHD 기준(orthographicSize=5.4, 1유닛=100px)으로 맞추면서 " +
+             "세로 가시 반경이 8.66 → 5.4가 되어 8.5 → 5.3으로 함께 낮췄다")]
+    [SerializeField] private float max_detect_range = 5.3f;
 
     [Header("빔 연출용 스프라이트")]
     [Tooltip("빔 무기(weapon_firemode=Beam)가 늘려서 사용할 Resources 폴더의 스프라이트 이름")]

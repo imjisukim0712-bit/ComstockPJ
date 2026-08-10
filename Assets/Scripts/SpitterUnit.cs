@@ -11,7 +11,8 @@ public class SpitterUnit : EnemyUnit
 {
     [Header("스피터 투사체 (전부 밸런스 미확정 임시값)")]
     [SerializeField] private float projectileSpeed = 12f;
-    [SerializeField] private float projectileVisualSize = 0.35f;
+    // 2026-08-10 "인게임 모든 이미지 1/2" 지시로 0.35 → 0.175
+    [SerializeField] private float projectileVisualSize = 0.175f;
 
     // 원거리 몬스터는 앞으로 내지를 이유가 없다. 예비 동작(뒤로 젖히며 뱉을 준비)만 남기고
     // 타격 돌진은 0으로 죽인다(EnemyUnit의 공격 모션 뼈대는 그대로 재사용).
