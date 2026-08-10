@@ -16,6 +16,9 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public class EnemyUnit : MonoBehaviour
 {
+    private const int BasicZombieMonsterId = 200001;
+    private const string BasicZombieSpriteName = "Enemy_zombie_S";
+
     // 자동공격(PlayerShootManager)이 "사거리 내 최근접 적"을 찾을 때 순회하는 전역 생존 목록.
     // Physics.OverlapSphere를 무기 슬롯마다 매 프레임 돌리는 대신, 스폰/사망 시점에만 갱신되는
     // 이 목록을 순회하는 쪽이 더 저렴하다.
@@ -33,12 +36,7 @@ public class EnemyUnit : MonoBehaviour
     public float AttackRange { get; private set; } // monster_range: 공격 사거리
     public float AtSp { get; private set; }         // monster_atsp: 공격속도 - 공격 쿨다운에 사용
     public float Mass { get; private set; } = ReferenceMass;       // monster_mass - 넉백 저항(기획서 p.22)
-    public float DetectRange { get; private set; } = float.MaxValue; // monster_detect - AI 각성 판정에 쓰는 감지범위
-    public MonsterAiType AiType { get; private set; } = MonsterAiType.Aggressive;
     public bool IsDead { get; private set; }
-
-    /// <summary>현재 플레이어를 추격 중인지(AI 성격값 상태 머신 - 좀비 기획서 Ver04 p.10).</summary>
-    public bool IsAlerted { get; private set; }
 
     // 다음 공격이 가능한 시각 (monster_atsp 기반 쿨다운). 서브클래스(스프린터/차저 등)가
     // 자신만의 공격 타이밍을 구현할 때도 같은 필드를 재사용할 수 있도록 protected로 열어둔다.
@@ -49,7 +47,6 @@ public class EnemyUnit : MonoBehaviour
     protected Rigidbody rb;
     protected Transform player_transform;
     protected PlayerRobotController player;
-    private Rigidbody player_rb; // 압박형(Pressure) AI의 이동 예측에 쓰는 플레이어 속도 소스
 
     [Header("체력바 (체력이 100% 미만일 때만 표시)")]
     [Tooltip("체력바 폭 = 본인 스프라이트 폭 × 이 비율")]
@@ -93,10 +90,6 @@ public class EnemyUnit : MonoBehaviour
         AtSp = data.monster_atsp;
 
         Mass = data.EffectiveMass;
-        DetectRange = data.EffectiveDetectRange;
-        AiType = data.monster_ai;
-        IsAlerted = false;
-        wander_timer = 0f; // 배회형이면 다음 FixedUpdate에서 곧바로 새 방향을 뽑는다
 
         UpdateHealthBar(); // 스폰 직후는 항상 100%이므로 바를 숨긴 상태로 초기화한다
     }
@@ -146,6 +139,12 @@ public class EnemyUnit : MonoBehaviour
         Alive.Remove(this);
     }
 
+    private void OnDisable()
+    {
+        // 공격 코루틴이 오브젝트 비활성화로 중단돼도 공격 프레임/색상이 남지 않게 한다.
+        RestoreAttackVisual();
+    }
+
     private void FindPlayer()
     {
         GameObject player_obj = GameObject.FindGameObjectWithTag("Player");
@@ -153,7 +152,6 @@ public class EnemyUnit : MonoBehaviour
 
         player_transform = player_obj.transform;
         player = player_obj.GetComponent<PlayerRobotController>();
-        player_rb = player_obj.GetComponent<Rigidbody>();
     }
 
     protected virtual void Update()
@@ -173,35 +171,10 @@ public class EnemyUnit : MonoBehaviour
         to_player.z = 0f; // X-Y 평면만 사용
         float distance = to_player.magnitude;
 
-        UpdateAlertState(distance);
-
         if (distance <= AttackRange + BodyContactRadius())
         {
             TryAttack();
         }
-    }
-
-    // ── AI 성격값 (좀비 기획서 Ver04 p.10) ──────────────────────
-    // 추격형/압박형은 감지범위 전체로 정찰하고, 휴식형/배회형은 그보다 훨씬 좁은
-    // (감지범위의 1/10) 범위 안에 들어와야, 또는 피격당해야 깨어난다.
-    // 한 번 깨어나면(추격 시작) 거리가 감지범위 x2 이상 벌어져야 다시 대기 상태로 돌아간다.
-    private const float PassiveDetectDivisor = 10f;
-    private const float DeaggroMultiplier = 2f;
-
-    private float PassiveDetectRadius =>
-        (AiType == MonsterAiType.Resting || AiType == MonsterAiType.Wandering)
-            ? DetectRange / PassiveDetectDivisor
-            : DetectRange;
-
-    private void UpdateAlertState(float distanceToPlayer)
-    {
-        if (IsAlerted)
-        {
-            if (distanceToPlayer > DetectRange * DeaggroMultiplier) IsAlerted = false; // 추격 종료 → 대기 상태 복귀
-            return;
-        }
-
-        if (distanceToPlayer <= PassiveDetectRadius) IsAlerted = true;
     }
 
     // 콜라이더끼리 물리적으로 맞닿았을 때도(= "들이박았을 때") 확실히 공격이 들어가도록
@@ -320,7 +293,7 @@ public class EnemyUnit : MonoBehaviour
     {
         IsAttacking = true;
 
-        bool use_frame_animation = GetType() == typeof(EnemyUnit) && ZombieAttackFrames.Length > 0;
+        bool use_frame_animation = CanPlayZombieAttackFrames();
 
         if (use_frame_animation)
         {
@@ -359,7 +332,33 @@ public class EnemyUnit : MonoBehaviour
         {
             // 4) 회복 동작 - 9~12번 프레임(원래 자세로 돌아온다)
             yield return PlayAttackFrames(8, 11, attackRecoverSeconds);
-            if (body_sprite_renderer != null) body_sprite_renderer.sprite = original_body_sprite;
+        }
+
+        RestoreAttackVisual();
+    }
+
+    /// <summary>
+    /// 좀비 전용 프레임이 다른 EnemyUnit 파생형이나 Player 렌더러에 적용되지 않도록 데이터 ID,
+    /// 태그, 컴포넌트 타입, 렌더러 소유권, 원본 스프라이트를 모두 확인한다.
+    /// </summary>
+    private bool CanPlayZombieAttackFrames()
+    {
+        return MonsterId == BasicZombieMonsterId &&
+               GetType() == typeof(EnemyUnit) &&
+               !CompareTag("Player") &&
+               body_sprite_renderer != null &&
+               body_sprite_renderer.gameObject == gameObject &&
+               original_body_sprite != null &&
+               original_body_sprite.name == BasicZombieSpriteName &&
+               ZombieAttackFrames.Length > 0;
+    }
+
+    private void RestoreAttackVisual()
+    {
+        if (body_sprite_renderer != null)
+        {
+            body_sprite_renderer.color = original_body_color;
+            if (original_body_sprite != null) body_sprite_renderer.sprite = original_body_sprite;
         }
 
         IsAttacking = false;
@@ -383,6 +382,11 @@ public class EnemyUnit : MonoBehaviour
         while (elapsed < duration)
         {
             if (IsDead || GameOverManager.IsGameOver || GameWinManager.IsGameWon) yield break;
+            if (!CanPlayZombieAttackFrames())
+            {
+                RestoreAttackVisual();
+                yield break;
+            }
 
             float t = Mathf.Clamp01(elapsed / duration);
             int frame_index = Mathf.Clamp(startIndex + Mathf.FloorToInt(t * count), 0, frames.Length - 1);
@@ -392,7 +396,10 @@ public class EnemyUnit : MonoBehaviour
             yield return null;
         }
 
-        body_sprite_renderer.sprite = frames[Mathf.Clamp(endIndexInclusive, 0, frames.Length - 1)];
+        if (CanPlayZombieAttackFrames())
+            body_sprite_renderer.sprite = frames[Mathf.Clamp(endIndexInclusive, 0, frames.Length - 1)];
+        else
+            RestoreAttackVisual();
     }
 
     /// <summary>공격 모션이 향할 방향(플레이어 쪽). 플레이어를 못 찾으면 바라보던 방향을 유지한다.</summary>
@@ -512,6 +519,15 @@ public class EnemyUnit : MonoBehaviour
         Vector3 seek = ComputeSeekDirection();
         Vector3 separation = ComputeSeparation();
 
+        // 겹침 방지 힘이 플레이어 반대 방향으로 작용하면 좀비가 잠시 도망가는 것처럼 보인다.
+        // 뒤쪽 성분만 제거해 전진은 항상 유지하고, 좌우로 비켜 가는 분리 성분은 보존한다.
+        if (seek.sqrMagnitude > 0.0001f)
+        {
+            Vector3 seek_direction = seek.normalized;
+            float separation_forward = Vector3.Dot(separation, seek_direction);
+            if (separation_forward < 0f) separation -= seek_direction * separation_forward;
+        }
+
         Vector3 move_dir = seek + separation;
         Vector3 move_velocity = move_dir.sqrMagnitude > 0.0001f ? move_dir.normalized * MoveSpeed : Vector3.zero;
 
@@ -521,60 +537,34 @@ public class EnemyUnit : MonoBehaviour
         rb.linearVelocity = move_velocity + knockback_velocity;
     }
 
-    // 압박형(Pressure)의 이동 예측 시간(초). 기획서에 구체적 수치가 없어 임시값이다.
-    private const float PressurePredictionTime = 0.6f;
+    private const float FacingVelocityThreshold = 0.01f;
 
     /// <summary>
-    /// AI 성격값에 따른 이동 방향(정규화 전). 대기 상태(미각성)에서는 배회형만 움직이고
-    /// 나머지는 가만히 서 있는다. 각성 상태에서는 압박형만 플레이어의 예상 이동 방향을
-    /// 선회 추적하고, 나머지는 현재 위치로 직진한다(좀비 기획서 Ver04 p.10).
+    /// 일반 추적·돌진·도주·넉백을 모두 포함한 최종 Rigidbody 이동 방향으로 스프라이트를 뒤집는다.
+    /// 원본 이미지는 오른쪽을 향한 상태로 취급하며, 거의 정지했을 때는 마지막 방향을 유지한다.
+    /// </summary>
+    protected virtual void LateUpdate()
+    {
+        if (body_sprite_renderer == null || rb == null) return;
+
+        float horizontal_velocity = rb.linearVelocity.x;
+        if (Mathf.Abs(horizontal_velocity) < FacingVelocityThreshold) return;
+
+        body_sprite_renderer.flipX = horizontal_velocity < 0f;
+    }
+
+    /// <summary>
+    /// 감지 범위나 AI 성격값 없이 항상 현재 플레이어 위치를 향하는 이동 방향(정규화 전).
     /// protected virtual - 스프린터/차저처럼 돌진 상태에서 이 로직을 완전히 대체하는
-    /// 서브클래스를 위해 열어둔다.
+    /// 서브클래스와, 팔로워 전멸 후 도주하는 리더를 위해 열어둔다.
     /// </summary>
     protected virtual Vector3 ComputeSeekDirection()
     {
         if (IsAttacking) return Vector3.zero; // 공격 모션 중에는 자리를 지킨다(들이받으면서 공격하지 않도록)
 
-        if (!IsAlerted)
-        {
-            return AiType == MonsterAiType.Wandering ? ComputeWanderDirection() : Vector3.zero;
-        }
-
-        if (AiType == MonsterAiType.Pressure)
-        {
-            Vector3 predicted_offset = PredictPlayerPosition() - transform.position;
-            predicted_offset.z = 0f;
-            return predicted_offset;
-        }
-
         Vector3 to_player = player_transform.position - transform.position;
         to_player.z = 0f;
         return to_player;
-    }
-
-    private Vector3 PredictPlayerPosition()
-    {
-        Vector3 velocity = player_rb != null ? player_rb.linearVelocity : Vector3.zero;
-        velocity.z = 0f;
-        return player_transform.position + velocity * PressurePredictionTime;
-    }
-
-    // ── 배회형(Wandering) 자유 배회 ──────────────────────────────
-    private const float WanderMinInterval = 1.5f;
-    private const float WanderMaxInterval = 3.5f;
-    private Vector3 wander_direction = Vector3.right;
-    private float wander_timer;
-
-    private Vector3 ComputeWanderDirection()
-    {
-        wander_timer -= Time.fixedDeltaTime;
-        if (wander_timer <= 0f)
-        {
-            float angle = Random.Range(0f, Mathf.PI * 2f);
-            wander_direction = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f);
-            wander_timer = Random.Range(WanderMinInterval, WanderMaxInterval);
-        }
-        return wander_direction;
     }
 
     // 몸이 실제로 겹치는 이웃들로부터 밀려나는 방향을 합산한다.
@@ -758,8 +748,6 @@ public class EnemyUnit : MonoBehaviour
 
         if (rb != null) rb.linearVelocity = Vector3.zero;
 
-        BroadcastDeathAlert();
-
         int? droppedItemId = DropTableManager.RollDrop(MonsterId);
         if (droppedItemId.HasValue)
         {
@@ -770,31 +758,6 @@ public class EnemyUnit : MonoBehaviour
         GrantKillRewards();
 
         Destroy(gameObject);
-    }
-
-    /// <summary>
-    /// 사망 시 자기 감지범위 안의 배회형/휴식형 좀비를 즉시 각성시킨다(좀비 기획서 Ver04 p.22
-    /// "주변의 다른 좀비가 사망하면 배회, 휴식 상태더라도 추격 상태로 전환"). 감지범위가
-    /// 무제한(monster_detect 미설정 - 보스 등 임시 데이터)이면 거리와 무관하게 전부 각성시킨다.
-    /// </summary>
-    private void BroadcastDeathAlert()
-    {
-        bool unlimited = DetectRange >= float.MaxValue;
-
-        foreach (EnemyUnit other in Alive)
-        {
-            if (other == null || other == this || other.IsDead) continue;
-            if (other.AiType != MonsterAiType.Resting && other.AiType != MonsterAiType.Wandering) continue;
-            if (other.IsAlerted) continue;
-
-            if (!unlimited)
-            {
-                float dist = Vector3.Distance(other.transform.position, transform.position);
-                if (dist > DetectRange) continue;
-            }
-
-            other.IsAlerted = true;
-        }
     }
 
     // AI 코어 경험치 + 골드를 필드 위의 픽업 오브젝트로 생성한다(플레이어가 다가가면 자동 흡수 -

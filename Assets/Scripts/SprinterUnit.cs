@@ -49,6 +49,14 @@ public class SprinterUnit : EnemyUnit
                 return;
             }
 
+            // 짧은 돌진 중에도 현재 플레이어 방향을 계속 갱신한다.
+            if (player_transform != null)
+            {
+                Vector3 to_player = player_transform.position - transform.position;
+                to_player.z = 0f;
+                if (to_player.sqrMagnitude > 0.0001f) dash_direction = to_player.normalized;
+            }
+
             rb.linearVelocity = dash_direction * (MoveSpeed * dashSpeedMultiplier);
             return;
         }

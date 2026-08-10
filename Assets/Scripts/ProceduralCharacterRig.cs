@@ -25,9 +25,17 @@ using UnityEngine;
 /// 이 컴포넌트가 붙은 오브젝트의 형제로 둔다.
 /// </summary>
 [DisallowMultipleComponent]
+[DefaultExecutionOrder(10000)]
 public class ProceduralCharacterRig : MonoBehaviour
 {
     private const string ResourceFolder = "Parts/";
+
+    // Resources/Parts의 실제 원본. 인스펙터 직렬화값이나 런타임 참조가 서로 바뀌어도 이 기준으로
+    // 되돌릴 수 있도록 클래스 전체에서 하나씩만 캐시한다.
+    private static Sprite expectedBodySprite;
+    private static Sprite expectedThighSprite;
+    private static Sprite expectedShinSprite;
+    private static Sprite expectedFootSprite;
 
     [Header("스프라이트 (비워두면 Resources/Parts에서 자동 로드)")]
     [SerializeField] private Sprite bodySprite;
@@ -208,6 +216,9 @@ public class ProceduralCharacterRig : MonoBehaviour
         public Transform hip;      // 고관절(회전축) = 허벅지 뼈
         public Transform knee;     // 무릎(회전축) = 정강이 뼈
         public Transform ankle;    // 발목(회전축) = 발
+        public SpriteRenderer thighRenderer;
+        public SpriteRenderer shinRenderer;
+        public SpriteRenderer footRenderer;
         public float phaseOffset;  // 0 또는 0.5
         public float sideOffsetX;  // 좌우로 벌린 양
     }
@@ -245,7 +256,7 @@ public class ProceduralCharacterRig : MonoBehaviour
     [ContextMenu("리그 다시 만들기")]
     public void Build()
     {
-        LoadMissingSprites();
+        LoadPartSprites();
         if (bodySprite == null || thighSprite == null || shinSprite == null || footSprite == null)
         {
             Debug.LogError("ProceduralCharacterRig: 스프라이트가 비어 있습니다. Assets/Resources/Parts/에 " +
@@ -343,17 +354,20 @@ public class ProceduralCharacterRig : MonoBehaviour
         leg.hip.SetParent(legsGroup, false);
         leg.hip.localPosition = new Vector3(sideX, standHipY, 0f);
         // 정강이가 허벅지보다 먼저 그려지고, 무릎 공(허벅지)과 신발이 그 위를 덮는다
-        AttachVisual(leg.hip, "Thigh", thighSprite, thighHip, thighTilt, sortingBase + 1, tint, false, legScale);
+        leg.thighRenderer = AttachVisual(leg.hip, "Thigh", thighSprite, thighHip, thighTilt,
+                                         sortingBase + 1, tint, false, legScale);
 
         leg.knee = new GameObject("Knee").transform;
         leg.knee.SetParent(leg.hip, false);
         leg.knee.localPosition = new Vector3(0f, -thighLength, 0f);
-        AttachVisual(leg.knee, "Shin", shinSprite, shinKnee, shinTilt, sortingBase, tint, false, legScale);
+        leg.shinRenderer = AttachVisual(leg.knee, "Shin", shinSprite, shinKnee, shinTilt,
+                                        sortingBase, tint, false, legScale);
 
         leg.ankle = new GameObject("Ankle").transform;
         leg.ankle.SetParent(leg.knee, false);
         leg.ankle.localPosition = new Vector3(0f, -shinLength, 0f);
-        AttachVisual(leg.ankle, "Foot", footSprite, footAnkle, 0f, sortingBase + 2, tint, footSpriteFlipX, legScale);
+        leg.footRenderer = AttachVisual(leg.ankle, "Foot", footSprite, footAnkle, 0f,
+                                        sortingBase + 2, tint, footSpriteFlipX, legScale);
 
         return leg;
     }
@@ -379,12 +393,68 @@ public class ProceduralCharacterRig : MonoBehaviour
         return sr;
     }
 
-    private void LoadMissingSprites()
+    /// <summary>
+    /// 인게임 로봇의 외형은 인스펙터에 남은 임의 참조가 아니라 Resources/Parts의 네 파츠가
+    /// 유일한 기준이다. 씬 참조가 잘못 저장됐더라도 Build 시 반드시 원본 파츠로 복구한다.
+    /// </summary>
+    private void LoadPartSprites()
     {
-        if (bodySprite == null) bodySprite = Resources.Load<Sprite>(ResourceFolder + "Body");
-        if (thighSprite == null) thighSprite = Resources.Load<Sprite>(ResourceFolder + "LegUpper");
-        if (shinSprite == null) shinSprite = Resources.Load<Sprite>(ResourceFolder + "LegLower");
-        if (footSprite == null) footSprite = Resources.Load<Sprite>(ResourceFolder + "Foot");
+        if (expectedBodySprite == null) expectedBodySprite = Resources.Load<Sprite>(ResourceFolder + "Body");
+        if (expectedThighSprite == null) expectedThighSprite = Resources.Load<Sprite>(ResourceFolder + "LegUpper");
+        if (expectedShinSprite == null) expectedShinSprite = Resources.Load<Sprite>(ResourceFolder + "LegLower");
+        if (expectedFootSprite == null) expectedFootSprite = Resources.Load<Sprite>(ResourceFolder + "Foot");
+
+        bodySprite = expectedBodySprite;
+        thighSprite = expectedThighSprite;
+        shinSprite = expectedShinSprite;
+        footSprite = expectedFootSprite;
+    }
+
+    /// <summary>
+    /// 피격·공격 연출 등 다른 런타임 코드가 실수로 로봇 렌더러의 sprite를 바꿔도 다음 프레임에
+    /// 지정 파츠로 복구한다. 색상·회전·스케일은 건드리지 않아 기존 애니메이션은 그대로 유지된다.
+    /// </summary>
+    private void RestorePartSprites()
+    {
+        // 필드 자체가 다른 파츠를 가리키는 경우까지 복구한다(예: bodySprite에 Foot이 들어간 상태).
+        if (bodySprite != expectedBodySprite || thighSprite != expectedThighSprite ||
+            shinSprite != expectedShinSprite || footSprite != expectedFootSprite)
+        {
+            LoadPartSprites();
+        }
+
+        // 렌더러 참조가 다른 뼈의 파츠로 바뀐 경우 정확한 자식 경로에서 다시 가져온다.
+        if (bodyVisual != null && (bodyRenderer == null || bodyRenderer.transform != bodyVisual))
+            bodyRenderer = bodyVisual.GetComponent<SpriteRenderer>();
+
+        for (int i = 0; i < legs.Length; i++)
+        {
+            Leg leg = legs[i];
+            if (leg == null) continue;
+            leg.thighRenderer = ResolvePartRenderer(leg.hip, "Thigh", leg.thighRenderer);
+            leg.shinRenderer = ResolvePartRenderer(leg.knee, "Shin", leg.shinRenderer);
+            leg.footRenderer = ResolvePartRenderer(leg.ankle, "Foot", leg.footRenderer);
+        }
+
+        if (bodyRenderer != null && bodyRenderer.sprite != bodySprite) bodyRenderer.sprite = bodySprite;
+
+        for (int i = 0; i < legs.Length; i++)
+        {
+            Leg leg = legs[i];
+            if (leg == null) continue;
+            if (leg.thighRenderer != null && leg.thighRenderer.sprite != thighSprite) leg.thighRenderer.sprite = thighSprite;
+            if (leg.shinRenderer != null && leg.shinRenderer.sprite != shinSprite) leg.shinRenderer.sprite = shinSprite;
+            if (leg.footRenderer != null && leg.footRenderer.sprite != footSprite) leg.footRenderer.sprite = footSprite;
+        }
+    }
+
+    private static SpriteRenderer ResolvePartRenderer(Transform parent, string childName, SpriteRenderer current)
+    {
+        if (parent == null) return null;
+        if (current != null && current.transform.parent == parent && current.gameObject.name == childName) return current;
+
+        Transform child = parent.Find(childName);
+        return child != null ? child.GetComponent<SpriteRenderer>() : null;
     }
 
     /// <summary>정규화 앵커 → 스프라이트 로컬 좌표(pivot = Center 기준, 유닛).</summary>
@@ -413,6 +483,8 @@ public class ProceduralCharacterRig : MonoBehaviour
     {
         if (rebuildRequested) Build();
         if (!built) return;
+
+        RestorePartSprites();
 
         if (rollActive)
         {
@@ -447,6 +519,12 @@ public class ProceduralCharacterRig : MonoBehaviour
         phase = Mathf.Repeat(phase + frequency * dt, 1f);
 
         Apply(dt, velocity);
+    }
+
+    // 다른 컴포넌트의 Update/코루틴이 sprite를 건드린 뒤에도 실제 렌더 직전에 한 번 더 확정한다.
+    private void LateUpdate()
+    {
+        if (built) RestorePartSprites();
     }
 
     /// <summary>

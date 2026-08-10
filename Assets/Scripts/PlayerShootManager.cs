@@ -44,6 +44,7 @@ using UnityEngine;
 ///
 /// 전제: 게임플레이는 X-Y 평면만 사용 (Z축 미사용) → PlayerRobotController와 동일한 규칙
 /// </summary>
+[DefaultExecutionOrder(10000)]
 public class PlayerShootManager : MonoBehaviour
 {
     [Serializable]
@@ -164,6 +165,10 @@ public class PlayerShootManager : MonoBehaviour
     private readonly Dictionary<string, Sprite> sprite_by_name = new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> warned_missing_sprite_names = new HashSet<string>();
 
+    // 슬롯별로 마지막에 정상 확인한 무기 이미지. 다른 공격 연출이나 잘못된 런타임 참조가
+    // 손 렌더러의 sprite를 바꾸더라도 렌더 직전에 이 기준으로 되돌린다.
+    private readonly Dictionary<int, Sprite> expected_weapon_sprite_by_slot = new Dictionary<int, Sprite>();
+
     // 무기 이미지 원본 픽셀 크기가 이미지마다 제각각이라(예: SMG 1080px vs 기관총류 480px)
     // 같은 Transform 스케일을 써도 화면에 보이는 크기가 크게 달라지는 문제가 있었다.
     // 그래서 스프라이트를 바꿔 낄 때마다 "화면에 보이는 실제 크기"가 항상 이 값(월드 단위)이
@@ -185,6 +190,15 @@ public class PlayerShootManager : MonoBehaviour
         {
             if (string.IsNullOrWhiteSpace(entry.prefab_name) || entry.prefab == null) continue;
             prefab_by_name[entry.prefab_name.Trim()] = entry.prefab;
+        }
+
+        // 데이터 매니저가 아직 준비되지 않은 첫 프레임에도 씬에 저장된 정상 기본 무기를
+        // 보호할 수 있도록 현재 이미지를 먼저 기준값으로 잡는다.
+        for (int i = 0; i < weapon_slots.Count; i++)
+        {
+            SpriteRenderer renderer = weapon_slots[i].hand_sprite_renderer;
+            if (renderer != null && renderer.sprite != null)
+                expected_weapon_sprite_by_slot[i] = renderer.sprite;
         }
     }
 
@@ -305,16 +319,33 @@ public class PlayerShootManager : MonoBehaviour
 
         string sprite_name = slot.use_left_hand_image ? data.weapon_lfwpimg : data.weapon_rgwpimg;
         Sprite sprite = ResolveWeaponSprite(sprite_name, data);
+        // 데이터 오타나 누락으로 로드에 실패했을 때 기존 정상 무기 이미지까지 지우지 않는다.
+        // 씬 기본 이미지 또는 직전에 정상 장착된 이미지가 그대로 남아 복구 가능한 상태를 유지한다.
+        if (sprite == null) return;
+
+        expected_weapon_sprite_by_slot[slot_index] = sprite;
         slot.hand_sprite_renderer.sprite = sprite;
 
         // 원본 이미지 크기가 제각각이라(예: 1536px 총기류 vs 250px 근접무기) 매번
         // 화면에 보이는 크기가 TargetHandImageSize로 일정해지도록 스케일을 다시 계산한다.
         // 그 위에 무기별 개별 배율(weapon_imgscale)을 추가로 곱한다.
-        if (sprite != null)
+        float max_dim = Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y, 0.0001f);
+        float normalized_scale = TargetHandImageSize / max_dim;
+        slot.hand_sprite_renderer.transform.localScale = Vector3.one * (normalized_scale * data.ImageScale);
+    }
+
+    private void LateUpdate()
+    {
+        // 조준 회전·좌우 반전·구르기 자세는 건드리지 않고 이미지 참조만 확정한다.
+        // 특히 Enemy_zombie/ZombieAttack 또는 다른 로봇 파츠가 손 렌더러에 잘못 들어가도
+        // 실제 카메라가 그리기 전 마지막 단계에서 장착 무기 원본으로 복구된다.
+        for (int i = 0; i < weapon_slots.Count; i++)
         {
-            float max_dim = Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y, 0.0001f);
-            float normalized_scale = TargetHandImageSize / max_dim;
-            slot.hand_sprite_renderer.transform.localScale = Vector3.one * (normalized_scale * data.ImageScale);
+            SpriteRenderer renderer = weapon_slots[i].hand_sprite_renderer;
+            if (renderer == null) continue;
+            if (!expected_weapon_sprite_by_slot.TryGetValue(i, out Sprite expected) || expected == null) continue;
+
+            if (renderer.sprite != expected) renderer.sprite = expected;
         }
     }
 

@@ -23,9 +23,7 @@ MonoBehaviour:
     monster_type: 1
     monster_atsp: 0.75
     monster_mass: 50
-    monster_detect: 13
     monster_size: 0
-    monster_ai: 0
   - monster_id: 200002
     monster_name: "\uCC28\uC800"
     monster_hp: 650
@@ -36,9 +34,7 @@ MonoBehaviour:
     monster_type: 1
     monster_atsp: 0.5
     monster_mass: 250
-    monster_detect: 16
     monster_size: 2
-    monster_ai: 0
   - monster_id: 200003
     monster_name: "\uC2A4\uD53C\uD130"
     monster_hp: 75
@@ -49,9 +45,7 @@ MonoBehaviour:
     monster_type: 1
     monster_atsp: 0.8
     monster_mass: 55
-    monster_detect: 15
     monster_size: 0
-    monster_ai: 0
   - monster_id: 200004
     monster_name: "\uC2A4\uD504\uB9B0\uD130"
     monster_hp: 120
@@ -62,9 +56,7 @@ MonoBehaviour:
     monster_type: 1
     monster_atsp: 1.5
     monster_mass: 40
-    monster_detect: 24
     monster_size: 0
-    monster_ai: 1
   - monster_id: 200005
     monster_name: "\uB514\uC2A4\uB7ED\uD130"
     monster_hp: 150
@@ -75,9 +67,7 @@ MonoBehaviour:
     monster_type: 1
     monster_atsp: 1
     monster_mass: 120
-    monster_detect: 12
     monster_size: 1
-    monster_ai: 3
   - monster_id: 200006
     monster_name: "\uB9AC\uB354"
     monster_hp: 600
@@ -88,9 +78,7 @@ MonoBehaviour:
     monster_type: 1
     monster_atsp: 1.2
     monster_mass: 200
-    monster_detect: 24
     monster_size: 2
-    monster_ai: 2
   robots:
   - robot_id: 100001
     robot_name: "\uCEF4\uC2A4\uD1A1 MK-1"

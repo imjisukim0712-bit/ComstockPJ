@@ -27,12 +27,12 @@ public class LeaderUnit : EnemyUnit
     {
         if (!is_fleeing && pack.Count > 0 && IsPackWiped()) is_fleeing = true;
 
-        if (is_fleeing) return; // 도주 중에는 감지/공격 판정을 하지 않는다(더 이상 싸우지 않음)
+        if (is_fleeing) return; // 도주 중에는 공격 판정을 하지 않는다(더 이상 싸우지 않음)
 
         base.Update();
     }
 
-    // 도주 중에는 플레이어 반대 방향으로 이동한다. 도주가 아닐 때는 기존 AI 성격값 로직을 그대로 쓴다.
+    // 도주 중에는 플레이어 반대 방향으로 이동한다. 도주가 아닐 때는 공통 직선 추적을 쓴다.
     protected override Vector3 ComputeSeekDirection()
     {
         if (!is_fleeing) return base.ComputeSeekDirection();

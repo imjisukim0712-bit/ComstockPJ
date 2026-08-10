@@ -50,6 +50,15 @@ public class ChargerUnit : EnemyUnit
                 return;
             }
 
+            // 돌진 시작 방향을 고정하지 않고 매 물리 프레임 현재 플레이어 방향으로 갱신한다.
+            // 모든 좀비가 항상 플레이어를 향해야 한다는 공통 규칙을 돌진 중에도 유지한다.
+            if (player_transform != null)
+            {
+                Vector3 to_player = player_transform.position - transform.position;
+                to_player.z = 0f;
+                if (to_player.sqrMagnitude > 0.0001f) charge_direction = to_player.normalized;
+            }
+
             rb.linearVelocity = charge_direction * (MoveSpeed * chargeSpeedMultiplier);
             return;
         }
