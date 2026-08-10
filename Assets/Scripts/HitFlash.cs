@@ -11,6 +11,15 @@ using UnityEngine;
 /// `_FlashAmount`만 0↔1로 움직인다. 이 값이 0이면 기본 스프라이트와 완전히 동일하게
 /// 보이므로 평상시 화면에는 아무 영향이 없다.
 ///
+/// <b>이 셰이더는 반드시 URP(HLSL)용이어야 한다.</b> 빌트인 렌더 파이프라인용 스프라이트
+/// 셰이더(CGPROGRAM + UnitySprites.cginc)로 바꾸면, 이 아래 <see cref="CollectTargets"/>가
+/// 머티리얼을 갈아끼우는 순간부터 <b>해당 렌더러들이 엉뚱한 텍스처로 그려진다</b>
+/// (머리에 신발, 다리에 좀비 이미지 등). URP 2D Renderer가 빌트인 RP 스프라이트 셰이더에는
+/// SpriteRenderer의 렌더러별 데이터(_MainTex 등)를 넘겨주지 않기 때문이다. 첫 피격 때
+/// <see cref="SetFlashAmount"/>가 MaterialPropertyBlock을 설정하면 그 데이터가 강제로
+/// 업로드되어 정상으로 돌아오는데, 이것이 "첫 피격 전까지만 파츠가 깨져 보이던" 증상의
+/// 정체였다(2026-08-10 수정, 상세는 작업.md).
+///
 /// 머티리얼 인스턴스를 유닛마다 새로 만들면(= sr.material 접근) 드로우콜이 늘고 GC가 생기므로,
 /// <see cref="MaterialPropertyBlock"/>으로 렌더러별 값만 덮어쓴다.
 ///
