@@ -3,9 +3,8 @@ using UnityEngine;
 
 /// <summary>
 /// 몬스터가 죽었을 때 골드/경험치 보상을 땅 위의 물리적 오브젝트로 만들어주는 매니저
-/// (EnemyUnit.GrantKillRewards()가 호출한다). DropItemManager와 동일한 패턴 -
-/// 씬에 따로 배치할 필요 없는 정적 유틸리티이며, 실제 획득 판정은 여기서 생성한
-/// 오브젝트에 붙는 RewardPickup 컴포넌트가 트리거 콜라이더로 처리한다.
+/// (EnemyUnit.GrantKillRewards()가 호출한다). 씬에 따로 배치할 필요 없는 정적 유틸리티이며,
+/// 실제 획득 판정은 여기서 생성한 오브젝트에 붙는 RewardPickup 컴포넌트가 트리거 콜라이더로 처리한다.
 /// </summary>
 public static class RewardPickupManager
 {

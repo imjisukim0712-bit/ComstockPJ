@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// 맵(배경 스프라이트)의 월드 영역을 알려주는 정적 유틸리티.
-/// PlayerInventory / DropTableManager 등과 같은 "씬에 배치할 필요 없는 static class" 패턴을 따른다.
+/// RunState / RewardPickupManager 등과 같은 "씬에 배치할 필요 없는 static class" 패턴을 따른다.
 ///
 /// <b>맵 크기를 코드에 상수로 박지 않는다.</b> 배경 오브젝트(<see cref="MapObjectName"/>)의
 /// SpriteRenderer가 실제로 차지하는 월드 bounds를 그대로 읽으므로, 인스펙터에서 배경의

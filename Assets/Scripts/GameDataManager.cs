@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 게임 데이터 테이블(몬스터/로봇/무기/방어구/드랍)을 제공하는 싱글톤.
+/// 게임 데이터 테이블(몬스터/로봇/무기/방어구)을 제공하는 싱글톤.
 /// localData(GameDataAsset)에 저장된 값을 Awake에서 동기적으로 읽어온다.
 /// IsLoaded/OnLoaded는 기존 호출부(EnemySpawner, PlayerRobotController 등)를 그대로
 /// 두기 위해 API 형태만 유지한다 - 로컬 로드는 항상 즉시 끝나므로 사실상 동기 동작이다.
@@ -23,7 +23,6 @@ public class GameDataManager : MonoBehaviour
     public Dictionary<int, RobotData> Robots { get; private set; } = new Dictionary<int, RobotData>();
     public Dictionary<int, WeaponData> Weapons { get; private set; } = new Dictionary<int, WeaponData>();
     public Dictionary<int, AmorData> Amors { get; private set; } = new Dictionary<int, AmorData>();
-    public Dictionary<int, List<DropEntry>> DropsByMonster { get; private set; } = new Dictionary<int, List<DropEntry>>();
 
     public bool IsLoaded { get; private set; } = false;
     public event Action OnLoaded;
@@ -60,13 +59,6 @@ public class GameDataManager : MonoBehaviour
 
         Amors.Clear();
         foreach (var d in localData.amors) Amors[d.amor_id] = d;
-
-        DropsByMonster.Clear();
-        foreach (var d in localData.drops)
-        {
-            if (!DropsByMonster.ContainsKey(d.monster_id)) DropsByMonster[d.monster_id] = new List<DropEntry>();
-            DropsByMonster[d.monster_id].Add(d);
-        }
 
         IsLoaded = true;
         OnLoaded?.Invoke();

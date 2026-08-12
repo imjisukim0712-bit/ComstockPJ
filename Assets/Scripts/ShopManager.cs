@@ -93,14 +93,17 @@ public class ShopManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 새 웨이브의 상점을 연다. 새로고침 횟수(비용)를 초기화하고 품목을 새로 뽑는다.
-    /// 잠금도 웨이브가 바뀌면 의미가 없으므로 전부 해제된다.
+    /// 새 웨이브의 상점을 연다. 새로고침 횟수(비용)를 초기화하고, 잠기지 않은 칸만 새로 뽑는다.
+    ///
+    /// 예전에는 "웨이브가 바뀌면 잠금이 의미 없다"고 보고 매 웨이브 전부 해제했지만, 사용자가
+    /// "잠긴 아이템은 다음 웨이브에도 품목이 바뀌면 안 된다"고 요청해(2026-08-12) 웨이브를
+    /// 넘어 잠금이 유지되도록 바꿨다 - respectLocks=true로 RerollOffers를 부르면 첫 진입 때는
+    /// (모든 칸이 null이라) 전부 새로 뽑히고, 이후 웨이브부터는 잠긴 칸만 그대로 남는다.
     /// </summary>
     public void OpenForNewWave()
     {
         RunState.ShopRefreshCount = 0;
-        offers.Clear();
-        RerollOffers(respectLocks: false);
+        RerollOffers(respectLocks: true);
     }
 
     /// <summary>

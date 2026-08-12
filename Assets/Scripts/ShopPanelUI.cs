@@ -24,6 +24,9 @@ public class ShopPanelUI : MonoBehaviour
         [Tooltip("품목 카드 전체 버튼(누르면 구매 시도)")]
         public Button cardButton;
 
+        [Tooltip("무기 손 이미지 또는 디스크 아이콘을 보여줄 이미지. 못 찾으면 자동으로 숨긴다")]
+        public Image iconImage;
+
         [Tooltip("'전설 · 무기' 처럼 등급과 카테고리를 보여줄 텍스트")]
         public TextMeshProUGUI headerText;
 
@@ -304,6 +307,13 @@ public class ShopPanelUI : MonoBehaviour
 
             ShopManager.Offer offer = shopManager.Offers[i];
 
+            if (ui.iconImage != null)
+            {
+                Sprite icon = ResolveOfferIcon(offer);
+                ui.iconImage.sprite = icon;
+                ui.iconImage.enabled = icon != null;
+            }
+
             // 기획서 표기 형식: "전설 · 무기"
             if (ui.headerText != null)
             {
@@ -321,6 +331,32 @@ public class ShopPanelUI : MonoBehaviour
             if (ui.lockButton != null) ui.lockButton.interactable = !offer.Purchased;
             if (ui.lockText != null) ui.lockText.text = offer.Locked ? "잠금 해제" : "잠금";
         }
+    }
+
+    // 이미지 이름 → 스프라이트 캐시(Resources.Load 반복 호출 방지). PlayerShootManager의
+    // sprite_by_name과 같은 패턴.
+    private readonly Dictionary<string, Sprite> offer_icon_cache = new Dictionary<string, Sprite>();
+
+    /// <summary>
+    /// 품목 카드에 보여줄 아이콘을 찾는다. 디스크는 DiscData.LoadIcon()(Discs/디스크01~21로
+    /// 매핑된 전용 아이콘)을, 무기는 전용 아이콘이 없어 손에 드는 이미지(weapon_rgwpimg)를
+    /// 그대로 재사용한다 - PlayerShootManager가 무기를 장착할 때 쓰는 것과 같은 스프라이트라
+    /// 별도 아트 없이도 무기를 알아볼 수 있다.
+    /// </summary>
+    private Sprite ResolveOfferIcon(ShopManager.Offer offer)
+    {
+        if (offer.IsDisc) return offer.Disc.LoadIcon();
+
+        string spriteName = offer.Weapon.weapon_rgwpimg;
+        if (string.IsNullOrWhiteSpace(spriteName)) return null;
+
+        if (!offer_icon_cache.TryGetValue(spriteName, out Sprite sprite))
+        {
+            sprite = Resources.Load<Sprite>(spriteName);
+            offer_icon_cache[spriteName] = sprite; // 못 찾아도(null) 캐시해서 매번 재시도하지 않는다
+        }
+
+        return sprite;
     }
 
     private void RefreshEquipment()

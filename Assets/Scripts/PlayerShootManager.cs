@@ -119,6 +119,15 @@ public class PlayerShootManager : MonoBehaviour
     {
         // 다음 발사가 가능해지는 시각. "발사 동작 종료 시각 + 대기시간"으로 계산한다.
         public float next_fire_time;
+
+        // 근접무기 "찌르기" 시각 연출 상태(StartMeleeThrustVisual/UpdateMeleeThrustVisual 참고).
+        // 데미지 판정(MeleeSwing.Execute)과는 분리된 순수 연출용 값이라 판정 로직에 영향을 주지 않는다.
+        public bool melee_thrust_active;
+        public float melee_thrust_start_time;
+        public float melee_thrust_duration;
+        public float melee_thrust_distance;
+        public Vector3 melee_thrust_home_world;
+        public Vector3 melee_thrust_direction;
     }
 
     [Header("장착 무기 소켓 (머리 파츠가 개수/타입을 정하는 규칙은 Phase 4에서 연결)")]
@@ -455,6 +464,13 @@ public class PlayerShootManager : MonoBehaviour
         bool rolling = player_stats != null && player_stats.IsDashing;
         if (rolling)
         {
+            // 찌르기 연출이 재생되던 중 구르기가 시작되면 취소한다. 취소하지 않으면 연출이 끝나는
+            // 시점(t>=1)에 구르기 시작 전 위치(월드 좌표 스냅샷)로 되돌리려 시도하는데, 그 사이
+            // 캐릭터가 구른 만큼 실제 위치와 어긋나 무기가 엉뚱한 곳에 붙어버린다.
+            if (!was_rolling)
+            {
+                for (int i = 0; i < weapon_slots.Count; i++) GetOrCreateRuntimeState(i).melee_thrust_active = false;
+            }
             ApplyRollPoseToAllSlots();
             was_rolling = true;
             return;
@@ -474,6 +490,8 @@ public class PlayerShootManager : MonoBehaviour
         for (int i = 0; i < weapon_slots.Count; i++)
         {
             UpdateSlot(i);
+            // 타겟을 놓쳐 UpdateSlot이 일찍 반환해도 이미 시작된 찌르기 연출은 끝까지 재생한다.
+            UpdateMeleeThrustVisual(i, weapon_slots[i]);
         }
     }
 
@@ -521,10 +539,20 @@ public class PlayerShootManager : MonoBehaviour
         EnemyUnit target = FindNearestEnemyInRange(pivot.position, detect_range);
         if (target != null) IsTargetingEnemy = true;
 
+        bool is_melee = weapon.weapon_firemode == WeaponFireMode.MeleeSwing;
+
+        // 이 소켓에 이전에 총이 장착돼 있었다면 ApplyAngleFlip이 flipY/localRotation을 남겨뒀을 수
+        // 있다. 근접무기는 ApplyAngleFlip을 아예 안 타므로 매 프레임 명시적으로 정상 상태로 되돌린다.
+        if (is_melee && slot.hand_sprite_renderer != null)
+        {
+            slot.hand_sprite_renderer.flipY = false;
+            slot.hand_sprite_renderer.transform.localRotation = Quaternion.identity;
+        }
+
         if (target == null)
         {
             float rest_angle = RotatePivotTowards(slot, weapon, pivot, slot.rest_rotation_degrees);
-            ApplyAngleFlip(slot, rest_angle, false);
+            if (!is_melee) ApplyAngleFlip(slot, rest_angle, false);
             return;
         }
 
@@ -535,10 +563,21 @@ public class PlayerShootManager : MonoBehaviour
         {
             // weapon_imgangle: 무기 그림마다 총구가 그려진 각도가 달라서, 무기를 바꾸면
             // 슬롯 보정각(rotation_offset_degrees)만으로는 총구가 타겟을 향하지 않는다.
+            //
+            // 근접무기는 slot.rotation_offset_degrees를 더하지 않는다 - 그 값은 좌/우 소켓에
+            // 각각 다르게 박혀 있는(126.3도/37도) "총기 전용" 보정값이다(총은 손마다 별도로
+            // 그려진 미러링 이미지를 쓰지만, 근접무기 3종은 좌우 이미지가 완전히 같은 파일이라
+            // 소켓이 달라져도 그림의 실제 방향은 그대로다). 슬롯 값을 그대로 더하면 무기가
+            // 어느 손에 장착됐는지에 따라 칼끝 방향이 달라져버린다. 그래서 근접무기는
+            // weapon_imgangle 하나만으로 방향을 맞춘다(2026-08-12, "근접무기가 뒤집어져
+            // 있음" 리포트로 발견).
             float target_angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg
-                                 + slot.rotation_offset_degrees + weapon.weapon_imgangle;
+                                 + (is_melee ? 0f : slot.rotation_offset_degrees) + weapon.weapon_imgangle;
             float current_angle = RotatePivotTowards(slot, weapon, pivot, target_angle);
-            ApplyAngleFlip(slot, current_angle, true);
+
+            // ApplyAngleFlip(상하 반전)의 각도 범위도 총기 전용 슬롯 값이라 근접무기에는 적용하지
+            // 않는다 - 근접무기는 칼이 어느 각도로 돌아가도(뒤집혀도) 자연스러워 굳이 필요 없다.
+            if (!is_melee) ApplyAngleFlip(slot, current_angle, true);
 
             // 아직 타겟 쪽으로 다 돌지 못했으면 발사를 미룬다 - 그래야 "무기가 돌아가는 시간"이
             // 눈속임이 아니라 실제 사격 타이밍에도 반영된다.
@@ -693,9 +732,12 @@ public class PlayerShootManager : MonoBehaviour
                 break;
 
             case WeaponFireMode.MeleeSwing:
-                // 근접은 투사체를 만들지 않고 총구 앞 부채꼴을 즉시 판정한다
+                // 근접은 투사체를 만들지 않고 총구 앞 부채꼴을 즉시 판정한다(데미지는 즉발 - 아래
+                // 찌르기 연출과는 별개다). 판정 자체는 그대로 두고 시각 연출만 추가한다.
                 MeleeSwing.Execute(fire_origin, aim_direction, GetTravelRange(weapon), damage,
                                    weapon.weapon_defignore, weapon.weapon_knockback);
+                attack_duration = Mathf.Max(0f, weapon.weapon_duration);
+                StartMeleeThrustVisual(slot_index, slot, weapon, aim_direction);
                 break;
 
             default:
@@ -711,6 +753,53 @@ public class PlayerShootManager : MonoBehaviour
         // 덕분에 3초짜리 빔은 3초 + 대기시간이 한 주기가 되어 빔이 여러 개 겹치지 않는다.
         float cooldown = weapon.weapon_atsp > 0f ? 1f / (weapon.weapon_atsp * CurrentAttackSpeedMultiplier()) : 1f;
         state.next_fire_time = Time.time + attack_duration + cooldown;
+    }
+
+    /// <summary>
+    /// 근접무기가 "찌르듯이 한 번 튀어나갔다가 돌아오는" 연출을 시작한다(2026-08-12 신규).
+    /// 데미지 판정(MeleeSwing.Execute)은 이미 끝난 뒤이므로 이 연출은 순수 시각 효과다 -
+    /// weapon.weapon_range/판정과 무관하게, 무기 소켓(rig_point/muzzle_point)의 <b>월드 위치</b>를
+    /// 잠깐 조준 방향으로 밀었다가 되돌린다(로컬 좌표로 하면 부모 스케일/회전에 따라 밀리는
+    /// 거리가 달라지는 문제가 있어 월드 좌표로 계산한다).
+    /// </summary>
+    private void StartMeleeThrustVisual(int slot_index, WeaponSlot slot, WeaponData weapon, Vector3 direction)
+    {
+        Transform pivot = slot.rig_point != null ? slot.rig_point : slot.muzzle_point;
+        if (pivot == null) return;
+
+        WeaponRuntimeState state = GetOrCreateRuntimeState(slot_index);
+        state.melee_thrust_active = true;
+        state.melee_thrust_start_time = Time.time;
+        state.melee_thrust_duration = Mathf.Max(0.01f, weapon.weapon_duration);
+        state.melee_thrust_distance = weapon.ProjectileSize; // weapon_atsize를 찌르는 거리로 재활용
+        state.melee_thrust_home_world = pivot.position;
+        state.melee_thrust_direction = direction;
+    }
+
+    /// <summary>
+    /// StartMeleeThrustVisual이 시작한 찌르기 연출을 매 프레임 진행시킨다. 0→1(찌르기)→0(복귀)
+    /// 삼각파로 절반 지점에서 최대로 뻗었다가 나머지 절반 동안 원위치로 돌아온다.
+    /// 구르기 등으로 pivot이 다른 곳으로 옮겨진 채 연출이 끝나도(ApplyRollPoseToAllSlots가 매 프레임
+    /// localPosition을 덮어쓰므로) 다음 발사 때 새 home_world를 다시 잡으므로 어긋나지 않는다.
+    /// </summary>
+    private void UpdateMeleeThrustVisual(int slot_index, WeaponSlot slot)
+    {
+        WeaponRuntimeState state = GetOrCreateRuntimeState(slot_index);
+        if (!state.melee_thrust_active) return;
+
+        Transform pivot = slot.rig_point != null ? slot.rig_point : slot.muzzle_point;
+        if (pivot == null) { state.melee_thrust_active = false; return; }
+
+        float t = (Time.time - state.melee_thrust_start_time) / state.melee_thrust_duration;
+        if (t >= 1f)
+        {
+            pivot.position = state.melee_thrust_home_world;
+            state.melee_thrust_active = false;
+            return;
+        }
+
+        float progress = t < 0.5f ? t * 2f : (1f - t) * 2f; // 0→1→0
+        pivot.position = state.melee_thrust_home_world + state.melee_thrust_direction * (progress * state.melee_thrust_distance);
     }
 
     /// <summary>

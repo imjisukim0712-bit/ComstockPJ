@@ -4,7 +4,7 @@ using System.Collections.Generic;
 /// <summary>
 /// 런(웨이브 전투~정비~상점) 동안 누적되는 진행 상태.
 /// PlayerSession(선택된 로봇=머리)과는 별개로, 웨이브를 진행하며 쌓이는 값들을 담는다.
-/// 다른 static 상태(PlayerSession, GameOverManager, PlayerInventory)와 동일한 패턴을 따른다.
+/// 다른 static 상태(PlayerSession, GameOverManager)와 동일한 패턴을 따른다.
 /// 아직 웨이브/상점/모딩 시스템이 없어 실제로 값을 채우는 코드는 이후 Phase에서 연결한다.
 /// </summary>
 public static class RunState

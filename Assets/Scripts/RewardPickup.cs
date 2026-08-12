@@ -10,8 +10,8 @@ public enum RewardType
 
 /// <summary>
 /// 골드/AI 코어 경험치 보상 하나를 필드 위의 물리적 오브젝트로 표현한다.
-/// ItemPickup과 동일한 패턴: 플레이어가 SphereCollider(트리거) 범위 안에 들어오면
-/// 자동으로 흡수되어 RunState에 더해지고 사라진다.
+/// 플레이어가 SphereCollider(트리거) 범위 안에 들어오면 자동으로 흡수되어
+/// RunState에 더해지고 사라진다.
 /// RewardPickupManager.SpawnReward()가 생성 직후 Init()으로 종류/수량을 넘겨준다.
 /// </summary>
 [RequireComponent(typeof(Collider))]

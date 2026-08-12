@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 게임 데이터 테이블(몬스터/로봇/무기/방어구/드랍)을 보관하는 **유일한 출처**.
+/// 게임 데이터 테이블(몬스터/로봇/무기/방어구)을 보관하는 **유일한 출처**.
 /// GameDataManager가 Awake에서 여기서 동기적으로 읽어간다.
 ///
 /// 값을 바꾸려면 Unity 인스펙터에서 이 에셋을 직접 편집한다. 외부(구글 시트 등)에서
@@ -15,5 +15,4 @@ public class GameDataAsset : ScriptableObject
     public List<RobotData> robots = new List<RobotData>();
     public List<WeaponData> weapons = new List<WeaponData>();
     public List<AmorData> amors = new List<AmorData>();
-    public List<DropEntry> drops = new List<DropEntry>();
 }

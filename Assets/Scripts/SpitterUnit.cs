@@ -10,9 +10,12 @@ using UnityEngine;
 public class SpitterUnit : EnemyUnit
 {
     [Header("스피터 투사체 (전부 밸런스 미확정 임시값)")]
-    [SerializeField] private float projectileSpeed = 12f;
-    // 2026-08-10 "인게임 모든 이미지 1/2" 지시로 0.35 → 0.175
-    [SerializeField] private float projectileVisualSize = 0.175f;
+    // 2026-08-12 "투사체 속도가 너무 빠르다" 리포트로 25% 감속: 12 → 9
+    [SerializeField] private float projectileSpeed = 9f;
+    // 2026-08-10 "인게임 모든 이미지 1/2" 지시로 0.35 → 0.175 됐던 것이, 2026-08-12
+    // "육안으로 확인이 어렵다" 리포트로 원래 크기(0.35)로 되돌아감 - 당시 축소는 일괄
+    // 절반 처리였을 뿐 투사체 가시성을 따로 검토한 값이 아니었다.
+    [SerializeField] private float projectileVisualSize = 0.35f;
 
     // 원거리 몬스터는 앞으로 내지를 이유가 없다. 예비 동작(뒤로 젖히며 뱉을 준비)만 남기고
     // 타격 돌진은 0으로 죽인다(EnemyUnit의 공격 모션 뼈대는 그대로 재사용).

@@ -112,10 +112,9 @@ public class PlayerRobotController : MonoBehaviour
 
     private void Awake()
     {
-        // 씬을 재시작해서 새 Player가 만들어질 때 이전 판의 게임오버/인벤토리/런 상태가 남아있지 않도록 초기화
+        // 씬을 재시작해서 새 Player가 만들어질 때 이전 판의 게임오버/런 상태가 남아있지 않도록 초기화
         GameOverManager.Reset();
         GameWinManager.Reset();
-        PlayerInventory.Reset();
         RunState.Reset();
         EnemyUnit.Alive.Clear();
         EnemyUnit.ResetStaticCaches();

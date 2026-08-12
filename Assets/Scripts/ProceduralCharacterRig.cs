@@ -390,8 +390,12 @@ public class ProceduralCharacterRig : MonoBehaviour
         leg.ankle = new GameObject("Ankle").transform;
         leg.ankle.SetParent(leg.knee, false);
         leg.ankle.localPosition = new Vector3(0f, -shinLength, 0f);
+        // 신발은 정강이보다 낮은 sortingOrder를 써서 뒤에 그려진다 - 정강이 아랫부분이 신발 통
+        // 위로 겹쳐 보여야 "신발 안에 다리를 넣은" 모습이 된다(2026-08-12, "신발이 다리보다
+        // 앞에 있어 신은 것처럼 안 보인다" 리포트로 발견. 예전 footAnkleAnchor 조정은 조인트
+        // 위치 문제였고 이건 별개로 그리기 순서 문제였다).
         leg.footRenderer = AttachVisual(leg.ankle, "Foot", footSprite, footAnkle, 0f,
-                                        sortingBase + 2, tint, footSpriteFlipX, FootScale);
+                                        sortingBase - 1, tint, footSpriteFlipX, FootScale);
 
         return leg;
     }

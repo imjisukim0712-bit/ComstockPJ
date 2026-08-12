@@ -175,10 +175,3 @@ public struct AmorData
     public float amor_avoid;
 }
 
-[Serializable]
-public struct DropEntry
-{
-    public int monster_id;
-    public int item_id;
-    public float item_drop;
-}

@@ -11,7 +11,7 @@ using UnityEngine;
 /// - monster_range: 공격 사거리 - 플레이어와의 거리가 이 값 이하면 공격을 시도
 /// - monster_type : 공격 타입 (현재 미구현 - 항상 근접 접촉형으로만 동작)
 /// - monster_atsp : 공격속도 - 공격 성공 후 다음 공격까지의 쿨다운 (1 / atsp 초)
-/// - 드랍테이블   : 사망 시 DropTableManager.RollDrop()으로 결정, DropItemManager가 땅에 상자로 생성
+/// - 보상 드랍    : 사망 시 GrantKillRewards()가 경험치/골드/부품상자를 RewardPickupManager로 생성
 /// </summary>
 [RequireComponent(typeof(Rigidbody))]
 public class EnemyUnit : MonoBehaviour
@@ -339,7 +339,12 @@ public class EnemyUnit : MonoBehaviour
             return;
         }
 
-        walk_frame_phase += Time.deltaTime * walkFrameFps;
+        // walkFrameFps는 "기준 이동속도(MoveSpeed)로 걸을 때"의 프레임 속도다. 실제 속도가
+        // 기준보다 느려지면(감속 오라 등) 애니메이션도 같이 느려지고, 빨라지면(넉백 등) 같이
+        // 빨라진다 - 고정 fps로 두면 이동속도를 조정할 때마다 애니메이션과 따로 놀았다
+        // (2026-08-12, "애니메이션 속도가 이동속도에 비해 너무 느리다" 리포트로 발견).
+        float speed_ratio = MoveSpeed > 0.01f ? planar_velocity.magnitude / MoveSpeed : 1f;
+        walk_frame_phase += Time.deltaTime * walkFrameFps * speed_ratio;
         int frame_index = Mathf.FloorToInt(walk_frame_phase) % frames.Length;
         body_sprite_renderer.sprite = frames[frame_index];
     }
@@ -884,13 +889,6 @@ public class EnemyUnit : MonoBehaviour
         IsDead = true;
 
         if (rb != null) rb.linearVelocity = Vector3.zero;
-
-        int? droppedItemId = DropTableManager.RollDrop(MonsterId);
-        if (droppedItemId.HasValue)
-        {
-            // 아이템을 땅에 물리적인 상자로 생성 - 플레이어가 일정 범위로 다가가면 자동 습득(ItemPickup 참고)
-            DropItemManager.SpawnDrop(droppedItemId.Value, transform.position);
-        }
 
         GrantKillRewards();
         OnKilledByPlayer?.Invoke(this);

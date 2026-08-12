@@ -9,7 +9,7 @@ using UnityEngine;
 /// 0.2초 만에 사라져서 화면에 아무것도 안 보이고, 초당 3회(전기톱검) Instantiate/Destroy만
 /// 반복된다. 부채꼴 즉시 판정이 근접 무기의 실제 동작에도 맞다.
 ///
-/// DropItemManager / RewardPickupManager와 같은 static 유틸리티 패턴을 따른다.
+/// RewardPickupManager와 같은 static 유틸리티 패턴을 따른다.
 /// 전제: X-Y 평면만 사용 (Z축 미사용)
 /// </summary>
 public static class MeleeSwing

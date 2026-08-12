@@ -15,7 +15,7 @@ using UnityEngine;
 /// (외부 연동 금지 규칙과 무관하다).
 ///
 /// 건드리는 리스트는 정확히 세 개다 - GameDataAsset.weapons / PartsCatalog.weaponMeta /
-/// ShopCatalog.weaponEntries. monsters·robots·drops·parts·discs 등은 절대 손대지 않는다.
+/// ShopCatalog.weaponEntries. monsters·robots·parts·discs 등은 절대 손대지 않는다.
 /// </summary>
 public static class WeaponTableGenerator
 {
@@ -81,6 +81,7 @@ public static class WeaponTableGenerator
         public WeaponFireMode firemode;
 
         public float imgscale;
+        public float imgangle;        // 이미지에 그려진 방향과 조준각의 차이를 메우는 보정각(도). 대부분 0(총구가 오른쪽을 향한 그림)
         public float weight;          // 자기장코어+다리 지탱력과 비교되는 무게
         public int basePrice;         // 일반 등급 가격 (상위 등급은 x PriceMultipliers)
 
@@ -222,31 +223,36 @@ public static class WeaponTableGenerator
         // ===== 근접 3종 (이미지가 방향별로 없어 좌우 공용) =====
         // range/detect는 ÷100 환산에서 제외한다 - 화면이 아니라 "적 몸통에 닿는 거리" 기준 값이라
         // 절반으로 줄이면 좀비 공격 사거리(1.6유닛)보다 짧아져 일방적으로 맞기만 한다(위 주석 참고).
+        // imgangle: 세 원본 그림 전부 칼끝이 우측이 아니라 좌상단(~140~145도)을 향하고 있어서
+        // (PIL로 불투명 픽셀 주성분축을 실측: 생존단검 140.2도 / 마체테 145.0도 / 전기톱검 141.3도),
+        // 그 반대값(-140~-145도)을 보정각으로 넣어야 조준 방향으로 칼끝이 정확히 향한다.
+        // duration/atsize는 근접에서 원래 미사용 값이라, 여기서는 "찌르기 애니메이션 총 시간(초)"/
+        // "찌르는 거리(유닛)"로 재활용한다(PlayerShootManager.StartMeleeThrustVisual 참고).
         new WeaponDef {
             kind = 11, name = "생존단검", wclass = WeaponClass.Melee, wtype = WeaponType.Melee,
-            atk = 33f, atsp = 1.8f, range = 2.2f, detect = 2.2f, speed = 0f, rotspeed = RotVeryHigh,
-            atsize = 1f, aim = 0f, rebound = 0f, projectiles = 1,
-            pierce = 0, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 5f, duration = 0f,
+            atk = 33f, atsp = 1.8f, range = 3.3f, detect = 3.3f, speed = 0f, rotspeed = RotVeryHigh,
+            atsize = 0.5f, aim = 0f, rebound = 0f, projectiles = 1,
+            pierce = 0, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 5f, duration = 0.16f,
             firemode = WeaponFireMode.MeleeSwing,
-            imgscale = 0.5f, weight = 1.0f, basePrice = 20,
+            imgscale = 0.5f, imgangle = -140f, weight = 1.0f, basePrice = 20,
             tanhwan = "", leftImg = "SurvivalKnife", rightImg = "SurvivalKnife"
         },
         new WeaponDef {
             kind = 12, name = "전술 마체테", wclass = WeaponClass.Melee, wtype = WeaponType.Melee,
-            atk = 50f, atsp = 1.2f, range = 2.6f, detect = 2.6f, speed = 0f, rotspeed = RotVeryHigh,
-            atsize = 1f, aim = 0f, rebound = 0f, projectiles = 1,
-            pierce = 0, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 9f, duration = 0f,
+            atk = 50f, atsp = 1.2f, range = 3.9f, detect = 3.9f, speed = 0f, rotspeed = RotVeryHigh,
+            atsize = 0.65f, aim = 0f, rebound = 0f, projectiles = 1,
+            pierce = 0, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 9f, duration = 0.22f,
             firemode = WeaponFireMode.MeleeSwing,
-            imgscale = 0.65f, weight = 1.5f, basePrice = 25,
+            imgscale = 0.65f, imgangle = -145f, weight = 1.5f, basePrice = 25,
             tanhwan = "", leftImg = "Machete", rightImg = "Machete"
         },
         new WeaponDef {
             kind = 13, name = "전기톱검", wclass = WeaponClass.Melee, wtype = WeaponType.Melee,
-            atk = 20f, atsp = 3f, range = 2.4f, detect = 2.4f, speed = 0f, rotspeed = RotVeryHigh,
-            atsize = 1f, aim = 0f, rebound = 0f, projectiles = 1,
-            pierce = 0, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 5f, duration = 0f,
+            atk = 20f, atsp = 3f, range = 3.6f, detect = 3.6f, speed = 0f, rotspeed = RotVeryHigh,
+            atsize = 0.55f, aim = 0f, rebound = 0f, projectiles = 1,
+            pierce = 0, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 5f, duration = 0.12f,
             firemode = WeaponFireMode.MeleeSwing,
-            imgscale = 0.65f, weight = 2.0f, basePrice = 30,
+            imgscale = 0.65f, imgangle = -141f, weight = 2.0f, basePrice = 30,
             tanhwan = "", leftImg = "ChainsawSword", rightImg = "ChainsawSword"
         }
     };
@@ -300,7 +306,7 @@ public static class WeaponTableGenerator
                     weapon_duration = def.duration,
                     weapon_firemode = def.firemode,
                     weapon_imgscale = def.imgscale,
-                    weapon_imgangle = 0f, // 실제 그림의 총구 각도를 보고 맞추는 값 - 화면 확인 후 조정
+                    weapon_imgangle = def.imgangle, // 실제 그림의 총구 각도를 보고 맞추는 값 - 화면 확인 후 조정
                     weapon_tanhwan = def.tanhwan,
                     weapon_lfwpimg = def.leftImg,
                     weapon_rgwpimg = def.rightImg
@@ -323,7 +329,7 @@ public static class WeaponTableGenerator
             }
         }
 
-        // weapons만 교체한다 - monsters/robots/amors/drops는 손대지 않는다
+        // weapons만 교체한다 - monsters/robots/amors는 손대지 않는다
         gameData.weapons = weapons;
         partsCatalog.EditorSetWeaponMeta(metas);
         shopCatalog.EditorSetWeaponEntries(entries);
