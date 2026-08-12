@@ -169,8 +169,12 @@ public class ShopManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 이 칸의 무기를 이 소켓에 장착할 수 있는지 확인한다(골드 부족/이미 구매 여부에 더해
-    /// 무기 소켓 타입 제한, 자기장 코어+다리 무게 제한까지 검사). 안 되면 이유를 함께 돌려준다.
+    /// 이 칸의 무기를 이 소켓에 장착할 수 있는지 확인한다(골드 부족/이미 구매 여부만 검사).
+    ///
+    /// 2026-08-12 "무기 소켓 개별화" 플랜부터 타입 불일치/무게 초과는 더 이상 구매를 막지
+    /// 않는다 - 타입이 달라도, 지탱력을 넘어도 항상 장착할 수 있고 대신 무게 패널티(타입
+    /// 불일치 시 배율, 초과 시 이동속도 감소)로만 반영된다. 비차단 경고 문구는
+    /// BuildSocketWarning을 따로 호출해서 얻는다.
     /// </summary>
     public bool CanPurchaseWeaponIntoSocket(int index, int socketIndex, out string reason)
     {
@@ -179,20 +183,36 @@ public class ShopManager : MonoBehaviour
         Offer offer = offers[index];
         if (offer.IsDisc) { reason = "무기 칸이 아닙니다"; return false; }
 
-        // 정비 시스템(ModdingManager)을 못 찾으면 제약 없이 통과시킨다 - 씬 배치 누락 같은
-        // 예외 상황에서 상점 자체가 완전히 막히는 것을 막기 위함.
-        ModdingManager modding = Object.FindFirstObjectByType<ModdingManager>();
-        if (modding == null) return true;
+        return true;
+    }
 
-        if (!modding.CheckWeaponTypeAllowed(offer.WeaponId, out reason)) return false;
+    /// <summary>
+    /// 소켓 선택 버튼에 곁들일 <b>비차단</b> 경고 문구(타입 불일치/무게 초과). 구매를 막지는
+    /// 않지만 어떤 패널티가 붙는지 미리 알려준다. 경고가 없으면 빈 문자열을 돌려준다.
+    /// </summary>
+    public string BuildSocketWarning(int index, int socketIndex)
+    {
+        if (index < 0 || index >= offers.Count || offers[index] == null) return string.Empty;
+
+        Offer offer = offers[index];
+        if (offer.IsDisc) return string.Empty;
+
+        ModdingManager modding = Object.FindFirstObjectByType<ModdingManager>();
+        if (modding == null) return string.Empty;
+
+        var warnings = new List<string>();
+
+        if (modding.IsWeaponMismatched(socketIndex, offer.WeaponId))
+        {
+            warnings.Add($"타입 불일치 - 무게 x{modding.MismatchWeightMultiplier:0.#} 적용");
+        }
 
         if (!modding.CheckWeightLimit(socketIndex, offer.WeaponId, out float totalAfter, out float capacity))
         {
-            reason = $"무기 무게 초과 ({totalAfter:0.#} / {capacity:0.#})";
-            return false;
+            warnings.Add($"무게 초과 ({totalAfter:0.#} / {capacity:0.#}) - 이동속도 감소");
         }
 
-        return true;
+        return string.Join(" / ", warnings);
     }
 
     /// <summary>무기를 구매해 지정한 소켓에 즉시 장착(교체)한다.</summary>

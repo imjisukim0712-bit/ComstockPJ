@@ -56,7 +56,15 @@ public static class RunState
     public static int ShopRefreshCount { get; set; } = 0;
 
     // 팔/다리 등 모딩 대상 파츠 ID (PartSlot.ToString() -> 장착된 파츠 ID). 머리는 PlayerSession.SelectedRobotId로 고정 관리
+    // PartSlot.ArmWeaponSocket은 더 이상 이 딕셔너리에 저장되지 않는다 - 아래
+    // EquippedWeaponSocketPartIds가 소켓 인덱스별로 독립 관리한다(2026-08-12 "무기 소켓 개별화" 플랜).
     public static Dictionary<string, int> EquippedPartIds { get; private set; } = new Dictionary<string, int>();
+
+    // 무기 소켓(팔 - 무기 소켓) 파츠를 소켓 인덱스별로 독립 저장한다. 예전에는 EquippedPartIds의
+    // "ArmWeaponSocket" 키 하나가 모든 물리 소켓에 공통 적용됐는데, 소켓마다 다른 종류(허용 무기
+    // 타입)·등급(사거리/감지거리/회전속도 배율)을 가질 수 있어야 해서 인덱스로 분리했다.
+    // 키가 없는 소켓은 "표준 소켓"(기본 파츠, 타입 제한 없음)이 낀 것으로 간주한다.
+    public static Dictionary<int, int> EquippedWeaponSocketPartIds { get; private set; } = new Dictionary<int, int>();
 
     // 장착된 파츠들이 만들어낸 스탯 증감 합계. CoreStatBonuses/DiscStatBonuses와 동일한 방식으로
     // RobotStats.Compute가 그대로 더한다. 파츠를 교체(ModdingManager.EquipPart)할 때마다
@@ -98,6 +106,7 @@ public static class RunState
         DiscUsesRemaining.Clear();
         ShopRefreshCount = 0;
         EquippedPartIds.Clear();
+        EquippedWeaponSocketPartIds.Clear();
         PartStatBonuses.Clear();
         UnopenedPartBoxCount = 0;
         ModdingInventory.Clear();

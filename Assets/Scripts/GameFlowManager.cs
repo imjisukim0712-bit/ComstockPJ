@@ -105,6 +105,12 @@ public class GameFlowManager : MonoBehaviour
         IsIntermission = true;
         lastEndedWaveNumber = waveNumber;
 
+        // 웨이브를 무사히 넘겼으니 체력을 전부 회복한다(사용자 확정 사항, 2026-08-12).
+        // 마지막(보스) 웨이브는 EndWave()가 아니라 WinGame()으로 끝나 이 이벤트 자체가 발생하지
+        // 않으므로 여기서는 자동으로 제외된다.
+        PlayerRobotController player = FindFirstObjectByType<PlayerRobotController>();
+        if (player != null) player.Heal(player.MaxHp);
+
         // 정비는 "전체 화면 UI + 인게임 완전 정지" 상태여야 한다(사용자 확정 사항).
         // 필드 정리를 먼저 하고 나서 시간을 멈춘다 - timeScale=0 상태에서 물리 이동을 시키면
         // Rigidbody가 그대로 반영되지 않을 수 있기 때문. 자석 연출이 여러 프레임에 걸쳐 재생돼야

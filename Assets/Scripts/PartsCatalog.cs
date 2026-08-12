@@ -83,8 +83,19 @@ public class PartsCatalog : ScriptableObject
     [Range(0f, 1f)]
     [SerializeField] private float partBoxDropChance = 0.05f;
 
+    [Header("무기 소켓 개별화 - 불일치/과적 패널티 (밸런스 미확정 임시값)")]
+    [Tooltip("무기 소켓 파츠가 제한하는 타입과 다른 무기를 끼웠을 때, 그 무기 무게에 곱해지는 배율. " +
+             "장착 자체는 항상 허용되고 이 배율만큼 무게만 늘어난다(2026-08-12 사용자 확정)")]
+    [SerializeField] private float mismatchWeightMultiplier = 2.0f;
+
+    [Tooltip("총 무게가 지탱력(자기장 코어+다리)을 초과했을 때, 초과분 1당 이동속도가 깎이는 양. " +
+             "지탱력 초과는 더 이상 장착을 막지 않고(하드 캡 제거) 이 감속으로만 반영된다")]
+    [SerializeField] private float overweightSpeedPenaltyPerUnit = 0.05f;
+
     public IReadOnlyList<PartData> Parts => parts;
     public float PartBoxDropChance => partBoxDropChance;
+    public float MismatchWeightMultiplier => mismatchWeightMultiplier > 0f ? mismatchWeightMultiplier : 1f;
+    public float OverweightSpeedPenaltyPerUnit => Mathf.Max(0f, overweightSpeedPenaltyPerUnit);
 
     /// <summary>해당 슬롯의 기본(런 시작용) 파츠. 없으면 그 슬롯의 첫 파츠, 그마저 없으면 null.</summary>
     public PartData? GetDefaultPart(PartSlot slot)

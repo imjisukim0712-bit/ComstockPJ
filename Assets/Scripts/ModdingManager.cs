@@ -26,6 +26,9 @@ public class ModdingManager : MonoBehaviour
     // 일어나므로 플레이어 참조를 캐시해둔다.
     private PlayerRobotController player_cache;
 
+    // ActiveSocketCount가 매 프레임(PlayerShootManager.Update)에서 조회되므로 캐시해둔다.
+    private PlayerShootManager shoot_cache;
+
     private void Awake()
     {
         Instance = this;
@@ -58,6 +61,9 @@ public class ModdingManager : MonoBehaviour
 
         foreach (PartSlot slot in (PartSlot[])System.Enum.GetValues(typeof(PartSlot)))
         {
+            // 무기 소켓은 슬롯 하나가 아니라 소켓 인덱스별로 채워야 하므로 아래에서 따로 처리한다.
+            if (slot == PartSlot.ArmWeaponSocket) continue;
+
             string key = slot.ToString();
             if (RunState.EquippedPartIds.ContainsKey(key)) continue;
 
@@ -72,6 +78,21 @@ public class ModdingManager : MonoBehaviour
             changed = true;
         }
 
+        PartData? defaultSocketPart = catalog.GetDefaultPart(PartSlot.ArmWeaponSocket);
+        if (defaultSocketPart == null)
+        {
+            Debug.LogWarning("PartsCatalog에 무기 소켓 슬롯의 기본 파츠가 없습니다.");
+        }
+        else
+        {
+            for (int i = 0; i < ActiveSocketCount; i++)
+            {
+                if (RunState.EquippedWeaponSocketPartIds.ContainsKey(i)) continue;
+                RunState.EquippedWeaponSocketPartIds[i] = defaultSocketPart.Value.partId;
+                changed = true;
+            }
+        }
+
         if (changed) RecomputePartStatBonuses();
     }
 
@@ -83,6 +104,26 @@ public class ModdingManager : MonoBehaviour
         if (!RunState.EquippedPartIds.TryGetValue(slot.ToString(), out int id)) return false;
 
         return catalog.TryGetPart(id, out part);
+    }
+
+    /// <summary>
+    /// socketIndex번 무기 소켓에 장착된 파츠(종류 + 등급 배율)를 가져온다. 이 소켓에 아직
+    /// 아무것도 장착하지 않았으면(EnsureDefaultPartsEquipped가 아직 못 채운 새 소켓 등) 카탈로그의
+    /// 기본 파츠(표준 소켓, 타입 제한 없음)로 안전하게 폴백한다.
+    /// </summary>
+    public bool TryGetEquippedWeaponSocketPart(int socketIndex, out PartData part)
+    {
+        part = default;
+        if (catalog == null) return false;
+
+        if (RunState.EquippedWeaponSocketPartIds.TryGetValue(socketIndex, out int id) && catalog.TryGetPart(id, out part))
+            return true;
+
+        PartData? defaultPart = catalog.GetDefaultPart(PartSlot.ArmWeaponSocket);
+        if (defaultPart == null) return false;
+
+        part = defaultPart.Value;
+        return true;
     }
 
     // ---------------------------------------------------------------------
@@ -110,6 +151,22 @@ public class ModdingManager : MonoBehaviour
     /// 머리(로봇) 능력치이므로 로봇마다 다르다.
     /// </summary>
     public int PartBoxCapacity => Mathf.Max(0, GetHeadInfo().partBoxCapacity);
+
+    /// <summary>
+    /// 실제로 쓸 수 있는 무기 소켓 개수 = Min(씬에 물리적으로 리깅된 소켓 수, 머리(로봇)
+    /// 파츠가 정한 소켓 개수). 2026-08-12 "무기 소켓 개별화" 플랜에서 신설 - 지금은 두 로봇
+    /// 전부 weaponSocketCount=2이고 씬 리깅도 2개라 실질적으로 기존과 동일하게 동작한다.
+    /// 3번째 이상 소켓은 씬에 RigingPoint 등을 배치해야 실제로 나타난다(별도 후보 작업).
+    /// </summary>
+    public int ActiveSocketCount
+    {
+        get
+        {
+            if (shoot_cache == null) shoot_cache = FindFirstObjectByType<PlayerShootManager>();
+            int rigged = shoot_cache != null ? shoot_cache.RiggedSocketCount : 0;
+            return Mathf.Max(0, Mathf.Min(rigged, GetHeadInfo().weaponSocketCount));
+        }
+    }
 
     /// <summary>
     /// 장착 가능한 최대 디스크 개수. DiscSlot 파츠를 끼웠으면 그 파츠 값이 우선하고,
@@ -223,7 +280,13 @@ public class ModdingManager : MonoBehaviour
     public bool TrySwapInventoryWithSlot(int inventoryIndex, PartSlot slot) =>
         TrySwapInventoryWithSlot(inventoryIndex, slot, out _);
 
-    /// <summary>교체에 실패하면 reason에 이유가 담긴다(정비 화면이 그대로 보여준다).</summary>
+    /// <summary>
+    /// 교체에 실패하면 reason에 이유가 담긴다(정비 화면이 그대로 보여준다).
+    ///
+    /// 무게 지탱력 초과는 더 이상 이 교체를 막지 않는다(2026-08-12 "무기 소켓 개별화" 플랜) -
+    /// 장착은 항상 허용되고, 초과분은 RobotStats.Compute의 이동속도 감소로만 반영된다.
+    /// 초과 여부는 정비 화면의 능력치 패널(GetTotalWeight/GetTotalWeightCapacity)이 계속 보여준다.
+    /// </summary>
     public bool TrySwapInventoryWithSlot(int inventoryIndex, PartSlot slot, out string reason)
     {
         reason = string.Empty;
@@ -236,14 +299,6 @@ public class ModdingManager : MonoBehaviour
 
         // 파츠는 자기 슬롯에만 들어간다.
         if (incoming.slot != slot) return false;
-
-        // 무거운 파츠로 갈아끼우면 지탱력을 넘길 수 있다.
-        // (자기장 코어/다리를 교체하는 경우엔 지탱력 자체도 함께 바뀐다 - CheckPartWeightLimit 참고)
-        if (!CheckPartWeightLimit(incoming, out float totalAfter, out float capacity))
-        {
-            reason = $"무게 초과 ({totalAfter:0.#} / {capacity:0.#})";
-            return false;
-        }
 
         string key = slot.ToString();
         bool hadPrevious = RunState.EquippedPartIds.TryGetValue(key, out int previousId);
@@ -259,6 +314,49 @@ public class ModdingManager : MonoBehaviour
         {
             RunState.ModdingInventory.RemoveAt(inventoryIndex);
         }
+
+        RecomputePartStatBonuses();
+        RunState.NotifyChanged();
+        return true;
+    }
+
+    /// <summary>
+    /// 인벤토리의 무기 소켓 파츠와 socketIndex번 소켓에 장착된 파츠를 <b>맞교환</b>한다.
+    /// TrySwapInventoryWithSlot과 같은 맞교환 로직이되, 대상이 PartSlot 하나가 아니라 소켓
+    /// 인덱스다(소켓마다 독립적으로 종류/등급을 가질 수 있어야 하기 때문 - 2026-08-12 플랜).
+    /// 이 소켓에 아직 아무것도 없었으면(기본 파츠 상태) 빠지는 자리에는 기본 파츠가 채워진다.
+    /// </summary>
+    public bool TrySwapInventoryWithWeaponSocket(int inventoryIndex, int socketIndex, out string reason)
+    {
+        reason = string.Empty;
+
+        if (catalog == null) return false;
+        if (inventoryIndex < 0 || inventoryIndex >= RunState.ModdingInventory.Count) return false;
+        if (socketIndex < 0 || socketIndex >= ActiveSocketCount) return false;
+
+        int incomingId = RunState.ModdingInventory[inventoryIndex];
+        if (!catalog.TryGetPart(incomingId, out PartData incoming)) return false;
+        if (incoming.slot != PartSlot.ArmWeaponSocket) return false;
+
+        if (!RunState.EquippedWeaponSocketPartIds.TryGetValue(socketIndex, out int previousId))
+        {
+            // 이 소켓은 지금까지 기본 파츠(표준 소켓)가 낀 것으로 간주됐다 - 빠지는 자리에
+            // 그 기본 파츠를 실제로 채워 넣어야 인벤토리로 "되돌릴" 수 있다.
+            PartData? fallback = catalog.GetDefaultPart(PartSlot.ArmWeaponSocket);
+            if (fallback == null)
+            {
+                // 기본 파츠조차 데이터에 없는 예외 상태 - 빠지는 자리가 없으니 인벤토리 칸을 지운다.
+                RunState.EquippedWeaponSocketPartIds[socketIndex] = incomingId;
+                RunState.ModdingInventory.RemoveAt(inventoryIndex);
+                RecomputePartStatBonuses();
+                RunState.NotifyChanged();
+                return true;
+            }
+            previousId = fallback.Value.partId;
+        }
+
+        RunState.EquippedWeaponSocketPartIds[socketIndex] = incomingId;
+        RunState.ModdingInventory[inventoryIndex] = previousId; // 맞교환: 빠진 파츠가 인벤토리의 그 자리를 차지한다.
 
         RecomputePartStatBonuses();
         RunState.NotifyChanged();
@@ -296,8 +394,42 @@ public class ModdingManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 현재 장착된 모든 무기의 무게 합. excludeSocketIndex를 주면 그 소켓은 제외한다 -
-    /// 같은 소켓에 새 무기를 넣을 때 "그 소켓의 기존 무게를 빼고 새 무게를 더해서" 비교하기 위함.
+    /// 이 소켓에 낀 무기 소켓 파츠가 이 무기의 타입(경무장/중무장/근접무기)을 제한하는데
+    /// 이 무기가 그 타입이 아니면 true. 투사체 타입(연사/산탄/정밀 등)과는 무관하다
+    /// (소켓은 무기 타입만 제한한다 - 사용자 확정 사항).
+    ///
+    /// 2026-08-12 "무기 소켓 개별화" 플랜부터 이 불일치는 더 이상 장착을 막지 않는다 -
+    /// 대신 GetEffectiveWeaponWeight가 무게에 배율을 곱해 이동속도 패널티로 이어진다.
+    /// </summary>
+    public bool IsWeaponMismatched(int socketIndex, int weaponId)
+    {
+        if (!TryGetEquippedWeaponSocketPart(socketIndex, out PartData socketPart) || !socketPart.restrictsWeaponClass)
+            return false;
+
+        // 이 무기의 타입 정보가 카탈로그에 없으면(데이터 누락) 불일치로 취급하지 않는다.
+        if (catalog == null || !catalog.TryGetWeaponMeta(weaponId, out PartsCatalog.WeaponMetaEntry meta))
+            return false;
+
+        return meta.weaponClass != socketPart.allowedWeaponClass;
+    }
+
+    /// <summary>타입 불일치 무기에 곱해지는 무게 배율(PartsCatalog의 밸런스 임시값).</summary>
+    public float MismatchWeightMultiplier => catalog != null ? catalog.MismatchWeightMultiplier : 2.0f;
+
+    /// <summary>무게 지탱력 초과 1당 이동속도가 깎이는 양(PartsCatalog의 밸런스 임시값). RobotStats.Compute가 읽는다.</summary>
+    public float OverweightSpeedPenaltyPerUnit => catalog != null ? catalog.OverweightSpeedPenaltyPerUnit : 0.05f;
+
+    /// <summary>이 소켓에 이 무기를 넣었을 때 실제로 적용되는 무게 = 기본 무게 x (타입 불일치면 배율, 아니면 1).</summary>
+    public float GetEffectiveWeaponWeight(int socketIndex, int weaponId)
+    {
+        float baseWeight = GetWeaponWeight(weaponId);
+        return IsWeaponMismatched(socketIndex, weaponId) ? baseWeight * MismatchWeightMultiplier : baseWeight;
+    }
+
+    /// <summary>
+    /// 현재 장착된 모든 무기의 무게 합(타입 불일치 배율 반영). excludeSocketIndex를 주면 그
+    /// 소켓은 제외한다 - 같은 소켓에 새 무기를 넣을 때 "그 소켓의 기존 무게를 빼고 새 무게를
+    /// 더해서" 비교하기 위함.
     /// </summary>
     public float GetEquippedWeaponWeightSum(int excludeSocketIndex = -1)
     {
@@ -305,24 +437,43 @@ public class ModdingManager : MonoBehaviour
         for (int i = 0; i < RunState.EquippedWeapons.Count; i++)
         {
             if (i == excludeSocketIndex) continue;
-            sum += GetWeaponWeight(RunState.EquippedWeapons[i].WeaponId);
+            sum += GetEffectiveWeaponWeight(i, RunState.EquippedWeapons[i].WeaponId);
+        }
+        return sum;
+    }
+
+    /// <summary>
+    /// 현재 장착된 무기 소켓 파츠들의 무게 합. excludeSocketIndex를 주면 그 소켓은 제외한다
+    /// (GetEquippedWeaponWeightSum과 같은 이유 - 그 소켓을 다른 파츠로 교체했을 때의 무게 계산용).
+    /// </summary>
+    private float GetEquippedWeaponSocketPartsWeightSum(int excludeSocketIndex = -1)
+    {
+        float sum = 0f;
+        for (int i = 0; i < ActiveSocketCount; i++)
+        {
+            if (i == excludeSocketIndex) continue;
+            if (TryGetEquippedWeaponSocketPart(i, out PartData part)) sum += part.weight;
         }
         return sum;
     }
 
     /// <summary>
     /// 장착된 <b>파츠</b>들의 무게 합(디스크는 무게가 없다). excludeSlot을 주면 그 슬롯은 빼고 센다 -
-    /// 그 슬롯을 다른 파츠로 교체했을 때의 무게를 계산하기 위함이다.
+    /// 그 슬롯을 다른 파츠로 교체했을 때의 무게를 계산하기 위함이다. 무기 소켓 파츠는 슬롯 하나가
+    /// 아니라 소켓 인덱스별로 존재하므로 excludeSocketIndex로 따로 뺄 소켓을 지정한다.
     /// </summary>
-    public float GetEquippedPartsWeightSum(PartSlot? excludeSlot = null)
+    public float GetEquippedPartsWeightSum(PartSlot? excludeSlot = null, int excludeSocketIndex = -1)
     {
         float sum = 0f;
 
         foreach (PartSlot slot in System.Enum.GetValues(typeof(PartSlot)))
         {
+            if (slot == PartSlot.ArmWeaponSocket) continue; // 소켓별 무게는 아래에서 따로 합산한다
             if (excludeSlot.HasValue && slot == excludeSlot.Value) continue;
             if (TryGetEquippedPart(slot, out PartData part)) sum += part.weight;
         }
+
+        sum += GetEquippedWeaponSocketPartsWeightSum(excludeSocketIndex);
 
         return sum;
     }
@@ -330,17 +481,21 @@ public class ModdingManager : MonoBehaviour
     /// <summary>무기 + 파츠를 전부 합친 현재 총 무게.</summary>
     public float GetTotalWeight() => GetEquippedWeaponWeightSum() + GetEquippedPartsWeightSum();
 
-    /// <summary>이 소켓에 이 무기를 넣었을 때 무게 제한(자기장 코어+다리)을 넘지 않는지 확인한다.</summary>
+    /// <summary>
+    /// 이 소켓에 이 무기를 넣었을 때 무게(타입 불일치 배율 반영)가 지탱력(자기장 코어+다리)을
+    /// 넘지 않는지 확인한다. <b>더 이상 장착을 막지 않는다</b> - 반환값은 UI 경고 표시용일
+    /// 뿐이며, 초과분은 RobotStats.Compute의 이동속도 감소로만 반영된다(2026-08-12 플랜).
+    /// </summary>
     public bool CheckWeightLimit(int socketIndex, int newWeaponId, out float totalAfter, out float capacity)
     {
         capacity = GetTotalWeightCapacity();
-        totalAfter = GetEquippedWeaponWeightSum(socketIndex) + GetWeaponWeight(newWeaponId) + GetEquippedPartsWeightSum();
+        totalAfter = GetEquippedWeaponWeightSum(socketIndex) + GetEffectiveWeaponWeight(socketIndex, newWeaponId) + GetEquippedPartsWeightSum();
         return totalAfter <= capacity;
     }
 
     /// <summary>
-    /// 이 파츠로 교체했을 때 무게 제한을 넘지 않는지 확인한다.
-    /// 파츠에도 무게가 생겼기 때문에(사용자 확정 사항) 파츠 교체도 무기 구매와 같은 검사를 받는다.
+    /// 이 파츠로 교체했을 때 무게가 지탱력을 넘지 않는지 확인한다(UI 경고 표시용 - 더 이상
+    /// 교체를 막지 않는다). 파츠에도 무게가 있기 때문에(사용자 확정 사항) 무기와 같은 계산을 쓴다.
     ///
     /// 주의: 교체하려는 파츠가 자기장 코어/다리면 지탱력 자체가 바뀌므로,
     /// 새 파츠의 weightCapacity를 반영한 지탱력과 비교해야 한다.
@@ -364,28 +519,6 @@ public class ModdingManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 무기 소켓 파츠의 <b>무기 타입</b>(경무장/중무장/근접무기) 제한과 이 무기가 맞는지 확인한다.
-    /// 투사체 타입(연사/산탄/정밀 등)은 이 검사와 무관하다 - 소켓은 무기 타입만 제한한다(사용자 확정 사항).
-    /// </summary>
-    public bool CheckWeaponTypeAllowed(int weaponId, out string reason)
-    {
-        reason = string.Empty;
-
-        // 기본 파츠(무기 타입 제한 없음)이거나 파츠 정보를 못 찾으면 통과시킨다.
-        if (!TryGetEquippedPart(PartSlot.ArmWeaponSocket, out PartData socketPart) || !socketPart.restrictsWeaponClass)
-            return true;
-
-        // 이 무기의 타입 정보가 카탈로그에 없으면(데이터 누락) 상점이 막히지 않도록 통과시킨다.
-        if (catalog == null || !catalog.TryGetWeaponMeta(weaponId, out PartsCatalog.WeaponMetaEntry meta))
-            return true;
-
-        if (meta.weaponClass == socketPart.allowedWeaponClass) return true;
-
-        reason = $"이 소켓은 {socketPart.allowedWeaponClass.ToKorean()}만 장착할 수 있습니다 (현재: {meta.weaponClass.ToKorean()})";
-        return false;
-    }
-
-    /// <summary>
     /// 현재 장착된 무기 소켓 파츠의 등급 효과 배율. 소켓 파츠가 없으면 전부 1배를 돌려준다.
     /// PlayerShootManager가 매 프레임 조회하므로 값만 넘기는 가벼운 구조체로 반환한다.
     /// </summary>
@@ -398,9 +531,14 @@ public class ModdingManager : MonoBehaviour
         public static SocketModifiers Identity => new SocketModifiers { Range = 1f, DetectRange = 1f, RotationSpeed = 1f };
     }
 
-    public SocketModifiers GetWeaponSocketModifiers()
+    /// <summary>
+    /// socketIndex번 소켓에 장착된 무기 소켓 파츠의 등급 효과 배율. 2026-08-12 "무기 소켓
+    /// 개별화" 전에는 소켓 파츠 하나가 모든 소켓에 공통 적용돼 인자가 없었지만, 이제 소켓마다
+    /// 독립된 파츠를 낄 수 있어 인덱스를 받는다.
+    /// </summary>
+    public SocketModifiers GetWeaponSocketModifiers(int socketIndex)
     {
-        if (!TryGetEquippedPart(PartSlot.ArmWeaponSocket, out PartData socketPart)) return SocketModifiers.Identity;
+        if (!TryGetEquippedWeaponSocketPart(socketIndex, out PartData socketPart)) return SocketModifiers.Identity;
 
         return new SocketModifiers
         {

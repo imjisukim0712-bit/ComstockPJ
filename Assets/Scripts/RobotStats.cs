@@ -53,6 +53,16 @@ public static class RobotStats
             ApplyBonus(ref result, bonus.Key, bonus.Value);
         }
 
+        // 2026-08-12 "무기 소켓 개별화" 플랜 - 무게 지탱력(자기장 코어+다리) 초과는 더 이상
+        // 장착 자체를 막지 않는 대신(ModdingManager의 하드 캡 제거), 초과분에 비례해 이동속도를
+        // 깎는다. ModdingManager.Instance가 없으면(씬 배치 누락 등) 패널티 없이 통과시킨다.
+        ModdingManager modding = ModdingManager.Instance;
+        if (modding != null)
+        {
+            float overweight = Mathf.Max(0f, modding.GetTotalWeight() - modding.GetTotalWeightCapacity());
+            if (overweight > 0f) result.MoveSpeed -= overweight * modding.OverweightSpeedPenaltyPerUnit;
+        }
+
         // 디스크의 하락 스탯 때문에 값이 0 밑으로 내려가 이동 불가/즉사 같은 상태가 되지 않도록 최소값을 둔다.
         result.MaxHp = Mathf.Max(1, result.MaxHp);
         result.Atk = Mathf.Max(0, result.Atk);

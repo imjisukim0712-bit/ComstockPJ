@@ -72,7 +72,7 @@ public class GameOverSummaryUI : MonoBehaviour
             "[로봇 모딩]\n" +
             $"헤드: {GetRobotName(player)}\n" +
             $"헬멧: {PartLine(modding, PartSlot.Helmet)}\n" +
-            $"무기 소켓: {socketCount}칸 ({PartLine(modding, PartSlot.ArmWeaponSocket)})\n" +
+            $"{BuildWeaponSocketPartsBlock(modding, socketCount)}\n" +
             $"팔 장갑: {PartLine(modding, PartSlot.ArmArmor)}\n" +
             $"자기장 코어: {PartLine(modding, PartSlot.MagneticCore)}\n" +
             $"다리: {PartLine(modding, PartSlot.Leg)}\n" +
@@ -162,6 +162,24 @@ public class GameOverSummaryUI : MonoBehaviour
     {
         if (modding == null || !modding.TryGetEquippedPart(slot, out PartData part)) return "(없음)";
         return $"<color={part.grade.ToColorHex()}>{part.grade.ToKorean()}</color> {part.partName}";
+    }
+
+    // ShopPanelUI.BuildWeaponSocketPartsBlock과 동일 - 소켓마다 다른 파츠를 낄 수 있어
+    // "무기 소켓: N칸" 한 줄로는 표현할 수 없다(2026-08-12 "무기 소켓 개별화" 플랜).
+    private static string BuildWeaponSocketPartsBlock(ModdingManager modding, int socketCount)
+    {
+        var lines = new List<string>();
+
+        for (int i = 0; i < socketCount; i++)
+        {
+            string part = modding != null && modding.TryGetEquippedWeaponSocketPart(i, out PartData socketPart)
+                ? $"<color={socketPart.grade.ToColorHex()}>{socketPart.grade.ToKorean()}</color> {socketPart.partName}"
+                : "(없음)";
+
+            lines.Add($"무기 소켓 {i + 1}: {part}");
+        }
+
+        return lines.Count > 0 ? string.Join("\n", lines) : "무기 소켓: (없음)";
     }
 
     private static string GetRobotName(PlayerRobotController player)

@@ -126,7 +126,10 @@ public class PlayerShootManager : MonoBehaviour
         public float melee_thrust_start_time;
         public float melee_thrust_duration;
         public float melee_thrust_distance;
-        public Vector3 melee_thrust_home_world;
+        // 소켓의 "복귀 지점"을 부모 기준 로컬 좌표로 저장한다(2026-08-12 수정). 예전에는 월드
+        // 좌표를 한 번 찍어서 그대로 썼는데, 찌르기가 재생되는 동안 캐릭터가 이동하면 그 월드
+        // 좌표가 캐릭터를 따라가지 못해 "복귀 지점이 몸에서 떨어져 있는" 것처럼 보였다.
+        public Vector3 melee_thrust_home_local;
         public Vector3 melee_thrust_direction;
     }
 
@@ -252,7 +255,7 @@ public class PlayerShootManager : MonoBehaviour
     {
         RunState.EquippedWeapons.Clear();
 
-        for (int i = 0; i < weapon_slots.Count; i++)
+        for (int i = 0; i < SocketCount; i++)
         {
             int weapon_id = weapon_slots[i].weapon_id;
 
@@ -313,6 +316,15 @@ public class PlayerShootManager : MonoBehaviour
 
         for (int i = 0; i < weapon_slots.Count; i++)
         {
+            // 로봇이 이 소켓을 갖지 않으면(ActiveSocketCount 밖) 이미지를 숨긴다 - 소켓이 물리적으로
+            // 존재해도 머리 파츠가 정한 소켓 개수보다 많으면 화면에 무기가 들려 있으면 안 된다.
+            if (i >= SocketCount)
+            {
+                if (weapon_slots[i].hand_sprite_renderer != null) weapon_slots[i].hand_sprite_renderer.enabled = false;
+                continue;
+            }
+
+            if (weapon_slots[i].hand_sprite_renderer != null) weapon_slots[i].hand_sprite_renderer.enabled = true;
             RefreshWeaponVisual(i);
         }
     }
@@ -360,8 +372,15 @@ public class PlayerShootManager : MonoBehaviour
         }
     }
 
-    /// <summary>현재 무기 소켓 개수(상점 UI가 "어느 소켓에 장착할지" 목록을 만들 때 사용).</summary>
-    public int SocketCount => weapon_slots.Count;
+    /// <summary>씬에 물리적으로 리깅된 소켓 개수(RigingPoint 등이 실제로 배치된 개수). 인스펙터
+    /// 설정 그대로이며, 로봇 종류와 무관하게 고정이다. ModdingManager.ActiveSocketCount가 이 값과
+    /// 머리(로봇) 파츠의 weaponSocketCount 중 작은 값을 골라 "실제로 쓸 수 있는" 소켓 수를 정한다.</summary>
+    public int RiggedSocketCount => weapon_slots.Count;
+
+    /// <summary>현재 실제로 쓸 수 있는 무기 소켓 개수(상점/정비 UI가 목록을 만들 때 사용).
+    /// 2026-08-12 "무기 소켓 개별화" 전에는 RiggedSocketCount와 항상 같았지만, 이제 머리(로봇)
+    /// 파츠가 정한 소켓 개수가 더 적으면 그 값으로 잘린다(ModdingManager.ActiveSocketCount 참고).</summary>
+    public int SocketCount => ModdingManager.Instance != null ? ModdingManager.Instance.ActiveSocketCount : weapon_slots.Count;
 
     /// <summary>이번 프레임에 소켓 중 하나라도 사거리 안의 적을 조준했는지. "위장 디스크"
     /// (비공격 시 이동속도 상승)가 참조한다.</summary>
@@ -449,9 +468,15 @@ public class PlayerShootManager : MonoBehaviour
         return null;
     }
 
-    // 무기 소켓 파츠(등급)가 주는 사거리/감지거리/회전속도 배율. 매 슬롯마다 조회하지 않도록
-    // 프레임당 한 번만 읽어둔다(소켓 파츠는 현재 모든 소켓에 공통 적용된다).
-    private ModdingManager.SocketModifiers socket_modifiers = ModdingManager.SocketModifiers.Identity;
+    /// <summary>소켓별로 독립된 무기 소켓 파츠(등급)가 주는 사거리/감지거리/회전속도 배율.
+    /// 2026-08-12 "무기 소켓 개별화" 전에는 소켓 파츠가 모든 소켓에 공통 적용돼 프레임당
+    /// 한 번만 읽어도 됐지만, 이제 소켓마다 다른 파츠를 낄 수 있어 소켓 인덱스별로 조회한다.</summary>
+    private ModdingManager.SocketModifiers GetSocketModifiers(int slot_index)
+    {
+        return ModdingManager.Instance != null
+            ? ModdingManager.Instance.GetWeaponSocketModifiers(slot_index)
+            : ModdingManager.SocketModifiers.Identity;
+    }
 
     private void Update()
     {
@@ -482,12 +507,15 @@ public class PlayerShootManager : MonoBehaviour
             was_rolling = false;
         }
 
-        socket_modifiers = ModdingManager.Instance != null
-            ? ModdingManager.Instance.GetWeaponSocketModifiers()
-            : ModdingManager.SocketModifiers.Identity;
+        // 2026-08-12 "무기 소켓 개별화" - 소켓 개수는 더 이상 씬에 리깅된 개수(weapon_slots.Count)
+        // 그대로가 아니라, 머리(로봇) 파츠가 정한 개수와 실제 리깅된 개수 중 작은 값이다.
+        // 로봇이 소켓을 적게 가지면 나머지 물리 소켓은 조준/발사/비주얼 갱신 대상에서 빠진다.
+        int active_socket_count = ModdingManager.Instance != null
+            ? Mathf.Min(weapon_slots.Count, ModdingManager.Instance.ActiveSocketCount)
+            : weapon_slots.Count;
 
         IsTargetingEnemy = false; // UpdateSlot이 소켓 하나라도 타겟을 찾으면 true로 바뀐다
-        for (int i = 0; i < weapon_slots.Count; i++)
+        for (int i = 0; i < active_socket_count; i++)
         {
             UpdateSlot(i);
             // 타겟을 놓쳐 UpdateSlot이 일찍 반환해도 이미 시작된 찌르기 연출은 끝까지 재생한다.
@@ -533,13 +561,23 @@ public class PlayerShootManager : MonoBehaviour
         Transform pivot = slot.rig_point != null ? slot.rig_point : slot.muzzle_point;
         if (pivot == null) return;
 
+        bool is_melee = weapon.weapon_firemode == WeaponFireMode.MeleeSwing;
+
+        // 근접무기는 찌르기 연출(StartMeleeThrustVisual)이 소켓 위치로 완전히 복귀할 때까지
+        // 조준·재타겟팅을 멈춘다. 예전에는 연출이 재생되는 도중에도 매 프레임 새 타겟 방향으로
+        // 회전을 계속 갱신해서, 칼이 제자리로 돌아오는 것과 동시에 다른 방향으로 돌아가버려
+        // "소켓 위치로 복귀하지 않는다"는 인상을 줬다(2026-08-12 사용자 리포트).
+        if (is_melee && GetOrCreateRuntimeState(slot_index).melee_thrust_active)
+        {
+            IsTargetingEnemy = true; // 여전히 공격 동작 중이므로 "타겟팅 없음" 조건부 효과는 발동하지 않아야 한다
+            return;
+        }
+
         // 감지거리 = 적을 감지해 발사를 시작하는 거리. 탄이 날아가는 최대 거리(사거리)와는
         // 별개이며, 둘 다 무기 기본값(weapon_range)에 소켓 등급 배율을 곱해서 얻는다.
-        float detect_range = GetDetectRange(weapon);
+        float detect_range = GetDetectRange(weapon, slot_index);
         EnemyUnit target = FindNearestEnemyInRange(pivot.position, detect_range);
         if (target != null) IsTargetingEnemy = true;
-
-        bool is_melee = weapon.weapon_firemode == WeaponFireMode.MeleeSwing;
 
         // 이 소켓에 이전에 총이 장착돼 있었다면 ApplyAngleFlip이 flipY/localRotation을 남겨뒀을 수
         // 있다. 근접무기는 ApplyAngleFlip을 아예 안 타므로 매 프레임 명시적으로 정상 상태로 되돌린다.
@@ -551,7 +589,7 @@ public class PlayerShootManager : MonoBehaviour
 
         if (target == null)
         {
-            float rest_angle = RotatePivotTowards(slot, weapon, pivot, slot.rest_rotation_degrees);
+            float rest_angle = RotatePivotTowards(slot, weapon, pivot, slot.rest_rotation_degrees, slot_index);
             if (!is_melee) ApplyAngleFlip(slot, rest_angle, false);
             return;
         }
@@ -573,7 +611,7 @@ public class PlayerShootManager : MonoBehaviour
             // 있음" 리포트로 발견).
             float target_angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg
                                  + (is_melee ? 0f : slot.rotation_offset_degrees) + weapon.weapon_imgangle;
-            float current_angle = RotatePivotTowards(slot, weapon, pivot, target_angle);
+            float current_angle = RotatePivotTowards(slot, weapon, pivot, target_angle, slot_index);
 
             // ApplyAngleFlip(상하 반전)의 각도 범위도 총기 전용 슬롯 값이라 근접무기에는 적용하지
             // 않는다 - 근접무기는 칼이 어느 각도로 돌아가도(뒤집혀도) 자연스러워 굳이 필요 없다.
@@ -591,33 +629,33 @@ public class PlayerShootManager : MonoBehaviour
         TryFireSlot(slot_index, slot, weapon, target);
     }
 
-    /// <summary>탄이 실제로 날아가는 최대 거리 = 무기 사거리 x 소켓 등급의 사거리 배율.</summary>
-    private float GetTravelRange(WeaponData weapon)
+    /// <summary>탄이 실제로 날아가는 최대 거리 = 무기 사거리 x 이 소켓의 사거리 배율.</summary>
+    private float GetTravelRange(WeaponData weapon, int slot_index)
     {
-        return weapon.TravelRange * socket_modifiers.Range;
+        return weapon.TravelRange * GetSocketModifiers(slot_index).Range;
     }
 
     /// <summary>
-    /// 적을 감지해 발사를 시작하는 거리 = 무기 감지거리(weapon_detect) x 소켓 등급의 감지거리 배율.
+    /// 적을 감지해 발사를 시작하는 거리 = 무기 감지거리(weapon_detect) x 이 소켓의 감지거리 배율.
     /// 두 가지로 한 번 더 잘린다:
     /// 1) 사거리 - 감지한 적에게 탄이 닿아야 의미가 있다
     /// 2) max_detect_range - 화면 밖의 보이지 않는 적과 교전하지 않도록 하는 상한
     /// </summary>
-    private float GetDetectRange(WeaponData weapon)
+    private float GetDetectRange(WeaponData weapon, int slot_index)
     {
-        float detect = weapon.DetectRange * socket_modifiers.DetectRange;
-        detect = Mathf.Min(detect, GetTravelRange(weapon));
+        float detect = weapon.DetectRange * GetSocketModifiers(slot_index).DetectRange;
+        detect = Mathf.Min(detect, GetTravelRange(weapon, slot_index));
 
         if (max_detect_range > 0f) detect = Mathf.Min(detect, max_detect_range);
         return detect;
     }
 
     /// <summary>
-    /// 무기 피벗을 목표 각도 쪽으로 무기의 회전 속도(x 소켓 등급 배율)만큼만 돌리고,
+    /// 무기 피벗을 목표 각도 쪽으로 무기의 회전 속도(x 이 소켓의 회전속도 배율)만큼만 돌리고,
     /// 이번 프레임에 실제로 적용된 각도를 돌려준다.
     /// 무기 데이터에 회전 속도가 없으면 슬롯 값으로 폴백하고, 그것도 0 이하면 즉시 스냅한다.
     /// </summary>
-    private float RotatePivotTowards(WeaponSlot slot, WeaponData weapon, Transform pivot, float target_angle)
+    private float RotatePivotTowards(WeaponSlot slot, WeaponData weapon, Transform pivot, float target_angle, int slot_index)
     {
         float base_speed = weapon.weapon_rotspeed > 0f
             ? weapon.weapon_rotspeed
@@ -632,7 +670,7 @@ public class PlayerShootManager : MonoBehaviour
         else
         {
             float current_angle = pivot.eulerAngles.z;
-            float speed = base_speed * socket_modifiers.RotationSpeed;
+            float speed = base_speed * GetSocketModifiers(slot_index).RotationSpeed;
             applied_angle = Mathf.MoveTowardsAngle(current_angle, target_angle, speed * Time.deltaTime);
         }
 
@@ -727,14 +765,14 @@ public class PlayerShootManager : MonoBehaviour
         switch (weapon.weapon_firemode)
         {
             case WeaponFireMode.Beam:
-                FireBeam(weapon, fire_origin, aim_direction, damage);
+                FireBeam(weapon, fire_origin, aim_direction, damage, slot_index);
                 attack_duration = Mathf.Max(0f, weapon.weapon_duration);
                 break;
 
             case WeaponFireMode.MeleeSwing:
                 // 근접은 투사체를 만들지 않고 총구 앞 부채꼴을 즉시 판정한다(데미지는 즉발 - 아래
                 // 찌르기 연출과는 별개다). 판정 자체는 그대로 두고 시각 연출만 추가한다.
-                MeleeSwing.Execute(fire_origin, aim_direction, GetTravelRange(weapon), damage,
+                MeleeSwing.Execute(fire_origin, aim_direction, GetTravelRange(weapon, slot_index), damage,
                                    weapon.weapon_defignore, weapon.weapon_knockback);
                 attack_duration = Mathf.Max(0f, weapon.weapon_duration);
                 StartMeleeThrustVisual(slot_index, slot, weapon, aim_direction);
@@ -745,7 +783,7 @@ public class PlayerShootManager : MonoBehaviour
                 GameObject projectile_prefab = ResolveProjectilePrefab(weapon, slot);
                 if (projectile_prefab == null) return;
 
-                FireProjectiles(projectile_prefab, slot, weapon, fire_origin, aim_direction, target_distance, damage);
+                FireProjectiles(projectile_prefab, slot, weapon, fire_origin, aim_direction, target_distance, damage, slot_index);
                 break;
         }
 
@@ -759,8 +797,11 @@ public class PlayerShootManager : MonoBehaviour
     /// 근접무기가 "찌르듯이 한 번 튀어나갔다가 돌아오는" 연출을 시작한다(2026-08-12 신규).
     /// 데미지 판정(MeleeSwing.Execute)은 이미 끝난 뒤이므로 이 연출은 순수 시각 효과다 -
     /// weapon.weapon_range/판정과 무관하게, 무기 소켓(rig_point/muzzle_point)의 <b>월드 위치</b>를
-    /// 잠깐 조준 방향으로 밀었다가 되돌린다(로컬 좌표로 하면 부모 스케일/회전에 따라 밀리는
-    /// 거리가 달라지는 문제가 있어 월드 좌표로 계산한다).
+    /// 잠깐 조준 방향으로 밀었다가 되돌린다. 복귀 지점 자체는 부모(캐릭터) 기준 로컬 좌표로
+    /// 저장한다 - 월드 좌표를 그대로 저장하면 연출이 재생되는 동안 캐릭터가 이동해도 복귀 지점이
+    /// 따라가지 못해 소켓이 몸에서 떨어진 채로 복귀하는 버그가 있었다(2026-08-12 사용자 리포트).
+    /// 밀어내는 거리(offset)는 여전히 월드 단위로 더한다 - 로컬로 하면 부모 스케일/회전에 따라
+    /// 밀리는 거리가 달라지는 문제가 있다(기존 설계 의도 유지).
     /// </summary>
     private void StartMeleeThrustVisual(int slot_index, WeaponSlot slot, WeaponData weapon, Vector3 direction)
     {
@@ -772,15 +813,17 @@ public class PlayerShootManager : MonoBehaviour
         state.melee_thrust_start_time = Time.time;
         state.melee_thrust_duration = Mathf.Max(0.01f, weapon.weapon_duration);
         state.melee_thrust_distance = weapon.ProjectileSize; // weapon_atsize를 찌르는 거리로 재활용
-        state.melee_thrust_home_world = pivot.position;
+        state.melee_thrust_home_local = pivot.localPosition;
         state.melee_thrust_direction = direction;
     }
 
     /// <summary>
     /// StartMeleeThrustVisual이 시작한 찌르기 연출을 매 프레임 진행시킨다. 0→1(찌르기)→0(복귀)
     /// 삼각파로 절반 지점에서 최대로 뻗었다가 나머지 절반 동안 원위치로 돌아온다.
-    /// 구르기 등으로 pivot이 다른 곳으로 옮겨진 채 연출이 끝나도(ApplyRollPoseToAllSlots가 매 프레임
-    /// localPosition을 덮어쓰므로) 다음 발사 때 새 home_world를 다시 잡으므로 어긋나지 않는다.
+    /// 복귀 지점(home)은 매 프레임 부모의 <b>현재</b> 트랜스폼으로 로컬→월드 변환해서 구하므로,
+    /// 연출이 재생되는 동안 캐릭터가 이동/회전해도 소켓이 항상 캐릭터를 따라간 뒤 정확히 그
+    /// 자리로 복귀한다. 구르기 등으로 pivot이 다른 곳으로 옮겨진 채 연출이 끝나도 다음 발사 때
+    /// 새 home_local을 다시 잡으므로 어긋나지 않는다.
     /// </summary>
     private void UpdateMeleeThrustVisual(int slot_index, WeaponSlot slot)
     {
@@ -790,16 +833,18 @@ public class PlayerShootManager : MonoBehaviour
         Transform pivot = slot.rig_point != null ? slot.rig_point : slot.muzzle_point;
         if (pivot == null) { state.melee_thrust_active = false; return; }
 
+        Vector3 home_world = pivot.parent != null ? pivot.parent.TransformPoint(state.melee_thrust_home_local) : state.melee_thrust_home_local;
+
         float t = (Time.time - state.melee_thrust_start_time) / state.melee_thrust_duration;
         if (t >= 1f)
         {
-            pivot.position = state.melee_thrust_home_world;
+            pivot.position = home_world;
             state.melee_thrust_active = false;
             return;
         }
 
         float progress = t < 0.5f ? t * 2f : (1f - t) * 2f; // 0→1→0
-        pivot.position = state.melee_thrust_home_world + state.melee_thrust_direction * (progress * state.melee_thrust_distance);
+        pivot.position = home_world + state.melee_thrust_direction * (progress * state.melee_thrust_distance);
     }
 
     /// <summary>
@@ -852,11 +897,11 @@ public class PlayerShootManager : MonoBehaviour
     private float CurrentAttackSpeedMultiplier() => Time.time < temp_attack_speed_expire_time ? temp_attack_speed_multiplier : 1f;
 
     /// <summary>지속시간 동안 직선 범위를 태우는 빔을 만든다(플라즈마 캐논).</summary>
-    private void FireBeam(WeaponData weapon, Vector3 origin, Vector3 direction, int total_damage)
+    private void FireBeam(WeaponData weapon, Vector3 origin, Vector3 direction, int total_damage, int slot_index)
     {
         Sprite visual = ResolveWeaponSprite(beam_sprite_name, weapon);
 
-        BeamProjectile.Fire(visual, origin, direction, GetTravelRange(weapon), weapon.ProjectileSize,
+        BeamProjectile.Fire(visual, origin, direction, GetTravelRange(weapon, slot_index), weapon.ProjectileSize,
                             total_damage, weapon.weapon_duration, weapon.weapon_defignore, weapon.weapon_knockback);
     }
 
@@ -904,7 +949,7 @@ public class PlayerShootManager : MonoBehaviour
     /// 탄퍼짐(weapon_aim)과 확률 관통(weapon_pierce_chance)은 <b>탄마다 따로</b> 굴린다.
     /// 그래야 "탄마다 60% 확률로 1번 관통" 같은 원안 스펙이 그대로 재현된다.
     /// </summary>
-    private void FireProjectiles(GameObject projectile_prefab, WeaponSlot slot, WeaponData weapon, Vector3 origin, Vector3 direction, float target_distance, int damage)
+    private void FireProjectiles(GameObject projectile_prefab, WeaponSlot slot, WeaponData weapon, Vector3 origin, Vector3 direction, float target_distance, int damage, int slot_index)
     {
         int projectile_count = weapon.ProjectileCount;
 
@@ -914,7 +959,7 @@ public class PlayerShootManager : MonoBehaviour
 
         // 폭발 무기는 기본적으로 최대 사거리에서 터지지만,
         // 타겟이 사거리 안쪽에 있다면 그 지점에서 조기 폭발한다.
-        float travel_range = GetTravelRange(weapon);
+        float travel_range = GetTravelRange(weapon, slot_index);
         if (weapon.weapon_splash > 0f && target_distance > 0f && target_distance < travel_range)
         {
             travel_range = target_distance;

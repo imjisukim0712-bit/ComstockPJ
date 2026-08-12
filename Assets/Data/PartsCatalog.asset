@@ -1695,3 +1695,5 @@ MonoBehaviour:
     weight: 3
     minWave: 7
   partBoxDropChance: 0.003
+  mismatchWeightMultiplier: 2
+  overweightSpeedPenaltyPerUnit: 0.05

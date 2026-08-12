@@ -90,8 +90,12 @@ public class ModdingPanelUI : MonoBehaviour
         if (slotContent != null) EnsureGrid(slotContent, slotCellSize, slotColumns, SlotRowCount);
     }
 
-    /// <summary>파츠 슬롯 칸 수(머리 1 + 모딩 슬롯) 기준 행 수. 슬롯 영역은 스크롤이 없어 이 행이 전부 들어가야 한다.</summary>
-    private int SlotRowCount => Mathf.CeilToInt((1 + PartSlotExtensions.DisplayOrder.Length) / (float)Mathf.Max(1, slotColumns));
+    /// <summary>파츠 슬롯 칸 수(머리 1 + 무기 소켓 N + 나머지 모딩 슬롯) 기준 행 수. 슬롯 영역은
+    /// 스크롤이 없어 이 행이 전부 들어가야 한다. 무기 소켓은 DisplayOrder에 없고 소켓 개수만큼
+    /// 별도로 그려지므로(2026-08-12 "무기 소켓 개별화" 플랜) 여기서 따로 더한다.</summary>
+    private int SlotRowCount => Mathf.CeilToInt((1 + WeaponSocketCount + PartSlotExtensions.DisplayOrder.Length) / (float)Mathf.Max(1, slotColumns));
+
+    private int WeaponSocketCount => moddingManager != null ? moddingManager.ActiveSocketCount : 0;
 
     /// <summary>부품 상자가 있을 때 GameFlowManager가 호출한다.</summary>
     public void Open()
@@ -204,6 +208,42 @@ public class ModdingPanelUI : MonoBehaviour
         Refresh();
     }
 
+    /// <summary>
+    /// HandleSlotClicked와 같은 역할이지만 대상이 PartSlot 하나가 아니라 무기 소켓 인덱스다
+    /// (소켓마다 독립적으로 파츠를 낄 수 있어야 하기 때문 - 2026-08-12 "무기 소켓 개별화" 플랜).
+    /// </summary>
+    private void HandleWeaponSocketCellClicked(int socketIndex)
+    {
+        if (moddingManager == null) return;
+
+        if (selectedInventoryIndex < 0)
+        {
+            SetHint("먼저 인벤토리에서 장착할 파츠를 선택하세요.");
+            return;
+        }
+
+        if (!moddingManager.TryGetEquipableSlot(selectedInventoryIndex, out PartSlot allowed) || allowed != PartSlot.ArmWeaponSocket)
+        {
+            SetHint("이 파츠는 무기 소켓에 장착할 수 없습니다.");
+            return;
+        }
+
+        string previousName = moddingManager.TryGetEquippedWeaponSocketPart(socketIndex, out PartData previous) ? previous.partName : "(비어 있음)";
+        List<PartData> before = moddingManager.GetInventoryParts();
+        string incomingName = selectedInventoryIndex < before.Count ? before[selectedInventoryIndex].partName : "파츠";
+
+        if (!moddingManager.TrySwapInventoryWithWeaponSocket(selectedInventoryIndex, socketIndex, out string reason))
+        {
+            SetHint(reason.Length > 0 ? $"교체하지 못했습니다 - {reason}" : "교체하지 못했습니다.");
+            return;
+        }
+
+        selectedInventoryIndex = -1;
+        SetHint($"무기 소켓 {socketIndex + 1} 교체 완료: {previousName} → {incomingName}");
+
+        Refresh();
+    }
+
     private void SetHint(string message)
     {
         if (hintText != null) hintText.text = message;
@@ -295,6 +335,23 @@ public class ModdingPanelUI : MonoBehaviour
                             moddingManager.TryGetEquipableSlot(selectedInventoryIndex, out PartSlot _);
         PartSlot highlightSlot = default;
         if (hasSelection) moddingManager.TryGetEquipableSlot(selectedInventoryIndex, out highlightSlot);
+
+        // 무기 소켓은 슬롯 하나가 아니라 소켓 인덱스별로 카드를 그린다(2026-08-12 "무기 소켓
+        // 개별화" 플랜) - 선택된 파츠가 무기 소켓 종류면 N칸이 전부 노란색으로 열린다.
+        bool highlightWeaponSockets = hasSelection && highlightSlot == PartSlot.ArmWeaponSocket;
+
+        for (int i = 0; i < WeaponSocketCount; i++)
+        {
+            int socketIndex = i;
+
+            string body = moddingManager != null && moddingManager.TryGetEquippedWeaponSocketPart(i, out PartData socketPart)
+                ? $"<color={socketPart.grade.ToColorHex()}>{socketPart.partName}</color>\n<size=70%>{socketPart.BuildDescription()}</size>"
+                : "<size=70%>(비어 있음)</size>";
+
+            CreateCell(slotContent, $"Slot_WeaponSocket_{i}", $"무기 소켓 {i + 1}\n{body}",
+                       highlightWeaponSockets ? slotHighlightColor : slotNormalColor,
+                       () => HandleWeaponSocketCellClicked(socketIndex));
+        }
 
         foreach (PartSlot slot in PartSlotExtensions.DisplayOrder)
         {

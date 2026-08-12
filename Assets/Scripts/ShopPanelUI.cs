@@ -225,13 +225,21 @@ public class ShopPanelUI : MonoBehaviour
                 ? $"{weapon.weapon_name} ({currentGrade.ToKorean()})"
                 : "(비어 있음)";
 
-            // 무기 타입 제한/무게 제한 때문에 이 소켓엔 못 넣는 경우 버튼을 비활성화하고 이유를 보여준다.
+            // 2026-08-12 "무기 소켓 개별화" 플랜부터 타입 불일치/무게 초과는 더 이상 버튼을
+            // 막지 않는다(언제나 장착 가능) - 대신 비차단 경고 문구로 어떤 패널티가 붙는지 보여준다.
             bool allowed = shopManager.CanPurchaseWeaponIntoSocket(offerIndex, i, out string reason);
             if (socketButtons[i] != null) socketButtons[i].interactable = allowed;
 
-            socketButtonTexts[i].text = allowed
-                ? $"소켓 {i + 1}\n{current}"
-                : $"소켓 {i + 1}\n{current}\n<color=#FF8080>{reason}</color>";
+            if (!allowed)
+            {
+                socketButtonTexts[i].text = $"소켓 {i + 1}\n{current}\n<color=#FF8080>{reason}</color>";
+                continue;
+            }
+
+            string warning = shopManager.BuildSocketWarning(offerIndex, i);
+            socketButtonTexts[i].text = warning.Length > 0
+                ? $"소켓 {i + 1}\n{current}\n<color=#F2BF26>{warning}</color>"
+                : $"소켓 {i + 1}\n{current}";
         }
 
         if (socketPickerRoot != null) socketPickerRoot.SetActive(true);
@@ -435,7 +443,7 @@ public class ShopPanelUI : MonoBehaviour
                 $"헤드: {GetRobotName()}\n" +
                 "헬멧: 기본\n" +
                 $"메모리 카드: AI 코어 Lv {RunState.CoreLevel}\n" +
-                $"무기 소켓: {socketCount}칸 ({PartLine(modding, PartSlot.ArmWeaponSocket)})\n" +
+                $"{BuildWeaponSocketPartsBlock(modding, socketCount)}\n" +
                 $"팔 장갑: {PartLine(modding, PartSlot.ArmArmor)}\n" +
                 $"디스크 슬롯: {discSlots}칸\n" +
                 "필살기 슬롯: 1칸 (데모 범위 밖)\n" +
@@ -454,6 +462,27 @@ public class ShopPanelUI : MonoBehaviour
         if (modding == null || !modding.TryGetEquippedPart(slot, out PartData part)) return "(없음)";
 
         return $"<color={part.grade.ToColorHex()}>{part.grade.ToKorean()}</color> {part.partName}";
+    }
+
+    /// <summary>
+    /// "무기 소켓: N칸" 한 줄로는 소켓별로 다른 파츠를 표현할 수 없어서(2026-08-12 "무기 소켓
+    /// 개별화" 플랜), 소켓마다 한 줄씩("무기 소켓 1: ...") 여러 줄로 펼친다. "장착 무기" 섹션의
+    /// for i < SocketCount 순회 스타일을 그대로 따른다.
+    /// </summary>
+    private static string BuildWeaponSocketPartsBlock(ModdingManager modding, int socketCount)
+    {
+        var lines = new List<string>();
+
+        for (int i = 0; i < socketCount; i++)
+        {
+            string part = modding != null && modding.TryGetEquippedWeaponSocketPart(i, out PartData socketPart)
+                ? $"<color={socketPart.grade.ToColorHex()}>{socketPart.grade.ToKorean()}</color> {socketPart.partName}"
+                : "(없음)";
+
+            lines.Add($"무기 소켓 {i + 1}: {part}");
+        }
+
+        return lines.Count > 0 ? string.Join("\n", lines) : "무기 소켓: (없음)";
     }
 
     private string GetRobotName()

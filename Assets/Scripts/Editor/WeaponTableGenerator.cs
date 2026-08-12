@@ -229,8 +229,9 @@ public static class WeaponTableGenerator
         // duration/atsize는 근접에서 원래 미사용 값이라, 여기서는 "찌르기 애니메이션 총 시간(초)"/
         // "찌르는 거리(유닛)"로 재활용한다(PlayerShootManager.StartMeleeThrustVisual 참고).
         new WeaponDef {
+            // 2026-08-12 사용자 요청으로 사거리(=감지거리) x1.5 추가 상향: 3.3→4.95
             kind = 11, name = "생존단검", wclass = WeaponClass.Melee, wtype = WeaponType.Melee,
-            atk = 33f, atsp = 1.8f, range = 3.3f, detect = 3.3f, speed = 0f, rotspeed = RotVeryHigh,
+            atk = 33f, atsp = 1.8f, range = 4.95f, detect = 4.95f, speed = 0f, rotspeed = RotVeryHigh,
             atsize = 0.5f, aim = 0f, rebound = 0f, projectiles = 1,
             pierce = 0, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 5f, duration = 0.16f,
             firemode = WeaponFireMode.MeleeSwing,
@@ -238,8 +239,9 @@ public static class WeaponTableGenerator
             tanhwan = "", leftImg = "SurvivalKnife", rightImg = "SurvivalKnife"
         },
         new WeaponDef {
+            // 2026-08-12 사용자 요청으로 사거리(=감지거리) x1.5 추가 상향: 3.9→5.85
             kind = 12, name = "전술 마체테", wclass = WeaponClass.Melee, wtype = WeaponType.Melee,
-            atk = 50f, atsp = 1.2f, range = 3.9f, detect = 3.9f, speed = 0f, rotspeed = RotVeryHigh,
+            atk = 50f, atsp = 1.2f, range = 5.85f, detect = 5.85f, speed = 0f, rotspeed = RotVeryHigh,
             atsize = 0.65f, aim = 0f, rebound = 0f, projectiles = 1,
             pierce = 0, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 9f, duration = 0.22f,
             firemode = WeaponFireMode.MeleeSwing,
@@ -247,8 +249,9 @@ public static class WeaponTableGenerator
             tanhwan = "", leftImg = "Machete", rightImg = "Machete"
         },
         new WeaponDef {
+            // 2026-08-12 사용자 요청으로 사거리(=감지거리) x1.5 추가 상향: 3.6→5.4
             kind = 13, name = "전기톱검", wclass = WeaponClass.Melee, wtype = WeaponType.Melee,
-            atk = 20f, atsp = 3f, range = 3.6f, detect = 3.6f, speed = 0f, rotspeed = RotVeryHigh,
+            atk = 20f, atsp = 3f, range = 5.4f, detect = 5.4f, speed = 0f, rotspeed = RotVeryHigh,
             atsize = 0.55f, aim = 0f, rebound = 0f, projectiles = 1,
             pierce = 0, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 5f, duration = 0.12f,
             firemode = WeaponFireMode.MeleeSwing,

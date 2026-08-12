@@ -18,6 +18,17 @@ public class EnemyProjectile : MonoBehaviour
     private float max_range;
     private Vector3 spawn_position;
 
+    // 코드로 생성하는 원형 스프라이트의 텍스처 크기/PPU. 콜라이더 반지름을 이 값들로부터
+    // 직접 계산해야 "보이는 원"과 "맞는 판정 범위"가 항상 일치한다.
+    private const int SpriteTextureSize = 32;
+    private const float SpritePixelsPerUnit = 100f;
+
+    // 2026-08-12 "투사체가 스치기만 해도 맞는다" 리포트로 발견 - 예전엔 콜라이더 반지름이
+    // 스프라이트 크기와 무관하게 0.5로 고정돼 있어서, 실제 보이는 원(반지름 0.16유닛)보다
+    // 3배 넘게 큰 판정 범위(면적 기준 약 9.8배)가 생겼다. 둘 다 같은 transform.localScale로
+    // 함께 커지므로 비율이 그대로 유지돼 어떤 visualSize 값에서도 항상 어긋나 있었다.
+    private static readonly float SpriteRadius = (SpriteTextureSize / 2f) / SpritePixelsPerUnit;
+
     private static Sprite cached_sprite;
 
     public static EnemyProjectile Spawn(Vector3 position, Vector3 direction, float speed, int damage, float range, float visualSize)
@@ -27,7 +38,7 @@ public class EnemyProjectile : MonoBehaviour
 
         SphereCollider col = go.AddComponent<SphereCollider>();
         col.isTrigger = true;
-        col.radius = 0.5f;
+        col.radius = SpriteRadius;
 
         Rigidbody rb = go.AddComponent<Rigidbody>();
         rb.isKinematic = true;
@@ -75,7 +86,7 @@ public class EnemyProjectile : MonoBehaviour
     {
         if (cached_sprite != null) return cached_sprite;
 
-        const int size = 32;
+        const int size = SpriteTextureSize;
         var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
         Vector2 center = new Vector2(size / 2f, size / 2f);
         float radius = size / 2f;
@@ -91,7 +102,7 @@ public class EnemyProjectile : MonoBehaviour
         }
         tex.Apply();
 
-        cached_sprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+        cached_sprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), SpritePixelsPerUnit);
         return cached_sprite;
     }
 }

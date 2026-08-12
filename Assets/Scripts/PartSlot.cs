@@ -26,12 +26,15 @@ public static class PartSlotExtensions
     /// <summary>
     /// 정비 화면에 슬롯을 배치하는 순서(시안 이미지 기준). 부위 그룹(머리 → 팔 → 다리)
     /// 순서대로 나열한다. enum 선언 순서는 직렬화 호환 때문에 못 바꾸므로 표시 순서를 따로 둔다.
+    ///
+    /// <b>ArmWeaponSocket은 여기 없다</b>(2026-08-12 "무기 소켓 개별화" 플랜) - 무기 소켓은 이제
+    /// 소켓 인덱스별로 카드가 N개(ModdingManager.ActiveSocketCount) 그려지므로, 이 슬롯 하나로
+    /// 표현할 수 없어 UI가 별도로 처리한다(ModdingPanelUI.RebuildSlots 참고).
     /// </summary>
     public static readonly PartSlot[] DisplayOrder =
     {
         PartSlot.Helmet,          // 머리
         PartSlot.DiscSlot,        // 머리
-        PartSlot.ArmWeaponSocket, // 팔
         PartSlot.ArmArmor,        // 팔
         PartSlot.MagneticCore,    // 팔
         PartSlot.Leg,             // 다리
