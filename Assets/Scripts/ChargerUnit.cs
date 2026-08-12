@@ -14,10 +14,16 @@ public class ChargerUnit : EnemyUnit
     [Header("차저 돌진 (지속시간 3초는 기획서 지정값, 나머지는 밸런스 미확정 임시값)")]
     [SerializeField] private float chargeDuration = 3f;
     [SerializeField] private float chargeSpeedMultiplier = 2.5f;
+    [Tooltip("돌진 시작 시점의 플레이어 위치를 이만큼 지나치면 돌진을 멈춘다(유닛). " +
+             "방향을 고정했기 때문에 플레이어가 피하면 계속 직진하는데, 이 상한이 없으면 " +
+             "3초 x 속도로 화면 밖(20유닛 이상)까지 밀고 나간다")]
+    [SerializeField] private float chargeOvershoot = 2f;
 
     private bool is_charging;
     private Vector3 charge_direction;
     private float next_ram_time;
+    private Vector3 charge_start_position;
+    private float charge_max_distance;
 
     protected override void ExecuteAttackEffect()
     {
@@ -26,6 +32,10 @@ public class ChargerUnit : EnemyUnit
         Vector3 dir = player_transform.position - transform.position;
         dir.z = 0f;
         charge_direction = dir.sqrMagnitude > 0.0001f ? dir.normalized : transform.right;
+
+        // 돌진 방향은 여기서 한 번만 정하고 돌진이 끝날 때까지 고정한다(직선 돌진).
+        charge_start_position = transform.position;
+        charge_max_distance = dir.magnitude + Mathf.Max(0f, chargeOvershoot);
 
         StartCoroutine(ChargeRoutine());
     }
@@ -50,13 +60,14 @@ public class ChargerUnit : EnemyUnit
                 return;
             }
 
-            // 돌진 시작 방향을 고정하지 않고 매 물리 프레임 현재 플레이어 방향으로 갱신한다.
-            // 모든 좀비가 항상 플레이어를 향해야 한다는 공통 규칙을 돌진 중에도 유지한다.
-            if (player_transform != null)
+            // 돌진은 시작 시점에 정한 방향 그대로 직선으로만 나간다. 예전에는 매 물리 프레임
+            // 플레이어 방향으로 방향을 다시 잡아서(공통 추적 규칙을 돌진 중에도 유지) 유도탄처럼
+            // 휘어 보였다(2026-08-12 수정 - 돌진은 추적이 아니라 한 방향으로 내지르는 공격이다).
+            if (Vector3.Distance(charge_start_position, transform.position) >= charge_max_distance)
             {
-                Vector3 to_player = player_transform.position - transform.position;
-                to_player.z = 0f;
-                if (to_player.sqrMagnitude > 0.0001f) charge_direction = to_player.normalized;
+                is_charging = false;
+                rb.linearVelocity = Vector3.zero;
+                return;
             }
 
             rb.linearVelocity = charge_direction * (MoveSpeed * chargeSpeedMultiplier);

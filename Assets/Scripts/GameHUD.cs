@@ -94,6 +94,7 @@ public class GameHUD : MonoBehaviour
         {
             hpSlider.maxValue = max;
             hpSlider.value = current;
+            UpdateHpBarArt(current / (float)max);
         }
 
         if (hpValueText != null)
@@ -107,6 +108,50 @@ public class GameHUD : MonoBehaviour
         UpdateWaveTime();
         UpdateExpBar();
         UpdatePartBoxCount();
+        UpdateDashCooldown();
+    }
+
+    // ── 체력 바 색 ───────────────────────────────────────────────────
+    // 체력이 넉넉하면 초록, 위험하면 빨강 막대 아트로 바꿔 한눈에 위험을 알 수 있게 한다
+    // (2026-08-13 UI 아트 적용). 스프라이트는 Resources에서 한 번만 읽어 캐시한다.
+    [Header("체력 바 아트 (Resources/UI)")]
+    [Tooltip("이 비율보다 체력이 높으면 초록 막대, 낮으면 빨강 막대를 쓴다")]
+    [SerializeField] private float hpDangerRatio = 0.4f;
+
+    private Image hp_fill_image;
+    private Sprite hp_bar_healthy;
+    private Sprite hp_bar_danger;
+    private bool hp_bar_art_loaded;
+
+    private void UpdateHpBarArt(float ratio)
+    {
+        if (!hp_bar_art_loaded)
+        {
+            hp_bar_art_loaded = true;
+            hp_bar_healthy = Resources.Load<Sprite>("UI/Green_bar00");
+            hp_bar_danger = Resources.Load<Sprite>("UI/Red_bar00");
+            if (hpSlider.fillRect != null) hp_fill_image = hpSlider.fillRect.GetComponent<Image>();
+        }
+
+        if (hp_fill_image == null || hp_bar_healthy == null || hp_bar_danger == null) return;
+
+        Sprite wanted = ratio > hpDangerRatio ? hp_bar_healthy : hp_bar_danger;
+        if (hp_fill_image.sprite != wanted) hp_fill_image.sprite = wanted;
+    }
+
+    // ── 구르기(Space) 재사용 대기 표시 ────────────────────────────────
+    [Header("구르기 쿨다운 아이콘")]
+    [Tooltip("구르기가 도는 동안 위에서 아래로 차오르는 어두운 덮개(Image type=Filled). " +
+             "비워두면 아무 것도 하지 않는다")]
+    [SerializeField] private Image dashCooldownOverlay;
+
+    private void UpdateDashCooldown()
+    {
+        if (dashCooldownOverlay == null) return;
+
+        float ratio = player.DashCooldownRatio; // 0 = 사용 가능, 1 = 방금 사용
+        dashCooldownOverlay.fillAmount = ratio;
+        dashCooldownOverlay.enabled = ratio > 0.001f;
     }
 
     // 부품 상자는 머리(로봇)의 적재량만큼만 보유할 수 있고 상한에 도달하면 더 드랍되지 않으므로,

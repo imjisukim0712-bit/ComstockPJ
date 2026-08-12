@@ -9,14 +9,19 @@ using UnityEngine;
 public class SprinterUnit : EnemyUnit
 {
     [Header("스프린터 돌진 (전부 밸런스 미확정 임시값)")]
-    [Tooltip("돌진이 지속되는 시간(초)")]
+    [Tooltip("돌진이 지속되는 시간(초). 아래 '지나치는 거리'에 먼저 도달하면 그 전에 끝난다")]
     [SerializeField] private float dashDuration = 0.35f;
     [Tooltip("돌진 중 이동속도 배율(monster_speed 대비)")]
     [SerializeField] private float dashSpeedMultiplier = 4f;
+    [Tooltip("돌진 시작 시점의 플레이어 위치를 이만큼 지나치면 돌진을 멈춘다(유닛). " +
+             "방향을 고정했기 때문에 플레이어가 피하면 계속 직진하는데, 이 상한이 없으면 화면 밖까지 밀고 나간다")]
+    [SerializeField] private float dashOvershoot = 2f;
 
     private bool is_dashing;
     private Vector3 dash_direction;
     private bool hit_this_dash;
+    private Vector3 dash_start_position;
+    private float dash_max_distance;
 
     protected override void ExecuteAttackEffect()
     {
@@ -25,6 +30,10 @@ public class SprinterUnit : EnemyUnit
         Vector3 dir = player_transform.position - transform.position;
         dir.z = 0f;
         dash_direction = dir.sqrMagnitude > 0.0001f ? dir.normalized : transform.right;
+
+        // 돌진 방향은 여기서 한 번만 정하고 돌진이 끝날 때까지 고정한다(직선 돌진).
+        dash_start_position = transform.position;
+        dash_max_distance = dir.magnitude + Mathf.Max(0f, dashOvershoot);
 
         StartCoroutine(DashRoutine());
     }
@@ -49,12 +58,13 @@ public class SprinterUnit : EnemyUnit
                 return;
             }
 
-            // 짧은 돌진 중에도 현재 플레이어 방향을 계속 갱신한다.
-            if (player_transform != null)
+            // 돌진은 시작 시점에 정한 방향 그대로 직선으로만 나간다. 예전에는 매 물리 프레임
+            // 플레이어 방향으로 방향을 다시 잡아서 유도탄처럼 휘어 보였다(2026-08-12 수정).
+            if (Vector3.Distance(dash_start_position, transform.position) >= dash_max_distance)
             {
-                Vector3 to_player = player_transform.position - transform.position;
-                to_player.z = 0f;
-                if (to_player.sqrMagnitude > 0.0001f) dash_direction = to_player.normalized;
+                is_dashing = false;
+                rb.linearVelocity = Vector3.zero;
+                return;
             }
 
             rb.linearVelocity = dash_direction * (MoveSpeed * dashSpeedMultiplier);

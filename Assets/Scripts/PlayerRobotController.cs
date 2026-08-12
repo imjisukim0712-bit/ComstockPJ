@@ -25,6 +25,13 @@ public class PlayerRobotController : MonoBehaviour
     /// <summary>구르기(대시) 중인지. 이 동안에는 무적이라 TakeDamage가 통째로 무시된다.</summary>
     public bool IsDashing { get; private set; }
 
+    /// <summary>
+    /// 구르기 재사용 대기 비율. 0 = 지금 바로 쓸 수 있음, 1 = 방금 썼음.
+    /// HUD의 구르기 아이콘이 이 값으로 덮개를 채운다(2026-08-13).
+    /// </summary>
+    public float DashCooldownRatio =>
+        dashCooldown > 0f ? Mathf.Clamp01(dashCooldownLeft / dashCooldown) : 0f;
+
     /// <summary>구르기 중 캐릭터가 회전한 각도(도, 0~360). 무기도 이 값을 그대로 따라 돌아
     /// 몸과 무기가 같이 구르는 것처럼 보이게 한다(PlayerShootManager가 읽음).</summary>
     public float DashSpinDegrees { get; private set; }

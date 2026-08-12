@@ -112,6 +112,29 @@ public class ShopPanelUI : MonoBehaviour
             int index = i;
             if (socketButtons[i] != null) socketButtons[i].onClick.AddListener(() => HandleSocketChosen(index));
         }
+
+        SetupDetailInspector();
+
+        // 음악 볼륨 설정(2026-08-13). 상점은 웨이브마다 반드시 거치는 화면이라 런 도중 볼륨을
+        // 조절할 수 있는 유일한 지점이다(타이틀 화면에도 같은 컨트롤이 있다).
+        // 위치는 상단의 비어 있는 구간(골드 표시와 '다음 웨이브 시작' 버튼 사이).
+        MusicVolumeSliderUI.Attach((RectTransform)transform, new Vector2(0.53f, 0.90f), new Vector2(0.70f, 0.97f));
+    }
+
+    // ── 보유 장비 상세 보기 ──────────────────────────────────────────
+    // 장착 무기 / 모딩 상태 / 디스크 목록의 각 줄을 클릭하면 상세 능력치 팝업이 열린다.
+    // 목록은 원래부터 "여러 줄이 든 TMP 텍스트 1개"라 줄마다 버튼을 두려면 씬 작업이 필요한데,
+    // 항목 수가 런타임에 변해서(무기 소켓 개수·디스크 슬롯 수) 링크 태그 방식을 택했다.
+    private EquipmentDetailPopup detail_popup;
+
+    private void SetupDetailInspector()
+    {
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas != null) detail_popup = EquipmentDetailPopup.Create(canvas.transform);
+
+        TextLinkClickRelay.Attach(equippedWeaponsText, ShowDetail);
+        TextLinkClickRelay.Attach(equippedDiscsText, ShowDetail);
+        TextLinkClickRelay.Attach(moddingStatusText, ShowDetail);
     }
 
     /// <summary>웨이브가 끝나 상점을 열 때 GameFlowManager가 호출한다.</summary>
@@ -126,12 +149,14 @@ public class ShopPanelUI : MonoBehaviour
         SetCombatHudVisible(false);
 
         gameObject.SetActive(true);
+        if (detail_popup != null) detail_popup.Hide(); // 상세 팝업은 캔버스 직속이라 패널과 같이 꺼지지 않는다
         Refresh();
     }
 
     public void Close()
     {
         SetCombatHudVisible(true);
+        if (detail_popup != null) detail_popup.Hide();
         gameObject.SetActive(false);
     }
 
@@ -353,9 +378,13 @@ public class ShopPanelUI : MonoBehaviour
     /// </summary>
     private Sprite ResolveOfferIcon(ShopManager.Offer offer)
     {
-        if (offer.IsDisc) return offer.Disc.LoadIcon();
+        return offer.IsDisc ? offer.Disc.LoadIcon() : ResolveWeaponIcon(offer.Weapon);
+    }
 
-        string spriteName = offer.Weapon.weapon_rgwpimg;
+    /// <summary>무기 아이콘(= 손에 드는 오른손 이미지)을 캐시를 거쳐 찾는다. 상세 팝업도 같이 쓴다.</summary>
+    private Sprite ResolveWeaponIcon(WeaponData weapon)
+    {
+        string spriteName = weapon.weapon_rgwpimg;
         if (string.IsNullOrWhiteSpace(spriteName)) return null;
 
         if (!offer_icon_cache.TryGetValue(spriteName, out Sprite sprite))
@@ -375,7 +404,7 @@ public class ShopPanelUI : MonoBehaviour
         if (equippedWeaponsText != null)
         {
             PlayerShootManager shootManager = FindFirstObjectByType<PlayerShootManager>();
-            var lines = new List<string> { "[장착 무기]" };
+            var lines = new List<string> { $"[장착 무기] {DetailHint}" };
 
             if (shootManager == null)
             {
@@ -387,7 +416,8 @@ public class ShopPanelUI : MonoBehaviour
                 {
                     if (shootManager.TryGetSocketInfo(i, out WeaponData weapon, out ItemGrade grade))
                     {
-                        lines.Add($"소켓 {i + 1}: <color={grade.ToColorHex()}>{grade.ToKorean()}</color> {weapon.weapon_name}");
+                        lines.Add(Clickable($"w:{i}",
+                            $"소켓 {i + 1}: <color={grade.ToColorHex()}>{grade.ToKorean()}</color> {weapon.weapon_name}"));
                     }
                     else
                     {
@@ -403,7 +433,7 @@ public class ShopPanelUI : MonoBehaviour
         if (equippedDiscsText != null)
         {
             int slotCount = shopManager != null ? shopManager.DiscSlotCount : 0;
-            var lines = new List<string> { $"[디스크] {RunState.EquippedDiscIds.Count}/{slotCount}" };
+            var lines = new List<string> { $"[디스크] {RunState.EquippedDiscIds.Count}/{slotCount} {DetailHint}" };
 
             if (RunState.EquippedDiscIds.Count == 0)
             {
@@ -419,7 +449,8 @@ public class ShopPanelUI : MonoBehaviour
                         if (disc.discId != discId) continue;
                         // 이름 줄 + 효과 설명 줄(작게) - 기획서 21종은 효과가 서로 많이 달라서
                         // 이름만으로는 뭘 하는 디스크인지 알 수 없다.
-                        name = $"<color={disc.grade.ToColorHex()}>{disc.grade.ToKorean()}</color> {disc.discName}\n" +
+                        name = Clickable($"d:{disc.discId}",
+                                   $"<color={disc.grade.ToColorHex()}>{disc.grade.ToKorean()}</color> {disc.discName}") + "\n" +
                                $"<size=80%><color=#AAAAAA>{disc.BuildDescription()}</color></size>";
                         break;
                     }
@@ -439,13 +470,14 @@ public class ShopPanelUI : MonoBehaviour
             if (shootManager != null) socketCount = shootManager.SocketCount;
 
             moddingStatusText.text =
-                "[로봇 모딩 상태]\n" +
-                $"헤드: {GetRobotName()}\n" +
-                "헬멧: 기본\n" +
+                $"[로봇 모딩 상태] {DetailHint}\n" +
+                Clickable("head", $"헤드: {GetRobotName()}") + "\n" +
+                // 예전에는 "헬멧: 기본"이 하드코딩돼 있어 실제로 낀 헬멧이 반영되지 않았다(2026-08-12 수정)
+                $"헬멧: {PartLine(modding, PartSlot.Helmet)}\n" +
                 $"메모리 카드: AI 코어 Lv {RunState.CoreLevel}\n" +
                 $"{BuildWeaponSocketPartsBlock(modding, socketCount)}\n" +
                 $"팔 장갑: {PartLine(modding, PartSlot.ArmArmor)}\n" +
-                $"디스크 슬롯: {discSlots}칸\n" +
+                $"디스크 슬롯({discSlots}칸): {PartLine(modding, PartSlot.DiscSlot)}\n" +
                 "필살기 슬롯: 1칸 (데모 범위 밖)\n" +
                 $"자기장 코어: {PartLine(modding, PartSlot.MagneticCore)}\n" +
                 $"다리: {PartLine(modding, PartSlot.Leg)}\n" +
@@ -456,12 +488,14 @@ public class ShopPanelUI : MonoBehaviour
         }
     }
 
-    // 파츠 하나를 "등급 이름 (설명)" 형태로 요약한다.
+    // 파츠 하나를 "등급 이름 (설명)" 형태로 요약한다. 장착된 파츠가 있으면 클릭해서
+    // 상세 능력치를 볼 수 있도록 링크로 감싼다.
     private static string PartLine(ModdingManager modding, PartSlot slot)
     {
         if (modding == null || !modding.TryGetEquippedPart(slot, out PartData part)) return "(없음)";
 
-        return $"<color={part.grade.ToColorHex()}>{part.grade.ToKorean()}</color> {part.partName}";
+        return Clickable($"p:{slot}",
+            $"<color={part.grade.ToColorHex()}>{part.grade.ToKorean()}</color> {part.partName}");
     }
 
     /// <summary>
@@ -476,7 +510,8 @@ public class ShopPanelUI : MonoBehaviour
         for (int i = 0; i < socketCount; i++)
         {
             string part = modding != null && modding.TryGetEquippedWeaponSocketPart(i, out PartData socketPart)
-                ? $"<color={socketPart.grade.ToColorHex()}>{socketPart.grade.ToKorean()}</color> {socketPart.partName}"
+                ? Clickable($"ws:{i}",
+                    $"<color={socketPart.grade.ToColorHex()}>{socketPart.grade.ToKorean()}</color> {socketPart.partName}")
                 : "(없음)";
 
             lines.Add($"무기 소켓 {i + 1}: {part}");
@@ -518,5 +553,264 @@ public class ShopPanelUI : MonoBehaviour
             $"회피율 {player.Avoid:0.##}\n" +
             $"행운 {player.Luck:0.##}\n" +
             $"질량 {player.Mess:0.##}";
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // 보유 장비 상세 보기 - 링크 태그 생성과 클릭 처리
+    // ─────────────────────────────────────────────────────────────────
+
+    /// <summary>목록 제목 옆에 붙이는 "클릭하면 상세를 볼 수 있다"는 안내.</summary>
+    private const string DetailHint = "<size=70%><color=#8FB8FF>(클릭 = 상세)</color></size>";
+
+    /// <summary>클릭 가능한 항목으로 감싼다. 밑줄은 "여기 누를 수 있다"는 시각 신호다.</summary>
+    private static string Clickable(string linkId, string label) => $"<link=\"{linkId}\"><u>{label}</u></link>";
+
+    /// <summary>
+    /// 링크 id를 해석해 알맞은 상세 팝업을 연다. id 형식:
+    /// <c>w:소켓번호</c>(장착 무기) / <c>ws:소켓번호</c>(무기 소켓 파츠) /
+    /// <c>p:슬롯이름</c>(그 외 파츠) / <c>d:디스크id</c> / <c>head</c>(로봇 본체).
+    /// </summary>
+    private void ShowDetail(string linkId)
+    {
+        if (detail_popup == null || string.IsNullOrEmpty(linkId)) return;
+
+        string[] token = linkId.Split(':');
+        string kind = token[0];
+        string arg = token.Length > 1 ? token[1] : string.Empty;
+
+        switch (kind)
+        {
+            case "w":
+                if (int.TryParse(arg, out int weaponSocket)) ShowWeaponDetail(weaponSocket);
+                break;
+
+            case "ws":
+                if (int.TryParse(arg, out int partSocket)) ShowWeaponSocketPartDetail(partSocket);
+                break;
+
+            case "p":
+                if (System.Enum.TryParse(arg, out PartSlot slot)) ShowPartDetail(slot);
+                break;
+
+            case "d":
+                if (int.TryParse(arg, out int discId)) ShowDiscDetail(discId);
+                break;
+
+            case "head":
+                ShowRobotDetail();
+                break;
+        }
+    }
+
+    private void ShowWeaponDetail(int socketIndex)
+    {
+        PlayerShootManager shootManager = FindFirstObjectByType<PlayerShootManager>();
+        if (shootManager == null) return;
+        if (!shootManager.TryGetSocketInfo(socketIndex, out WeaponData weapon, out ItemGrade grade)) return;
+
+        ModdingManager modding = FindFirstObjectByType<ModdingManager>();
+        if (player == null) player = FindFirstObjectByType<PlayerRobotController>();
+
+        var lines = new List<string>();
+
+        // 무기 타입/투사체 타입은 무기 데이터가 아니라 PartsCatalog의 메타 표에 있다.
+        if (modding != null && modding.Catalog != null &&
+            modding.Catalog.TryGetWeaponMeta(weapon.weapon_id, out PartsCatalog.WeaponMetaEntry meta))
+        {
+            lines.Add($"분류: {meta.weaponClass.ToKorean()} / {meta.type.ToKorean()}");
+        }
+
+        // 실제로 적에게 들어가는 1발 데미지 = weapon_atk + (로봇 공격력 / 발수). 치명타는 별도.
+        float robotAtk = player != null ? player.Atk : 0f;
+        float perShot = weapon.weapon_atk + robotAtk / weapon.ProjectileCount;
+        float dps = perShot * weapon.ProjectileCount * weapon.weapon_atsp;
+
+        lines.Add($"공격력 {weapon.weapon_atk:0.##} (+로봇 {robotAtk:0.##} 분배 → 1발 {perShot:0.##})");
+        lines.Add($"공격속도 {weapon.weapon_atsp:0.##}회/초 · 초당 피해 약 {dps:0.#}");
+
+        // 사거리/감지거리는 값 하나만 보여준다(2026-08-12 사용자 요청 - "데이터값 → 실제값"
+        // 두 개를 나란히 쓰던 것을 없앴다). 남긴 값은 소켓 파츠 배율까지 먹은 최종 적용값이라
+        // 화면에 적힌 숫자가 곧 게임에서 나가는 거리다.
+        lines.Add($"사거리 {shootManager.GetEffectiveTravelRange(socketIndex):0.##}");
+        lines.Add($"감지거리 {shootManager.GetEffectiveDetectRange(socketIndex):0.##}");
+
+        lines.Add($"발사 방식: {FireModeName(weapon.weapon_firemode)}");
+        if (weapon.ProjectileCount > 1) lines.Add($"동시 발사 {weapon.ProjectileCount}발 (탄퍼짐 {weapon.weapon_aim:0.##}도)");
+        if (weapon.weapon_speed > 0f) lines.Add($"탄속 {weapon.ProjectileSpeed:0.##}");
+        if (weapon.weapon_duration > 0f) lines.Add($"지속시간 {weapon.weapon_duration:0.##}초");
+        if (weapon.weapon_splash > 0f) lines.Add($"폭발 반경 {weapon.weapon_splash:0.##}");
+        if (weapon.weapon_pierce != 0)
+        {
+            string pierce = weapon.weapon_pierce < 0 ? "무제한" : $"{weapon.weapon_pierce}회";
+            if (weapon.weapon_pierce_chance > 0f && weapon.weapon_pierce_chance < 1f)
+            {
+                pierce += $" (확률 {weapon.weapon_pierce_chance * 100f:0}%)";
+            }
+            lines.Add($"관통 {pierce}");
+        }
+        if (weapon.weapon_defignore > 0f) lines.Add($"방어력 무시 {weapon.weapon_defignore * 100f:0}%");
+        if (weapon.weapon_knockback > 0f) lines.Add($"넉백 {weapon.weapon_knockback:0.##}");
+        lines.Add($"조준 회전속도 {weapon.RotationSpeed:0.#}도/초");
+
+        // 무게는 소켓 타입이 안 맞으면 배율이 붙는다(장착은 되지만 이동속도가 깎인다).
+        if (modding != null)
+        {
+            float baseWeight = modding.GetWeaponWeight(weapon.weapon_id);
+            float effective = modding.GetEffectiveWeaponWeight(socketIndex, weapon.weapon_id);
+            lines.Add(Mathf.Approximately(baseWeight, effective)
+                ? $"무게 {baseWeight:0.##}"
+                : $"무게 {baseWeight:0.##} → <color=#F2BF26>{effective:0.##} (소켓 타입 불일치 x{modding.MismatchWeightMultiplier:0.##})</color>");
+        }
+
+        detail_popup.Show(
+            $"소켓 {socketIndex + 1} · <color={grade.ToColorHex()}>{grade.ToKorean()}</color> {weapon.weapon_name}",
+            string.Join("\n", lines),
+            ResolveWeaponIcon(weapon));
+    }
+
+    // WeaponFireMode에는 한글 이름 확장이 없어서(다른 enum들과 달리 UI에 쓰인 적이 없다) 여기서 변환한다.
+    private static string FireModeName(WeaponFireMode mode)
+    {
+        switch (mode)
+        {
+            case WeaponFireMode.Projectile: return "투사체";
+            case WeaponFireMode.Beam: return "지속 빔";
+            case WeaponFireMode.MeleeSwing: return "근접 휘두르기";
+            default: return mode.ToString();
+        }
+    }
+
+    private void ShowWeaponSocketPartDetail(int socketIndex)
+    {
+        ModdingManager modding = FindFirstObjectByType<ModdingManager>();
+        if (modding == null || !modding.TryGetEquippedWeaponSocketPart(socketIndex, out PartData part)) return;
+
+        var lines = new List<string>
+        {
+            $"부위: 무기 소켓 {socketIndex + 1}",
+            $"장착 가능 무기: {(part.restrictsWeaponClass ? part.allowedWeaponClass.ToKorean() : "전체")}",
+            $"사거리 x{part.RangeMultiplier:0.##}",
+            $"감지거리 x{part.DetectRangeMultiplier:0.##}",
+            $"조준 회전속도 x{part.RotationSpeedMultiplier:0.##}"
+        };
+
+        if (part.weight != 0f) lines.Add($"무게 {part.weight:0.##}");
+
+        // 이 소켓에 실제로 낀 무기와 타입이 맞는지까지 같이 보여준다(불일치면 무게 배율이 붙는다).
+        PlayerShootManager shootManager = FindFirstObjectByType<PlayerShootManager>();
+        if (shootManager != null && shootManager.TryGetSocketInfo(socketIndex, out WeaponData weapon, out _))
+        {
+            lines.Add(modding.IsWeaponMismatched(socketIndex, weapon.weapon_id)
+                ? $"<color=#F2BF26>현재 장착 '{weapon.weapon_name}' - 타입 불일치 (무게 x{modding.MismatchWeightMultiplier:0.##})</color>"
+                : $"현재 장착 '{weapon.weapon_name}' - 타입 일치");
+        }
+
+        detail_popup.Show(
+            $"<color={part.grade.ToColorHex()}>{part.grade.ToKorean()}</color> {part.partName}",
+            string.Join("\n", lines),
+            null);
+    }
+
+    private void ShowPartDetail(PartSlot slot)
+    {
+        ModdingManager modding = FindFirstObjectByType<ModdingManager>();
+        if (modding == null || !modding.TryGetEquippedPart(slot, out PartData part)) return;
+
+        var lines = new List<string> { $"부위: {slot.ToKorean()}" };
+
+        if (part.bonusAmount != 0f) lines.Add($"{StatTypeNames.ToKorean(part.bonusStat)} +{part.bonusAmount:0.##}");
+        if (part.weightCapacity != 0f) lines.Add($"무게 지탱 +{part.weightCapacity:0.##}");
+        if (part.weight != 0f) lines.Add($"무게 {part.weight:0.##}");
+        if (slot == PartSlot.DiscSlot) lines.Add($"디스크 슬롯 {part.discSlotCount}칸");
+        if (lines.Count == 1) lines.Add("(보너스 없음)");
+
+        // 무게는 개별 파츠만 봐서는 감이 안 오므로 로봇 전체 합계를 함께 보여준다.
+        float total = modding.GetTotalWeight();
+        float capacity = modding.GetTotalWeightCapacity();
+        float over = Mathf.Max(0f, total - capacity);
+        lines.Add($"\n로봇 전체 무게 {total:0.##} / 지탱력 {capacity:0.##}");
+        if (over > 0f)
+        {
+            lines.Add($"<color=#F2BF26>초과 {over:0.##} → 이동속도 -{over * modding.OverweightSpeedPenaltyPerUnit:0.##}</color>");
+        }
+
+        detail_popup.Show(
+            $"<color={part.grade.ToColorHex()}>{part.grade.ToKorean()}</color> {part.partName}",
+            string.Join("\n", lines),
+            null);
+    }
+
+    private void ShowDiscDetail(int discId)
+    {
+        if (shopManager == null || shopManager.Catalog == null) return;
+
+        foreach (DiscData disc in shopManager.Catalog.Discs)
+        {
+            if (disc.discId != discId) continue;
+
+            var lines = new List<string>
+            {
+                "분류: 디스크",
+                disc.BuildDescription()
+            };
+
+            // 기획서 21종은 효과 종류가 제각각이라(처치 시 발동·시간제·확률형…) 실제 파라미터를
+            // 값이 들어있는 것만 골라 덧붙인다.
+            var numbers = new List<string>();
+            if (disc.chance01 > 0f) numbers.Add($"발동 확률 {disc.chance01 * 100f:0.##}%");
+            if (disc.flatValue != 0f) numbers.Add($"수치 {disc.flatValue:0.##}");
+            if (disc.multiplier != 0f) numbers.Add($"배율 x{disc.multiplier:0.##}");
+            if (disc.duration > 0f) numbers.Add($"지속 {disc.duration:0.##}초");
+            if (disc.interval > 0f) numbers.Add($"주기 {disc.interval:0.##}초");
+            if (disc.radius > 0f) numbers.Add($"범위 {disc.radius:0.##}");
+            if (disc.cap > 0f) numbers.Add($"상한 {disc.cap:0.##}");
+            if (disc.maxUses > 0) numbers.Add($"최대 {disc.maxUses}회");
+            if (numbers.Count > 0) lines.Add(string.Join(" · ", numbers));
+
+            AppendDiscStat(lines, disc.statA, disc.amountA);
+            AppendDiscStat(lines, disc.statB, disc.amountB);
+            AppendDiscStat(lines, disc.statC, disc.amountC);
+
+            detail_popup.Show(
+                $"<color={disc.grade.ToColorHex()}>{disc.grade.ToKorean()}</color> {disc.discName}",
+                string.Join("\n", lines),
+                disc.LoadIcon());
+            return;
+        }
+    }
+
+    private static void AppendDiscStat(List<string> lines, StatType stat, float amount)
+    {
+        if (amount == 0f) return;
+
+        string sign = amount > 0f ? "+" : string.Empty;
+        string color = amount > 0f ? "#88FF88" : "#FF8080";
+        lines.Add($"<color={color}>{StatTypeNames.ToKorean(stat)} {sign}{amount:0.##}</color>");
+    }
+
+    private void ShowRobotDetail()
+    {
+        if (player == null) player = FindFirstObjectByType<PlayerRobotController>();
+        if (player == null || GameDataManager.Instance == null) return;
+        if (!GameDataManager.Instance.Robots.TryGetValue(player.RobotId, out RobotData data)) return;
+
+        ModdingManager modding = FindFirstObjectByType<ModdingManager>();
+
+        var lines = new List<string>
+        {
+            "분류: 로봇(머리) - 런 중 교체 불가",
+            $"기본 체력 {data.robot_hp} / 공격력 {data.robot_atk} / 방어력 {data.robot_def}",
+            $"기본 이동속도 {data.robot_speed:0.##} / 회피 {data.robot_avoid:0.##} / 행운 {data.robot_luck:0.##}",
+            $"치명타 {data.robot_cc:0.##}% · 배율 {data.robot_cd:0.##}",
+            $"질량 {data.robot_mess:0.##}"
+        };
+
+        if (modding != null)
+        {
+            lines.Add($"\n무기 소켓 {modding.ActiveSocketCount}칸 · 디스크 슬롯 {modding.DiscSlotCount}칸");
+            lines.Add($"부품 상자 적재량 {RunState.UnopenedPartBoxCount}/{modding.PartBoxCapacity}");
+        }
+
+        detail_popup.Show(data.robot_name, string.Join("\n", lines), null);
     }
 }

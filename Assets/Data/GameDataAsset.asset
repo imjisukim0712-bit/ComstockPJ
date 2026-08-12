@@ -43,7 +43,7 @@ MonoBehaviour:
     monster_speed: 1.5
     monster_range: 6
     monster_type: 1
-    monster_atsp: 0.8
+    monster_atsp: 0.4
     monster_mass: 55
     monster_size: 0
   - monster_id: 200004

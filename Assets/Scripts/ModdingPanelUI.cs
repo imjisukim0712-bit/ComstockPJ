@@ -437,6 +437,20 @@ public class ModdingPanelUI : MonoBehaviour
         const float spacing = 6f;
         int columnCount = Mathf.Max(1, columns);
 
+        // ContentSizeFitter는 스크롤 뷰의 content일 때만 필요하다. 스크롤이 없는 슬롯 격자에도
+        // 붙어 있었는데, 그러면 "컨테이너 높이 → 칸 높이 → (fitter가) 컨테이너 높이" 되먹임이
+        // 생겨 화면을 열 때마다 칸이 점점 납작해진다(실측: 칸 높이 75 → 34.65, 컨테이너 rect
+        // 높이가 -106까지 내려갔다). 그래서 스크롤 밖이면 세로 fit을 끄고 높이를 앵커 기준으로
+        // 되돌린 뒤에 칸 크기를 계산한다(2026-08-13).
+        bool insideScrollRect = container.GetComponentInParent<ScrollRect>() != null;
+        ContentSizeFitter fitter = container.GetComponent<ContentSizeFitter>();
+
+        if (!insideScrollRect)
+        {
+            if (fitter != null) fitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
+            container.sizeDelta = new Vector2(container.sizeDelta.x, 0f); // 앵커가 정한 높이로 복귀
+        }
+
         Vector2 cellSize = fallbackCellSize;
         float availableWidth = container.rect.width;
         if (availableWidth > 1f && fallbackCellSize.x > 0f)
@@ -469,11 +483,13 @@ public class ModdingPanelUI : MonoBehaviour
         grid.constraintCount = columnCount;
         grid.childAlignment = TextAnchor.UpperLeft;
 
-        // 스크롤 뷰의 content로 쓰일 때 칸이 늘어난 만큼 높이가 자라야 한다.
-        ContentSizeFitter fitter = container.GetComponent<ContentSizeFitter>();
-        if (fitter == null) fitter = container.gameObject.AddComponent<ContentSizeFitter>();
-        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        // 스크롤 뷰의 content로 쓰일 때만 칸이 늘어난 만큼 높이가 자라야 한다.
+        if (insideScrollRect)
+        {
+            if (fitter == null) fitter = container.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        }
     }
 
     private void ClearChildren(RectTransform container)
@@ -503,8 +519,34 @@ public class ModdingPanelUI : MonoBehaviour
         var cell = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         cell.transform.SetParent(parent, false);
 
-        Image image = cell.GetComponent<Image>();
+        // 칸은 "테두리 아트(고정) + 안쪽 상태색(가변)" 두 겹이다(2026-08-13 UI 아트 적용).
+        // 예전처럼 칸 이미지 하나에 색을 칠하면, 테두리 스프라이트가 거의 검정이라 색을 곱하는
+        // 순간 노란 슬롯 강조·파란 선택 강조가 전부 검게 죽어버린다. 그래서 아트는 흰색으로 두고
+        // 상태색은 안쪽에 따로 깐 뒤, **안쪽 이미지를 돌려줘서** 기존 색 변경 코드가 그대로 돌게 한다.
+        Image frame = cell.GetComponent<Image>();
+        Sprite frameSprite = Resources.Load<Sprite>("UI/Black_ui03");
+        if (frameSprite != null)
+        {
+            frame.sprite = frameSprite;
+            frame.type = Image.Type.Sliced;
+            frame.color = Color.white;
+        }
+        else
+        {
+            frame.color = color; // 아트를 못 찾으면 예전처럼 단색 칸으로 동작
+        }
+
+        var stateGo = new GameObject("State", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        stateGo.transform.SetParent(cell.transform, false);
+        var stateRect = (RectTransform)stateGo.transform;
+        stateRect.anchorMin = new Vector2(0.07f, 0.07f);
+        stateRect.anchorMax = new Vector2(0.93f, 0.93f);
+        stateRect.offsetMin = Vector2.zero;
+        stateRect.offsetMax = Vector2.zero;
+
+        Image image = stateGo.GetComponent<Image>();
         image.color = color;
+        image.raycastTarget = false; // 클릭은 바깥 칸(프레임)이 받는다
 
         if (onClick != null)
         {

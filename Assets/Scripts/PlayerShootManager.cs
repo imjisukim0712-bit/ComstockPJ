@@ -400,6 +400,26 @@ public class PlayerShootManager : MonoBehaviour
     }
 
     /// <summary>
+    /// UI 조회용 - 이 소켓에 실제로 적용되는 사거리/감지거리(무기 기본값 x 소켓 파츠 배율,
+    /// 감지거리는 사거리·화면 상한으로 한 번 더 잘린 최종값). 상점 상세 팝업이 "데이터 값"이
+    /// 아니라 "지금 이 소켓에서 실제로 나가는 거리"를 보여줄 수 있도록 노출한다.
+    /// </summary>
+    public float GetEffectiveTravelRange(int socketIndex)
+    {
+        return TryGetSocketInfo(socketIndex, out WeaponData weapon, out _)
+            ? GetTravelRange(weapon, socketIndex)
+            : 0f;
+    }
+
+    /// <inheritdoc cref="GetEffectiveTravelRange"/>
+    public float GetEffectiveDetectRange(int socketIndex)
+    {
+        return TryGetSocketInfo(socketIndex, out WeaponData weapon, out _)
+            ? GetDetectRange(weapon, socketIndex)
+            : 0f;
+    }
+
+    /// <summary>
     /// 상점에서 산 무기를 소켓에 즉시 장착(교체)한다. 기획서의 "무기 구매 = 소켓 즉시 교체"에 해당한다.
     /// 등급은 무기 데이터 행이 직접 들고 있으므로(등급마다 별도 행) 따로 받지 않는다.
     /// </summary>
