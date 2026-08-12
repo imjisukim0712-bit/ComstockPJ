@@ -344,13 +344,19 @@ public class ProceduralCharacterRig : MonoBehaviour
         legsGroup.SetParent(rigRoot, false);
         legsGroup.localScale = new Vector3(facingSign, 1f, 1f);
 
-        // 다리 2개. 0 = 뒤쪽(먼저 그려짐), 1 = 앞쪽. phaseOffset(0 / 0.5)만 다르고 그 외
-        // 규칙(굽힘 부호·그림 방향)은 두 다리가 완전히 동일하다 — 사람처럼.
-        // 앞다리는 고관절 자체를 frontLegPullBack만큼 뒤다리 쪽(중심)으로 당긴다 - 대기/보행
-        // 구분 없이 다리 전체(뼈·발 모두)가 통째로 이동한다(idle 타겟만 조정하는 것과 다르다).
-        legs[0] = BuildLeg("Leg_Back", bodySortingOrder - 10, -hipSeparation * 0.5f, 0.5f, backLegTint,
+        // 다리 2개. phaseOffset(0 / 0.5)만 다르고 그 외 규칙(굽힘 부호·그림 방향)은 두 다리가
+        // 완전히 동일하다 — 사람처럼. 앞다리는 고관절 자체를 frontLegPullBack만큼 뒤다리 쪽
+        // (중심)으로 당긴다 - 대기/보행 구분 없이 다리 전체(뼈·발 모두)가 통째로 이동한다
+        // (idle 타겟만 조정하는 것과 다르다). 이 위치·위상 배정 자체는 바꾸지 않는다.
+        //
+        // 밝기/그리기 순서(Leg_Front=밝고 앞에 그려짐, Leg_Back=어둡고 뒤에 그려짐)는 반대로
+        // 뒤집었다(2026-08-12, "왼쪽을 볼 때 오른쪽 다리가 더 밝아야 한다"는 사용자 지정) -
+        // legsGroup이 facingSign만큼 좌우로 뒤집히므로, 로컬 -X 쪽 다리는 오른쪽을 바라볼 때
+        // 화면 왼쪽에, 왼쪽을 바라볼 때 화면 오른쪽에 온다. 그 다리를 밝게(Leg_Front) 하면
+        // "오른쪽을 볼 때 왼쪽 다리가 밝고, 왼쪽을 볼 때 오른쪽 다리가 밝다"는 요청과 일치한다.
+        legs[0] = BuildLeg("Leg_Front", bodySortingOrder - 5, -hipSeparation * 0.5f, 0.5f, Color.white,
                            thighHip, thighTilt, shinKnee, shinTilt, footAnkle);
-        legs[1] = BuildLeg("Leg_Front", bodySortingOrder - 5, hipSeparation * 0.5f - frontLegPullBack, 0f, Color.white,
+        legs[1] = BuildLeg("Leg_Back", bodySortingOrder - 10, hipSeparation * 0.5f - frontLegPullBack, 0f, backLegTint,
                            thighHip, thighTilt, shinKnee, shinTilt, footAnkle);
 
         built = true;
