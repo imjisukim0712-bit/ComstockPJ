@@ -373,7 +373,10 @@ public class ShopPanelUI : MonoBehaviour
                     foreach (DiscData disc in shopManager.Catalog.Discs)
                     {
                         if (disc.discId != discId) continue;
-                        name = $"<color={disc.grade.ToColorHex()}>{disc.grade.ToKorean()}</color> {disc.discName}";
+                        // 이름 줄 + 효과 설명 줄(작게) - 기획서 21종은 효과가 서로 많이 달라서
+                        // 이름만으로는 뭘 하는 디스크인지 알 수 없다.
+                        name = $"<color={disc.grade.ToColorHex()}>{disc.grade.ToKorean()}</color> {disc.discName}\n" +
+                               $"<size=80%><color=#AAAAAA>{disc.BuildDescription()}</color></size>";
                         break;
                     }
                     lines.Add(name);

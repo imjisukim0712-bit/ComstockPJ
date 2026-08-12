@@ -20,6 +20,15 @@ using UnityEngine;
 /// 업로드되어 정상으로 돌아오는데, 이것이 "첫 피격 전까지만 파츠가 깨져 보이던" 증상의
 /// 정체였다(2026-08-10 수정, 상세는 작업.md).
 ///
+/// <b>빌드에서는 반드시 `Resources/` 밑의 머티리얼 애셋을 통해 셰이더를 로드해야 한다.</b>
+/// 에디터에서는 프로젝트의 모든 셰이더가 컴파일돼 있어 `Shader.Find`가 항상 성공하지만,
+/// 실제 빌드는 씬/프리팹/`Resources` 애셋이 참조하지 않는 셰이더를 스트리핑한다. 이 셰이더는
+/// 코드에서만 `new Material(shader)`로 동적 생성되고 어떤 씬 에셋도 참조하지 않으므로,
+/// `Shader.Find`로 직접 찾으면 빌드에서 null이 되어 피격 연출이 조용히 사라진다(2026-08-12,
+/// "빌드에서 피격 이펙트가 없어짐" 리포트로 발견). `Assets/Resources/Materials/
+/// SpriteFlashBase.mat`(이 셰이더를 쓰는 더미 머티리얼)을 만들어 `Resources.Load`로 불러오면
+/// 그 머티리얼이 빌드에 강제로 포함되면서 셰이더도 함께 포함된다.
+///
 /// 머티리얼 인스턴스를 유닛마다 새로 만들면(= sr.material 접근) 드로우콜이 늘고 GC가 생기므로,
 /// <see cref="MaterialPropertyBlock"/>으로 렌더러별 값만 덮어쓴다.
 ///
@@ -28,7 +37,7 @@ using UnityEngine;
 /// </summary>
 public class HitFlash : MonoBehaviour
 {
-    private const string ShaderName = "Comstock/SpriteFlash";
+    private const string BaseMaterialResourcePath = "Materials/SpriteFlashBase";
     private static readonly int FlashAmountId = Shader.PropertyToID("_FlashAmount");
     private static readonly int FlashColorId = Shader.PropertyToID("_FlashColor");
 
@@ -112,18 +121,18 @@ public class HitFlash : MonoBehaviour
     {
         if (shared_flash_material != null) return shared_flash_material;
 
-        Shader shader = Shader.Find(ShaderName);
-        if (shader == null || !shader.isSupported)
+        Material baseMaterial = Resources.Load<Material>(BaseMaterialResourcePath);
+        if (baseMaterial == null || baseMaterial.shader == null || !baseMaterial.shader.isSupported)
         {
             if (!warned_missing_shader)
             {
                 warned_missing_shader = true;
-                Debug.LogWarning($"HitFlash: 셰이더 '{ShaderName}'을(를) 찾을 수 없거나 지원되지 않아 피격 연출이 표시되지 않습니다.");
+                Debug.LogWarning($"HitFlash: '{BaseMaterialResourcePath}' 머티리얼을 찾을 수 없거나 셰이더가 지원되지 않아 피격 연출이 표시되지 않습니다.");
             }
             return null;
         }
 
-        shared_flash_material = new Material(shader) { name = "SpriteFlash (shared)" };
+        shared_flash_material = new Material(baseMaterial) { name = "SpriteFlash (shared)" };
         return shared_flash_material;
     }
 

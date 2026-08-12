@@ -41,6 +41,16 @@ public static class RunState
     // 계산된 결과만 여기에 누적해둔다.
     public static Dictionary<StatType, float> DiscStatBonuses { get; private set; } = new Dictionary<StatType, float>();
 
+    // 2026-08-12 디스크 기획서(김재원) 반영 - "처치마다 누적(최대치 있음)" 효과(교향곡:화염/바람
+    // 소리/금속음/교향곡:암석)의 진행도. discId -> 지금까지 누적된 값(cap 이하로 클램프됨).
+    // DiscStatBonuses와 별도로 두는 이유: 같은 종류 디스크를 두 장 장착해도 각자 독립적으로
+    // cap까지 쌓여야 하는데, DiscStatBonuses는 스탯별 "합계"만 들고 있어 개별 진행도를 모른다.
+    public static Dictionary<int, float> DiscStackProgress { get; private set; } = new Dictionary<int, float>();
+
+    // "마지막 발악" 디스크처럼 런당 사용 횟수 제한이 있는 효과의 남은 횟수. discId -> 남은 횟수.
+    // 장착 시 maxUses만큼 채워지고(같은 디스크를 여러 장 장착하면 합산), 발동될 때마다 1씩 줄어든다.
+    public static Dictionary<int, int> DiscUsesRemaining { get; private set; } = new Dictionary<int, int>();
+
     // 이번 웨이브의 상점에서 새로고침을 몇 번 했는지 (비용이 누를수록 비싸진다).
     // 다음 웨이브 상점을 열 때 0으로 되돌린다.
     public static int ShopRefreshCount { get; set; } = 0;
@@ -84,6 +94,8 @@ public static class RunState
         EquippedWeapons.Clear();
         EquippedDiscIds.Clear();
         DiscStatBonuses.Clear();
+        DiscStackProgress.Clear();
+        DiscUsesRemaining.Clear();
         ShopRefreshCount = 0;
         EquippedPartIds.Clear();
         PartStatBonuses.Clear();

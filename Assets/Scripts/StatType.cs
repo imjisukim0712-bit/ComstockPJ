@@ -12,5 +12,11 @@ public enum StatType
     Luck,
     CritChance,   // robot_cc
     CritDamage,   // robot_cd
-    Mass          // robot_mess
+    Mass,         // robot_mess
+
+    // 2026-08-12 디스크 기획서(김재원) "금화의 잔향 디스크" 반영 - 로봇 스탯이 아니라
+    // 골드 획득량에 곱해지는 비율(%)이라 RobotStats.ApplyBonus에는 연결하지 않는다
+    // (해당 switch에 case가 없어도 안전하게 무시된다). RewardPickup.CollectImmediately()가
+    // RunState.DiscStatBonuses에서 직접 읽어 골드 수령량에 곱한다.
+    GoldGain
 }

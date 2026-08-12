@@ -12,7 +12,9 @@ using UnityEngine;
 /// </summary>
 public static class DropItemManager
 {
-    private const float PickupRange = 2f;   // 이 거리 안으로 플레이어가 들어오면 자동 습득
+    // 2026-08-12 사용자 지적 "아이템 획득 반경이 PC 크기보다 과하게 큼" - RewardPickupManager와
+    // 동일한 이유로 2 → 1 축소.
+    private const float PickupRange = 1f;   // 이 거리 안으로 플레이어가 들어오면 자동 습득
     // 2026-08-10 "인게임 모든 이미지 1/2" 지시로 1.2 → 0.6. 습득 거리(PickupRange)는 그림이 아니라
     // 조작 편의 값이라 함께 줄이지 않았다.
     private const float BoxWorldSize = 0.6f; // 아이템 상자 스프라이트의 월드 크기(변 길이, 유닛)

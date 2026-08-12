@@ -70,7 +70,10 @@ public class RewardPickup : MonoBehaviour
         switch (Type)
         {
             case RewardType.Gold:
-                RunState.Gold += Amount;
+                // "금화의 잔향 디스크" - 골드 획득량에 %가 곱해진다(StatType.GoldGain, RobotStats와
+                // 무관한 별도 값이라 RunState.DiscStatBonuses에서 직접 읽는다).
+                float gold_gain_percent = RunState.DiscStatBonuses.TryGetValue(StatType.GoldGain, out float g) ? g : 0f;
+                RunState.Gold += Mathf.RoundToInt(Amount * (1f + gold_gain_percent / 100f));
                 break;
 
             // 부품 상자는 머리(로봇)의 적재량 상한이 있으므로 정비 매니저를 거쳐 지급한다.

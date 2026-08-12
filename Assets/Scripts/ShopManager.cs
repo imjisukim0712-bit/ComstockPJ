@@ -216,13 +216,59 @@ public class ShopManager : MonoBehaviour
         return true;
     }
 
-    /// <summary>디스크를 장착하고, 그 증감치를 RunState의 합산 보너스에 반영한다.</summary>
+    /// <summary>
+    /// 디스크를 장착하고, 상시 스탯 성분을 RunState의 합산 보너스에 반영한다.
+    ///
+    /// 2026-08-12 디스크 기획서 반영으로 효과가 21종으로 늘면서, 상시 스탯 가감(statA/B/C)을
+    /// 갖는 타입은 <see cref="DiscEffectType.StatModifier"/>와
+    /// <see cref="DiscEffectType.PassiveAuraSlow"/>(자기 자신에게 걸리는 회피율 성분만) 둘뿐이다.
+    /// 나머지 타입(처치 시 발동/주기/조건부 등)은 상시 보너스가 없고 <see cref="DiscEffectRuntime"/>이
+    /// 매 프레임 또는 이벤트 시점에 직접 처리한다.
+    /// </summary>
     private void EquipDisc(DiscData disc)
     {
         RunState.EquippedDiscIds.Add(disc.discId);
 
-        AddDiscBonus(disc.upStat, disc.upAmount);
-        AddDiscBonus(disc.downStat, -disc.downAmount); // 하락 스탯은 음수로 누적
+        if (disc.effectType == DiscEffectType.StatModifier)
+        {
+            AddDiscBonus(disc.statA, disc.amountA);
+            AddDiscBonus(disc.statB, disc.amountB);
+            AddDiscBonus(disc.statC, disc.amountC);
+        }
+        else if (disc.effectType == DiscEffectType.PassiveAuraSlow)
+        {
+            AddDiscBonus(disc.statA, disc.amountA); // amountB(주변 적 감속)는 DiscEffectRuntime이 처리
+        }
+        else if (disc.effectType == DiscEffectType.LastStand)
+        {
+            RunState.DiscUsesRemaining.TryGetValue(disc.discId, out int remaining);
+            RunState.DiscUsesRemaining[disc.discId] = remaining + Mathf.Max(1, disc.maxUses);
+        }
+        else if (disc.effectType == DiscEffectType.CritChancePerDisc)
+        {
+            // 착용 디스크 총 개수(이번에 추가된 것 포함)에 비례하므로, 매 장착마다 다시 계산한다.
+            RecomputeCritChancePerDisc(disc);
+        }
+    }
+
+    /// <summary>
+    /// "염동력" 등 크리티컬 확률이 착용 디스크 개수에 비례하는 효과의 기여분을 다시 계산해
+    /// DiscStatBonuses에 덮어쓴다. 다른 스탯처럼 누적만 하면 장착할 때마다 이전 개수 기준
+    /// 값이 남아 이중으로 더해지므로, 전용 키로 따로 추적해 항상 최신 값으로 교체한다.
+    /// </summary>
+    private void RecomputeCritChancePerDisc(DiscData disc)
+    {
+        if (!RunState.DiscStackProgress.TryGetValue(disc.discId, out float previous)) previous = 0f;
+
+        // 이 디스크 자체를 여러 장 장착했으면(중복 장착 허용) 장 수만큼 배로 적용한다.
+        int copies = 0;
+        foreach (int id in RunState.EquippedDiscIds) if (id == disc.discId) copies++;
+
+        float total = disc.amountA * copies * RunState.EquippedDiscIds.Count;
+        RunState.DiscStackProgress[disc.discId] = total;
+
+        if (!RunState.DiscStatBonuses.ContainsKey(StatType.CritChance)) RunState.DiscStatBonuses[StatType.CritChance] = 0f;
+        RunState.DiscStatBonuses[StatType.CritChance] += total - previous;
     }
 
     private static void AddDiscBonus(StatType stat, float amount)

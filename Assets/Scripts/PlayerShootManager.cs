@@ -354,6 +354,10 @@ public class PlayerShootManager : MonoBehaviour
     /// <summary>현재 무기 소켓 개수(상점 UI가 "어느 소켓에 장착할지" 목록을 만들 때 사용).</summary>
     public int SocketCount => weapon_slots.Count;
 
+    /// <summary>이번 프레임에 소켓 중 하나라도 사거리 안의 적을 조준했는지. "위장 디스크"
+    /// (비공격 시 이동속도 상승)가 참조한다.</summary>
+    public bool IsTargetingEnemy { get; private set; }
+
     /// <summary>소켓에 현재 장착된 무기 정보를 가져온다(상점 UI 표시용).</summary>
     public bool TryGetSocketInfo(int socketIndex, out WeaponData weapon, out ItemGrade grade)
     {
@@ -466,6 +470,7 @@ public class PlayerShootManager : MonoBehaviour
             ? ModdingManager.Instance.GetWeaponSocketModifiers()
             : ModdingManager.SocketModifiers.Identity;
 
+        IsTargetingEnemy = false; // UpdateSlot이 소켓 하나라도 타겟을 찾으면 true로 바뀐다
         for (int i = 0; i < weapon_slots.Count; i++)
         {
             UpdateSlot(i);
@@ -514,6 +519,7 @@ public class PlayerShootManager : MonoBehaviour
         // 별개이며, 둘 다 무기 기본값(weapon_range)에 소켓 등급 배율을 곱해서 얻는다.
         float detect_range = GetDetectRange(weapon);
         EnemyUnit target = FindNearestEnemyInRange(pivot.position, detect_range);
+        if (target != null) IsTargetingEnemy = true;
 
         if (target == null)
         {
@@ -703,7 +709,7 @@ public class PlayerShootManager : MonoBehaviour
 
         // 대기시간은 <b>발사 동작이 끝난 뒤부터</b> 흐른다(사용자 확정 사항).
         // 덕분에 3초짜리 빔은 3초 + 대기시간이 한 주기가 되어 빔이 여러 개 겹치지 않는다.
-        float cooldown = weapon.weapon_atsp > 0f ? 1f / weapon.weapon_atsp : 1f;
+        float cooldown = weapon.weapon_atsp > 0f ? 1f / (weapon.weapon_atsp * CurrentAttackSpeedMultiplier()) : 1f;
         state.next_fire_time = Time.time + attack_duration + cooldown;
     }
 
@@ -717,7 +723,10 @@ public class PlayerShootManager : MonoBehaviour
     /// </summary>
     private int ComputeDamage(WeaponData weapon)
     {
-        float robot_atk = player_stats != null ? player_stats.Atk : 0f;
+        // 디스크(공명의 소리/결정의 마찰음 등)의 시간제/영구 공격력 보정치를 포함한다.
+        float robot_atk = 0f;
+        if (player_stats != null) robot_atk = player_stats.Atk + player_stats.GetTempStatBonus(StatType.Atk);
+
         float damage = weapon.weapon_atk + robot_atk / weapon.ProjectileCount;
 
         if (player_stats != null && player_stats.Cc > 0f)
@@ -729,8 +738,29 @@ public class PlayerShootManager : MonoBehaviour
             }
         }
 
+        // "777 디스크" - 확률로 이번 데미지를 배로 늘린다.
+        if (player_stats != null && player_stats.DiscEffects != null)
+        {
+            damage = player_stats.DiscEffects.ApplyOnAttackProcs(damage);
+        }
+
         return Mathf.Max(1, Mathf.RoundToInt(damage));
     }
+
+    // 2026-08-12 디스크 기획서 "광분 바이러스 디스크" 반영 - 이 게임에 "공격속도"라는 로봇
+    // 스탯이 원래 없어서(무기마다 자기 weapon_atsp만 있음), 처치 시 잠깐 발사 대기시간을
+    // 줄여주는 전용 배율을 여기 별도로 둔다. 1보다 크면 그만큼 대기시간이 짧아진다.
+    private float temp_attack_speed_multiplier = 1f;
+    private float temp_attack_speed_expire_time = 0f;
+
+    /// <summary>duration초 동안 발사 대기시간을 1/(1+multiplierBonus)배로 줄인다(공격속도 상승).</summary>
+    public void ApplyTempAttackSpeedBuff(float multiplierBonus, float duration)
+    {
+        temp_attack_speed_multiplier = 1f + Mathf.Max(0f, multiplierBonus);
+        temp_attack_speed_expire_time = Time.time + duration;
+    }
+
+    private float CurrentAttackSpeedMultiplier() => Time.time < temp_attack_speed_expire_time ? temp_attack_speed_multiplier : 1f;
 
     /// <summary>지속시간 동안 직선 범위를 태우는 빔을 만든다(플라즈마 캐논).</summary>
     private void FireBeam(WeaponData weapon, Vector3 origin, Vector3 direction, int total_damage)

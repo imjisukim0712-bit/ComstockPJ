@@ -100,8 +100,10 @@ public class ProceduralCharacterRig : MonoBehaviour
     [Tooltip("발에서 발목(정강이가 꽂히는 지점). 신발 스프라이트 안에서 이 지점에 정강이 끝이 온다.\n" +
              "값이 높으면(≈0.88 = 신발 입구) 정강이와 신발이 '따로 떨어져' 보이고, 값을 낮춰 신발 안쪽에\n" +
              "두면 정강이 끝이 신발 통에 파묻혀 '신발을 신은' 모습이 된다(신발이 정강이보다 위에 그려짐).\n" +
-             "2026-08-10 사용자 지정으로 0.88 → 0.62")]
-    [SerializeField] private Vector2 footAnkleAnchor = new Vector2(0.55f, 0.62f);
+             "2026-08-10 사용자 지정으로 0.88 → 0.62했었으나, 2026-08-12 재확인 결과 0.62는 신발이\n" +
+             "정강이 전체를 완전히 가려버리는 버그 수준이었다(스크린샷으로 실측 확인). 0.85로 올려\n" +
+             "정강이가 보이면서 발목만 살짝 파묻히는 원래 의도로 되돌렸다.")]
+    [SerializeField] private Vector2 footAnkleAnchor = new Vector2(0.55f, 0.85f);
     [Tooltip("발 스프라이트에서 바닥에 닿는 밑창 높이")]
     [SerializeField] private float footSoleY = 0.16f;
 

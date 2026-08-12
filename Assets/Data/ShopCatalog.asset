@@ -171,69 +171,467 @@ MonoBehaviour:
     basePrice: 240
   discs:
   - discId: 400001
-    discName: "\uACFC\uBD80\uD558 \uD68C\uB85C"
+    discName: "\uB124\uC78E\uD074\uB85C\uBC84 \uB514\uC2A4\uD06C"
     grade: 0
     price: 20
-    upStat: 1
-    upAmount: 3
-    downStat: 2
-    downAmount: 2
+    iconName: "Discs/\uB514\uC2A4\uD06C01"
+    effectDescription: "\uD589\uC6B4\uC774 7% \uC99D\uAC00\uD569\uB2C8\uB2E4."
+    effectType: 0
+    statA: 5
+    amountA: 7
+    statB: 0
+    amountB: 0
+    statC: 0
+    amountC: 0
+    flatValue: 0
+    chance01: 0
+    multiplier: 0
+    cap: 0
+    interval: 0
+    duration: 0
+    radius: 0
+    maxUses: 0
   - discId: 400002
-    discName: "\uACBD\uB7C9 \uD504\uB808\uC784"
-    grade: 0
-    price: 20
-    upStat: 3
-    upAmount: 0.6
-    downStat: 0
-    downAmount: 8
-  - discId: 400003
-    discName: "\uC911\uC7A5\uAC11 \uCF54\uD305"
-    grade: 1
-    price: 35
-    upStat: 2
-    upAmount: 6
-    downStat: 3
-    downAmount: 0.5
-  - discId: 400004
-    discName: "\uC815\uBC00 \uC870\uC900 \uCE69"
-    grade: 1
-    price: 35
-    upStat: 6
-    upAmount: 8
-    downStat: 1
-    downAmount: 2
-  - discId: 400005
-    discName: "\uCDA9\uACA9 \uC99D\uD3ED\uAE30"
-    grade: 2
-    price: 55
-    upStat: 7
-    upAmount: 0.4
-    downStat: 4
-    downAmount: 3
-  - discId: 400006
-    discName: "\uD68C\uD53C \uAE30\uB3D9 \uB85C\uC9C1"
-    grade: 2
-    price: 55
-    upStat: 4
-    upAmount: 7
-    downStat: 0
-    downAmount: 15
-  - discId: 400007
-    discName: "\uD589\uC6B4\uC758 \uB09C\uC218\uAE30"
+    discName: "\uC5FC\uB3D9\uB825 \uB514\uC2A4\uD06C"
     grade: 3
     price: 80
-    upStat: 5
-    upAmount: 5
-    downStat: 2
-    downAmount: 4
-  - discId: 400008
-    discName: "\uD575\uC735\uD569 \uCF54\uC5B4"
+    iconName: "Discs/\uB514\uC2A4\uD06C02"
+    effectDescription: "\uCC29\uC6A9\uD55C \uB514\uC2A4\uD06C\uC758 \uC218\uB9CC\uD07C
+      \uCE58\uBA85\uD0C0 \uD655\uB960\uC774 3% \uC99D\uAC00\uD569\uB2C8\uB2E4."
+    effectType: 8
+    statA: 0
+    amountA: 3
+    statB: 0
+    amountB: 0
+    statC: 0
+    amountC: 0
+    flatValue: 0
+    chance01: 0
+    multiplier: 0
+    cap: 0
+    interval: 0
+    duration: 0
+    radius: 0
+    maxUses: 0
+  - discId: 400003
+    discName: "777 \uB514\uC2A4\uD06C"
+    grade: 3
+    price: 80
+    iconName: "Discs/\uB514\uC2A4\uD06C03"
+    effectDescription: "\uACF5\uACA9 \uC2DC 7%\uC758 \uD655\uB960\uB85C \uB370\uBBF8\uC9C0\uAC00
+      77% \uC99D\uAC00\uD569\uB2C8\uB2E4."
+    effectType: 6
+    statA: 0
+    amountA: 0
+    statB: 0
+    amountB: 0
+    statC: 0
+    amountC: 0
+    flatValue: 0
+    chance01: 0.07
+    multiplier: 0.77
+    cap: 0
+    interval: 0
+    duration: 0
+    radius: 0
+    maxUses: 0
+  - discId: 400004
+    discName: "\uB9C8\uC9C0\uB9C9 \uBC1C\uC545 \uB514\uC2A4\uD06C"
     grade: 4
     price: 120
-    upStat: 0
-    upAmount: 40
-    downStat: 3
-    downAmount: 0.8
+    iconName: "Discs/\uB514\uC2A4\uD06C04"
+    effectDescription: "\uCCB4\uB825\uC774 1 \uC774\uD558\uB85C \uB5A8\uC5B4\uC9C0\uBA74
+      3\uCD08\uAC04 \uCCB4\uB825\uC744 1\uB85C \uACE0\uC815\uD558\uACE0 \uBB34\uC801
+      \uC0C1\uD0DC\uAC00 \uB418\uBA70 \uC774\uB3D9\uC18D\uB3C4\uAC00 100% \uC99D\uAC00\uD569\uB2C8\uB2E4
+      (\uC81C\uD55C 1\uD68C)."
+    effectType: 9
+    statA: 0
+    amountA: 1
+    statB: 0
+    amountB: 0
+    statC: 0
+    amountC: 0
+    flatValue: 0
+    chance01: 0
+    multiplier: 0
+    cap: 0
+    interval: 0
+    duration: 3
+    radius: 0
+    maxUses: 1
+  - discId: 400005
+    discName: "\uC5D0\uB108\uC9C0 \uBCA0\uB9AC\uC5B4 \uB514\uC2A4\uD06C"
+    grade: 4
+    price: 120
+    iconName: "Discs/\uB514\uC2A4\uD06C05"
+    effectDescription: "\uD68C\uBCF5\uB418\uC9C0 \uC54A\uB294 \uCD5C\uB300 \uCCB4\uB825
+      15\uAC00 \uC8FC\uC5B4\uC9D1\uB2C8\uB2E4 (\uC6E8\uC774\uBE0C\uB9C8\uB2E4 \uCD08\uAE30\uD654)."
+    effectType: 13
+    statA: 0
+    amountA: 0
+    statB: 0
+    amountB: 0
+    statC: 0
+    amountC: 0
+    flatValue: 15
+    chance01: 0
+    multiplier: 0
+    cap: 0
+    interval: 0
+    duration: 0
+    radius: 0
+    maxUses: 0
+  - discId: 400006
+    discName: "\uD3EC\uADFC\uD55C \uCE58\uC720 \uB514\uC2A4\uD06C"
+    grade: 0
+    price: 20
+    iconName: "Discs/\uB514\uC2A4\uD06C06"
+    effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 HP\uB97C 1 \uD68C\uBCF5\uD569\uB2C8\uB2E4."
+    effectType: 4
+    statA: 0
+    amountA: 0
+    statB: 0
+    amountB: 0
+    statC: 0
+    amountC: 0
+    flatValue: 1
+    chance01: 0
+    multiplier: 0
+    cap: 0
+    interval: 0
+    duration: 0
+    radius: 0
+    maxUses: 0
+  - discId: 400007
+    discName: "\uAD50\uD5A5\uACE1: \uC554\uC11D \uB514\uC2A4\uD06C"
+    grade: 1
+    price: 35
+    iconName: "Discs/\uB514\uC2A4\uD06C07"
+    effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 \uBC29\uC5B4\uB825\uC774
+      0.1 \uC99D\uAC00\uD569\uB2C8\uB2E4 (\uCD5C\uB300 5)."
+    effectType: 5
+    statA: 2
+    amountA: 0.1
+    statB: 0
+    amountB: 0
+    statC: 0
+    amountC: 0
+    flatValue: 0
+    chance01: 0
+    multiplier: 0
+    cap: 5
+    interval: 0
+    duration: 0
+    radius: 0
+    maxUses: 0
+  - discId: 400008
+    discName: "\uB098\uBB34 \uBB50\uC2DC\uAE30 \uB514\uC2A4\uD06C"
+    grade: 0
+    price: 20
+    iconName: "Discs/\uB514\uC2A4\uD06C08"
+    effectDescription: "\uC774\uB3D9\uC18D\uB3C4 5% \uAC10\uC18C, \uCCB4\uB825 30
+      \uC99D\uAC00."
+    effectType: 0
+    statA: 0
+    amountA: 30
+    statB: 3
+    amountB: -0.125
+    statC: 0
+    amountC: 0
+    flatValue: 0
+    chance01: 0
+    multiplier: 0
+    cap: 0
+    interval: 0
+    duration: 0
+    radius: 0
+    maxUses: 0
+  - discId: 400009
+    discName: "\uC774\uB07C \uB080 \uB514\uC2A4\uD06C"
+    grade: 2
+    price: 55
+    iconName: "Discs/\uB514\uC2A4\uD06C09"
+    effectDescription: "5\uCD08\uB9C8\uB2E4 HP\uAC00 2\uB9CC\uD07C \uD68C\uBCF5\uB429\uB2C8\uB2E4."
+    effectType: 10
+    statA: 0
+    amountA: 0
+    statB: 0
+    amountB: 0
+    statC: 0
+    amountC: 0
+    flatValue: 2
+    chance01: 0
+    multiplier: 0
+    cap: 0
+    interval: 5
+    duration: 0
+    radius: 0
+    maxUses: 0
+  - discId: 400010
+    discName: "\uAD50\uD5A5\uACE1: \uD654\uC5FC \uB514\uC2A4\uD06C"
+    grade: 2
+    price: 55
+    iconName: "Discs/\uB514\uC2A4\uD06C10"
+    effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 \uACF5\uACA9\uB825\uC774
+      0.1 \uC99D\uAC00\uD569\uB2C8\uB2E4 (\uCD5C\uB300 5)."
+    effectType: 5
+    statA: 1
+    amountA: 0.1
+    statB: 0
+    amountB: 0
+    statC: 0
+    amountC: 0
+    flatValue: 0
+    chance01: 0
+    multiplier: 0
+    cap: 5
+    interval: 0
+    duration: 0
+    radius: 0
+    maxUses: 0
+  - discId: 400011
+    discName: "\uAE08\uD654\uC758 \uC794\uD5A5 \uB514\uC2A4\uD06C"
+    grade: 2
+    price: 55
+    iconName: "Discs/\uB514\uC2A4\uD06C11"
+    effectDescription: "\uD68D\uB4DD\uD558\uB294 \uACE8\uB4DC\uAC00 10% \uC99D\uAC00\uD569\uB2C8\uB2E4."
+    effectType: 0
+    statA: 9
+    amountA: 10
+    statB: 0
+    amountB: 0
+    statC: 0
+    amountC: 0
+    flatValue: 0
+    chance01: 0
+    multiplier: 0
+    cap: 0
+    interval: 0
+    duration: 0
+    radius: 0
+    maxUses: 0
+  - discId: 400012
+    discName: "\uBC14\uB78C \uC18C\uB9AC \uB514\uC2A4\uD06C"
+    grade: 0
+    price: 20
+    iconName: "Discs/\uB514\uC2A4\uD06C12"
+    effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 \uC774\uB3D9\uC18D\uB3C4\uAC00
+      0.1% \uC99D\uAC00\uD569\uB2C8\uB2E4 (\uCD5C\uB300 5%)."
+    effectType: 5
+    statA: 3
+    amountA: 0.0025
+    statB: 0
+    amountB: 0
+    statC: 0
+    amountC: 0
+    flatValue: 0
+    chance01: 0
+    multiplier: 0
+    cap: 0.125
+    interval: 0
+    duration: 0
+    radius: 0
+    maxUses: 0
+  - discId: 400013
+    discName: "\uACB0\uC815\uC758 \uB9C8\uCC30\uC74C \uB514\uC2A4\uD06C"
+    grade: 3
+    price: 80
+    iconName: "Discs/\uB514\uC2A4\uD06C13"
+    effectDescription: "\uACF5\uACA9\uB825\uC774 15% \uAC10\uC18C\uD569\uB2C8\uB2E4.
+      \uCE58\uBA85\uD0C0 \uD655\uB960\uC774 5% \uC99D\uAC00\uD558\uACE0, \uCE58\uBA85\uD0C0
+      \uB370\uBBF8\uC9C0\uAC00 15% \uC99D\uAC00\uD569\uB2C8\uB2E4."
+    effectType: 0
+    statA: 1
+    amountA: -0.45
+    statB: 6
+    amountB: 5
+    statC: 7
+    amountC: 0.15
+    flatValue: 0
+    chance01: 0
+    multiplier: 0
+    cap: 0
+    interval: 0
+    duration: 0
+    radius: 0
+    maxUses: 0
+  - discId: 400014
+    discName: "\uC704\uC7A5 \uB514\uC2A4\uD06C"
+    grade: 1
+    price: 35
+    iconName: "Discs/\uB514\uC2A4\uD06C14"
+    effectDescription: "\uC801\uC744 \uACF5\uACA9\uD558\uACE0 \uC788\uC9C0 \uC54A\uC744
+      \uACBD\uC6B0 \uC774\uB3D9\uC18D\uB3C4 20% \uC99D\uAC00."
+    effectType: 11
+    statA: 0
+    amountA: 0.5
+    statB: 0
+    amountB: 0
+    statC: 0
+    amountC: 0
+    flatValue: 0
+    chance01: 0
+    multiplier: 0
+    cap: 0
+    interval: 0
+    duration: 0
+    radius: 0
+    maxUses: 0
+  - discId: 400015
+    discName: "\uAE08\uC18D\uC74C \uB514\uC2A4\uD06C"
+    grade: 1
+    price: 35
+    iconName: "Discs/\uB514\uC2A4\uD06C15"
+    effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 \uCD5C\uB300 \uCCB4\uB825\uC774
+      1 \uC99D\uAC00\uD569\uB2C8\uB2E4 (\uCD5C\uB300 10)."
+    effectType: 5
+    statA: 0
+    amountA: 1
+    statB: 0
+    amountB: 0
+    statC: 0
+    amountC: 0
+    flatValue: 0
+    chance01: 0
+    multiplier: 0
+    cap: 10
+    interval: 0
+    duration: 0
+    radius: 0
+    maxUses: 0
+  - discId: 400016
+    discName: "\uC740\uD558\uC218 \uB514\uC2A4\uD06C"
+    grade: 1
+    price: 35
+    iconName: "Discs/\uB514\uC2A4\uD06C16"
+    effectDescription: "\uC2A4\uD0AC \uCFE8\uD0C0\uC784\uC774 15% \uAC10\uC18C\uD569\uB2C8\uB2E4."
+    effectType: 14
+    statA: 0
+    amountA: 15
+    statB: 0
+    amountB: 0
+    statC: 0
+    amountC: 0
+    flatValue: 0
+    chance01: 0
+    multiplier: 0
+    cap: 0
+    interval: 0
+    duration: 0
+    radius: 0
+    maxUses: 0
+  - discId: 400017
+    discName: "\uACF5\uBA85\uC758 \uC18C\uB9AC \uB514\uC2A4\uD06C"
+    grade: 2
+    price: 55
+    iconName: "Discs/\uB514\uC2A4\uD06C17"
+    effectDescription: "10\uCD08\uB9C8\uB2E4 \uACF5\uACA9\uB825 +10, \uBC29\uC5B4\uB825
+      -5 \uD6A8\uACFC\uC640 \uACF5\uACA9\uB825 -10, \uBC29\uC5B4\uB825 +5 \uD6A8\uACFC\uAC00
+      \uBC88\uAC08\uC544 \uC801\uC6A9\uB429\uB2C8\uB2E4."
+    effectType: 12
+    statA: 0
+    amountA: 10
+    statB: 0
+    amountB: 5
+    statC: 0
+    amountC: 0
+    flatValue: 0
+    chance01: 0
+    multiplier: 0
+    cap: 0
+    interval: 10
+    duration: 0
+    radius: 0
+    maxUses: 0
+  - discId: 400018
+    discName: "\uAD11\uBD84 \uBC14\uC774\uB7EC\uC2A4 \uB514\uC2A4\uD06C"
+    grade: 2
+    price: 55
+    iconName: "Discs/\uB514\uC2A4\uD06C18"
+    effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 3\uCD08\uAC04 \uC774\uB3D9\uC18D\uB3C4\uC640
+      \uACF5\uACA9\uC18D\uB3C4\uAC00 2% \uC99D\uAC00\uD569\uB2C8\uB2E4."
+    effectType: 2
+    statA: 0
+    amountA: 0.05
+    statB: 0
+    amountB: 0.02
+    statC: 0
+    amountC: 0
+    flatValue: 0
+    chance01: 0
+    multiplier: 0
+    cap: 0
+    interval: 0
+    duration: 3
+    radius: 0
+    maxUses: 0
+  - discId: 400019
+    discName: "\uAD50\uD5A5\uACE1: \uBC88\uAC1C \uB514\uC2A4\uD06C"
+    grade: 3
+    price: 80
+    iconName: "Discs/\uB514\uC2A4\uD06C19"
+    effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 \uB2E4\uB978 \uC801
+      \uD558\uB098\uC5D0\uAC8C \uBC88\uAC1C\uAC00 \uD280\uC5B4 20\uC758 \uD53C\uD574\uB97C
+      \uC785\uD799\uB2C8\uB2E4."
+    effectType: 1
+    statA: 0
+    amountA: 0
+    statB: 0
+    amountB: 0
+    statC: 0
+    amountC: 0
+    flatValue: 20
+    chance01: 0
+    multiplier: 0
+    cap: 0
+    interval: 0
+    duration: 0
+    radius: 0
+    maxUses: 0
+  - discId: 400020
+    discName: "\uBB3C \uBE60\uC9C0\uB294 \uC18C\uB9AC \uB514\uC2A4\uD06C"
+    grade: 1
+    price: 35
+    iconName: "Discs/\uB514\uC2A4\uD06C20"
+    effectDescription: "\uD68C\uD53C\uC728 +2%. \uAC00\uAE4C\uC774 \uC788\uB294 \uC801\uC758
+      \uC774\uB3D9\uC18D\uB3C4 2% \uAC10\uC18C."
+    effectType: 7
+    statA: 4
+    amountA: 2
+    statB: 0
+    amountB: 2
+    statC: 0
+    amountC: 0
+    flatValue: 0
+    chance01: 0
+    multiplier: 0
+    cap: 0
+    interval: 0
+    duration: 0
+    radius: 3
+    maxUses: 0
+  - discId: 400021
+    discName: "\uAD50\uD5A5\uACE1: \uD30C\uB3C4 \uB514\uC2A4\uD06C"
+    grade: 2
+    price: 55
+    iconName: "Discs/\uB514\uC2A4\uD06C21"
+    effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 3\uCD08\uAC04 \uBC29\uC5B4\uB825\uACFC
+      \uD68C\uD53C\uC728\uC774 3% \uC99D\uAC00\uD569\uB2C8\uB2E4."
+    effectType: 3
+    statA: 0
+    amountA: 0.15
+    statB: 0
+    amountB: 3
+    statC: 0
+    amountC: 0
+    flatValue: 0
+    chance01: 0
+    multiplier: 0
+    cap: 0
+    interval: 0
+    duration: 3
+    radius: 0
+    maxUses: 0
   slotCount: 4
   discAppearChance: 0.4
   refreshBaseCost: 10

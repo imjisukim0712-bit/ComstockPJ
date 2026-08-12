@@ -2,12 +2,72 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// 디스크(CD 형태) 한 종류의 정의. 다른 로그라이크의 유물/아이템 역할이며,
-/// 기획서대로 <b>특정 스탯이 오르는 대신 다른 스탯이 내려가는 리스크</b>를 함께 가진다.
+/// 디스크 하나의 효과가 어떤 "모양"인지. 21종 각각이 서로 다른 동작을 하지만, 실제로는
+/// 아래 카테고리 중 하나를 골라 파라미터(statA/amountA 등)만 다르게 채우는 방식으로 전부
+/// 표현된다(무기의 WeaponFireMode와 같은 접근 - 종류별 클래스를 만들지 않고 데이터+해석자로 처리).
+/// 실제 해석은 DiscEffectRuntime(주기/조건부 효과)과 EquipDisc/EnemyUnit/PlayerShootManager/
+/// RewardPickup(즉발/훅 기반 효과) 여러 곳에 나뉘어 있다 - 각 필드의 의미는 아래 주석 참고.
+/// </summary>
+public enum DiscEffectType
+{
+    /// <summary>영구 스탯 가감. statA/B/C(사용하는 만큼)를 장착 즉시 RunState.DiscStatBonuses에 더한다.</summary>
+    StatModifier,
+
+    /// <summary>적 처치 시 다른 적 하나에게 flatValue만큼 고정 피해(번개가 튐).</summary>
+    OnKillChainLightning,
+
+    /// <summary>적 처치 시 duration초 동안 이동속도(amountA, 절대값)와 공격속도(amountB, 배율 증가분)가 함께 오른다.</summary>
+    OnKillTempMoveAtkSpeed,
+
+    /// <summary>적 처치 시 duration초 동안 방어력(amountA, 절대값)과 회피율(amountB, %p)이 함께 오른다.</summary>
+    OnKillTempDefDodge,
+
+    /// <summary>적 처치 시 flatValue만큼 즉시 회복.</summary>
+    OnKillHeal,
+
+    /// <summary>적을 처치할 때마다 statA가 amountA씩 누적된다(cap까지만).</summary>
+    OnKillStackStat,
+
+    /// <summary>공격이 명중할 때마다 chance01 확률로 이번 데미지가 (1+multiplier)배가 된다.</summary>
+    OnAttackChanceBonusDamage,
+
+    /// <summary>상시: statA(보통 회피율)가 amountA만큼 영구 상승 + radius 반경 안의 적 이동속도를 amountB%만큼 감소.</summary>
+    PassiveAuraSlow,
+
+    /// <summary>현재 장착한 디스크 개수 x amountA(%p)만큼 치명타 확률이 상승(장착/해제될 때마다 재계산).</summary>
+    CritChancePerDisc,
+
+    /// <summary>체력이 0 이하가 되는 순간 1회(maxUses)에 한해 체력 1로 고정 + duration초 무적 + 이동속도 amountA배 증가.</summary>
+    LastStand,
+
+    /// <summary>interval초마다 flatValue만큼 회복.</summary>
+    PeriodicHeal,
+
+    /// <summary>플레이어가 공격 중이 아닐 때 이동속도가 amountA(절대값)만큼 상승.</summary>
+    MoveSpeedWhenNotAttacking,
+
+    /// <summary>interval초마다 공격력 ±amountA / 방어력 ∓amountB 조합이 번갈아 적용된다.</summary>
+    OscillatingAtkDef,
+
+    /// <summary>회복되지 않는 최대 체력 flatValue가 추가된다. 웨이브가 시작될 때마다 가득 채워진다.</summary>
+    WaveShieldMaxHp,
+
+    /// <summary>스킬(필살기) 쿨타임 amountA% 감소. 필살기가 데모 범위 밖이라 현재는 값만 보관하고 소비처가 없다.</summary>
+    SkillCooldownReduction
+}
+
+/// <summary>
+/// 디스크(CD 형태) 한 종류의 정의. 다른 로그라이크의 유물/아이템 역할이다.
+///
+/// 2026-08-12 `20260810_디스크기획서_Ver01_김재원.pdf` 반영 - 기존에는 "상승 스탯 하나 +
+/// 하락 스탯 하나"만 표현 가능한 단순 구조였지만, 실제 기획서의 21종은 대부분 처치 시 발동/
+/// 시간제/조건부/확률형 효과라 <see cref="DiscEffectType"/>로 종류를 나누고 범용 파라미터
+/// (statA~C, flatValue, chance01 등)로 표현하도록 확장했다. 실제 21종 데이터는
+/// `Assets/Scripts/Editor/DiscTableGenerator.cs`(에디터 전용, 메뉴
+/// `Comstock/디스크 테이블 21종 재생성`)가 채운다 - 무기 테이블과 동일한 패턴.
 ///
 /// 무기와 달리 구글시트에 원본 테이블이 없는 신규 데이터라, 기획자가 직접 채우는
-/// 로컬 전용 데이터로 ShopCatalog 에셋 안에 목록으로 보관한다
-/// (AiCoreUpgradePool과 동일한 방식).
+/// 로컬 전용 데이터로 ShopCatalog 에셋 안에 목록으로 보관한다.
 /// </summary>
 [Serializable]
 public struct DiscData
@@ -24,22 +84,37 @@ public struct DiscData
     [Tooltip("기본 판매 가격(골드). 등급별 가격 배율은 적용하지 않고 이 값을 그대로 쓴다")]
     public int price;
 
-    [Header("상승 스탯 (이득)")]
-    public StatType upStat;
-    public float upAmount;
+    [Tooltip("Assets/Resources 기준 아이콘 스프라이트 경로(확장자 제외). 예: Discs/디스크01")]
+    public string iconName;
 
-    [Header("하락 스탯 (리스크)")]
-    [Tooltip("내려갈 스탯. upStat과 같은 값으로 두지 말 것")]
-    public StatType downStat;
+    [Tooltip("상점 카드/장착 목록에 보여줄 효과 설명 한 줄(기획서 '효과:' 문구를 그대로 옮김)")]
+    public string effectDescription;
 
-    [Tooltip("내려갈 양(양수로 적는다. 실제 적용 시 음수로 바뀐다)")]
-    public float downAmount;
+    public DiscEffectType effectType;
 
-    /// <summary>상점 카드/장착 목록에 보여줄 한 줄 설명. 예: "공격력 +3 / 이동속도 -0.4"</summary>
-    public string BuildDescription()
-    {
-        return $"{StatTypeNames.ToKorean(upStat)} +{upAmount:0.##} / {StatTypeNames.ToKorean(downStat)} -{downAmount:0.##}";
-    }
+    [Header("스탯 파라미터 (effectType에 따라 의미가 다름 - 위 enum 주석 참고)")]
+    public StatType statA;
+    public float amountA;
+    public StatType statB;
+    public float amountB;
+    public StatType statC;
+    public float amountC;
+
+    [Header("범용 수치 파라미터 (effectType에 따라 의미가 다름 - 위 enum 주석 참고)")]
+    public float flatValue;
+    public float chance01;
+    public float multiplier;
+    public float cap;
+    public float interval;
+    public float duration;
+    public float radius;
+    public int maxUses;
+
+    /// <summary>상점 카드/장착 목록에 보여줄 한 줄 설명.</summary>
+    public string BuildDescription() => effectDescription;
+
+    /// <summary>iconName 경로로 Resources에서 스프라이트를 불러온다. 비어있거나 못 찾으면 null.</summary>
+    public Sprite LoadIcon() => string.IsNullOrEmpty(iconName) ? null : Resources.Load<Sprite>(iconName);
 }
 
 /// <summary>StatType을 UI에 한글로 보여주기 위한 표시명 모음.</summary>
@@ -58,6 +133,7 @@ public static class StatTypeNames
             case StatType.CritChance: return "치명타 확률";
             case StatType.CritDamage: return "치명타 피해";
             case StatType.Mass: return "질량";
+            case StatType.GoldGain: return "골드 획득량";
             default: return type.ToString();
         }
     }

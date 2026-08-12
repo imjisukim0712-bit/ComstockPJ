@@ -24,6 +24,18 @@ public class EnemyUnit : MonoBehaviour
     // 이 목록을 순회하는 쪽이 더 저렴하다.
     public static readonly List<EnemyUnit> Alive = new List<EnemyUnit>();
 
+    // 2026-08-12 디스크 기획서 반영 - "적을 처치하면 ~" 형태의 디스크 효과(교향곡:번개/화염/암석,
+    // 광분 바이러스, 포근한 치유, 바람 소리, 금속음, 교향곡:파도)가 구독하는 전역 이벤트.
+    // 이 게임은 플레이어만 데미지를 줄 수 있으므로(EnemyUnit.TakeDamage는 플레이어 공격에서만
+    // 호출된다) Die()가 곧 "플레이어가 처치함"과 동일하다 - 별도의 "누가 죽였는지" 구분이 필요 없다.
+    public static event System.Action<EnemyUnit> OnKilledByPlayer;
+
+    // "물 빠지는 소리 디스크" - DiscEffectRuntime이 플레이어 주변 반경 안의 적에게 매 프레임
+    // 설정한다(반경 밖이면 다음 프레임에 1로 되돌아간다 - DiscEffectRuntime이 매 프레임 전체를
+    // 1로 리셋한 뒤 반경 안의 적만 다시 낮춘다).
+    private float aura_slow_multiplier = 1f;
+    public void SetAuraSlowMultiplier(float multiplier) => aura_slow_multiplier = Mathf.Clamp01(multiplier);
+
     /// <summary>넉백 배율 기준점(기획서 p.15 좀비 기본 질량). 이 질량보다 무거우면 덜, 가벼우면 더 밀려난다.</summary>
     public const float ReferenceMass = 50f;
 
@@ -273,6 +285,70 @@ public class EnemyUnit : MonoBehaviour
             }
             return zombie_attack_frames_cache;
         }
+    }
+
+    // 좀비 전용 이동(걷기/셔플) 8프레임(Assets/Resources/ZombieMove/walk_left_f0~f7.png, 사용자가
+    // 2026-08-12에 제공). 원본이 250x250으로 Enemy_zombie_S.png와 정확히 같은 규격이라 별도
+    // 스케일 보정 없이 그대로 쓸 수 있다(import 설정도 Enemy_zombie_S와 동일하게 맞췄다 -
+    // spriteMode Single, PPU 100, pivot 중앙). 공격 프레임과 같은 이유로 기본 좀비(EnemyUnit,
+    // MonsterId 200001)에만 적용한다 - 다른 몬스터는 규격(소형~초대형)마다 픽셀 크기가 달라
+    // 이 프레임을 그대로 쓰면 몸 크기가 잠깐 바뀌어 보인다.
+    private static Sprite[] zombie_move_frames_cache;
+
+    private static Sprite[] ZombieMoveFrames
+    {
+        get
+        {
+            if (zombie_move_frames_cache == null)
+            {
+                Sprite[] loaded = Resources.LoadAll<Sprite>("ZombieMove");
+                System.Array.Sort(loaded, (a, b) => string.CompareOrdinal(a.name, b.name));
+                zombie_move_frames_cache = loaded;
+            }
+            return zombie_move_frames_cache;
+        }
+    }
+
+    [Tooltip("좀비 전용 이동(걷기) 모션 재생 속도(초당 프레임 수). 8프레임이라 8이면 1초에 한 바퀴 순환한다")]
+    [SerializeField] private float walkFrameFps = 6f;
+
+    private float walk_frame_phase;
+
+    /// <summary>
+    /// 기본 좀비가 이동 중일 때 <see cref="ZombieMoveFrames"/>를 순환 재생하고, 멈추거나
+    /// 공격 모션이 시작되면 원래 정지 스프라이트로 되돌린다. 공격 프레임(<see cref="PlayAttackFrames"/>)이
+    /// 이미 body_sprite_renderer.sprite를 직접 다루고 있는 동안(IsAttacking)에는 건드리지 않는다 -
+    /// 서로 다른 시점에만 소유권을 넘겨받으므로 매 프레임 충돌하지 않는다.
+    /// </summary>
+    private void UpdateWalkAnimation()
+    {
+        if (!CanPlayZombieMoveFrames())
+        {
+            walk_frame_phase = 0f;
+            return;
+        }
+
+        Sprite[] frames = ZombieMoveFrames;
+        Vector2 planar_velocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y);
+        bool is_moving = planar_velocity.sqrMagnitude > (FacingVelocityThreshold * FacingVelocityThreshold);
+
+        if (!is_moving)
+        {
+            walk_frame_phase = 0f;
+            if (body_sprite_renderer.sprite != original_body_sprite) body_sprite_renderer.sprite = original_body_sprite;
+            return;
+        }
+
+        walk_frame_phase += Time.deltaTime * walkFrameFps;
+        int frame_index = Mathf.FloorToInt(walk_frame_phase) % frames.Length;
+        body_sprite_renderer.sprite = frames[frame_index];
+    }
+
+    /// <summary>좀비 전용 이동 프레임이 다른 EnemyUnit 파생형이나 Player 렌더러에 적용되지
+    /// 않도록 <see cref="CanPlayZombieAttackFrames"/>와 동일한 조건에 공격 중이 아닐 것을 더한다.</summary>
+    private bool CanPlayZombieMoveFrames()
+    {
+        return !IsAttacking && !IsDead && CanPlayZombieAttackFrames() && ZombieMoveFrames.Length > 0;
     }
 
     // monster_atsp(공격속도) 쿨다운에 맞춰 공격을 시작한다.
@@ -566,7 +642,7 @@ public class EnemyUnit : MonoBehaviour
         }
 
         Vector3 move_dir = seek + separation;
-        Vector3 move_velocity = move_dir.sqrMagnitude > 0.0001f ? move_dir.normalized * MoveSpeed : Vector3.zero;
+        Vector3 move_velocity = move_dir.sqrMagnitude > 0.0001f ? move_dir.normalized * (MoveSpeed * aura_slow_multiplier) : Vector3.zero;
 
         // 넉백 속도를 시간에 따라 줄이면서 이동 속도에 더한다(덮어쓰지 않는다 - ApplyKnockback 주석 참고)
         knockback_velocity = Vector3.MoveTowards(knockback_velocity, Vector3.zero, KnockbackDecay * Time.fixedDeltaTime);
@@ -582,16 +658,21 @@ public class EnemyUnit : MonoBehaviour
 
     /// <summary>
     /// 일반 추적·돌진·도주·넉백을 모두 포함한 최종 Rigidbody 이동 방향으로 스프라이트를 뒤집는다.
-    /// 원본 이미지는 오른쪽을 향한 상태로 취급하며, 거의 정지했을 때는 마지막 방향을 유지한다.
+    /// 원본 이미지(Enemy_zombie_S 등)는 팔을 <b>왼쪽</b>으로 뻗은 상태로 그려져 있으므로, 왼쪽이
+    /// 기본(flipX=false)이고 오른쪽으로 이동할 때만 뒤집어야 한다. 거의 정지했을 때는 마지막
+    /// 방향을 유지한다.
+    /// (2026-08-12 사용자 지적 "좀비 이동 방향이 바라보는 반대로 적용됨" - 부호가 반대로
+    /// 들어가 있어 오른쪽으로 이동할 때 왼쪽을 보고, 왼쪽으로 이동할 때 오른쪽을 보고 있었다.)
     /// </summary>
     protected virtual void LateUpdate()
     {
         if (body_sprite_renderer == null || rb == null) return;
 
         float horizontal_velocity = rb.linearVelocity.x;
-        if (Mathf.Abs(horizontal_velocity) < FacingVelocityThreshold) return;
+        if (Mathf.Abs(horizontal_velocity) >= FacingVelocityThreshold)
+            body_sprite_renderer.flipX = horizontal_velocity > 0f;
 
-        body_sprite_renderer.flipX = horizontal_velocity < 0f;
+        UpdateWalkAnimation();
     }
 
     /// <summary>
@@ -812,6 +893,7 @@ public class EnemyUnit : MonoBehaviour
         }
 
         GrantKillRewards();
+        OnKilledByPlayer?.Invoke(this);
 
         Destroy(gameObject);
     }

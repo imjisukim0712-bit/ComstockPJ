@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -28,9 +29,15 @@ public class PlayerRobotController : MonoBehaviour
     /// 몸과 무기가 같이 구르는 것처럼 보이게 한다(PlayerShootManager가 읽음).</summary>
     public float DashSpinDegrees { get; private set; }
 
+    /// <summary>디스크 기획서(2026-08-12)의 처치 시/조건부/1회성 효과를 실행하는 컴포넌트.
+    /// HitFlash와 같은 방식으로 Awake에서 자동으로 붙는다.</summary>
+    public DiscEffectRuntime DiscEffects { get; private set; }
+
     [Header("구르기 (Space) - 전부 밸런스 미확정 임시값")]
     [Tooltip("한 번 구를 때 이동하는 거리(유닛)")]
-    [SerializeField] private float dashDistance = 5f;
+    // 2026-08-12 사용자 지적 "PC 구르기 거리가 너무 김" - 이 값(5)은 2026-08-10 이미지 1/2 축소
+    // 이전(몸이 지금의 2배였을 때) 튜닝된 값이라 몸 크기 대비 과도해졌다. 5 → 2.5.
+    [SerializeField] private float dashDistance = 2.5f;
     [Tooltip("구르기가 지속되는 시간(초). 이 시간 동안 무적이다")]
     [SerializeField] private float dashDuration = 0.28f;
     [Tooltip("구르기 재사용 대기시간(초)")]
@@ -83,6 +90,23 @@ public class PlayerRobotController : MonoBehaviour
     private float dashTimeLeft;
     private float dashCooldownLeft;
 
+    // ── 디스크 기획서(2026-08-12) 관련 상태 ──────────────────────────
+    // 시간제 임시 스탯 보너스(광분 바이러스/교향곡:파도/공명의 소리/마지막 발악). RunState의
+    // 영구 보너스 체계와 분리해 여기서 직접 만료시각까지만 유지한다 - 몇 초짜리 버프 때문에
+    // RunState.NotifyChanged를 계속 유발하며 전체 스탯을 재계산하지 않아도 되게 하려는 목적.
+    private readonly List<(StatType stat, float amount, float expireTime)> tempStatBonuses = new List<(StatType, float, float)>();
+
+    // "위장 디스크" - 공격 중이 아닐 때만 붙는 이동속도 보너스. DiscEffectRuntime이 매 프레임
+    // 최신값으로 덮어쓴다(조건이 사라지면 즉시 0으로 돌아와야 하므로 만료시각 방식을 쓰지 않는다).
+    private float conditionalMoveSpeedBonus;
+
+    // "에너지 베리어 디스크" - 회복되지 않는 여분 체력. 웨이브가 시작될 때마다 가득 채워진다.
+    private int shieldMaxHp;
+    private int shieldHp;
+
+    // "마지막 발악 디스크" - 발동 중 무적 종료 시각(0이면 비활성).
+    private float lastStandInvulnUntil;
+
     // 정비 화면에서 필드를 초기화할 때 되돌아갈 시작 위치(Awake 시점의 위치).
     private Vector3 startPosition;
 
@@ -130,6 +154,9 @@ public class PlayerRobotController : MonoBehaviour
         // HitFlash는 첫 피격 때 대상 렌더러를 다시 수집한다(HitFlash.Play() 참고).
         hitFlash = GetComponent<HitFlash>();
         if (hitFlash == null) hitFlash = gameObject.AddComponent<HitFlash>();
+
+        DiscEffects = GetComponent<DiscEffectRuntime>();
+        if (DiscEffects == null) DiscEffects = gameObject.AddComponent<DiscEffectRuntime>();
 
         rb.isKinematic = false; // 물리 충돌이 필요하므로 false로
         rb.useGravity = false;
@@ -210,23 +237,82 @@ public class PlayerRobotController : MonoBehaviour
     /// 적의 공격력(enemyAtk)을 받아 피격 처리한다.
     /// 1) robot_avoid(회피 확률) 판정: 0~100 랜덤값이 회피 확률 이하면 데미지 계산 자체를 하지 않는다.
     /// 2) 회피 실패 시 받는 데미지 = 적의 공격력 - robot_def(방어력) (0 미만으로는 내려가지 않음)
+    /// 3) "에너지 베리어" 등 실드가 있으면 먼저 실드부터 깎인다.
+    /// 4) 이 데미지로 체력이 0 이하가 되는 순간 "마지막 발악" 디스크가 남아있으면 대신 발동한다.
     /// 체력이 0 이하가 되면 1회차 게임오버 처리를 한다.
     /// </summary>
     public void TakeDamage(int enemyAtk)
     {
         if (IsDead) return;
         if (IsDashing) return; // 구르기 중에는 무적 - 회피 판정조차 하지 않는다
+        if (Time.time < lastStandInvulnUntil) return; // 마지막 발악 무적 구간
 
+        float effective_avoid = Avoid + GetTempStatBonus(StatType.Avoid);
         float avoid_roll = Random.Range(0f, 100f);
-        if (avoid_roll <= Avoid) return; // 회피 성공 - 데미지 계산식 자체가 발동하지 않음
+        if (avoid_roll <= effective_avoid) return; // 회피 성공 - 데미지 계산식 자체가 발동하지 않음
 
-        int dmg = Mathf.Max(0, enemyAtk - Def);
-        CurrentHp = Mathf.Max(0, CurrentHp - dmg);
+        float effective_def = Def + GetTempStatBonus(StatType.Def);
+        int dmg = Mathf.Max(0, enemyAtk - Mathf.RoundToInt(effective_def));
+
+        if (shieldHp > 0)
+        {
+            int absorbed = Mathf.Min(shieldHp, dmg);
+            shieldHp -= absorbed;
+            dmg -= absorbed;
+        }
+
+        int new_hp = CurrentHp - dmg;
+
+        if (new_hp <= 0 && DiscEffects != null && DiscEffects.TryTriggerLastStand(out float speedBonusRatio, out float invulnDuration))
+        {
+            CurrentHp = 1;
+            lastStandInvulnUntil = Time.time + invulnDuration;
+            ApplyTempStatBonus(StatType.MoveSpeed, MoveSpeed * speedBonusRatio, invulnDuration);
+            if (hitFlash != null) hitFlash.Play();
+            return;
+        }
+
+        CurrentHp = Mathf.Max(0, new_hp);
 
         if (hitFlash != null) hitFlash.Play(); // 피격 시 0.25초 흰색
 
         if (CurrentHp <= 0) Die();
     }
+
+    /// <summary>디스크(포근한 치유/이끼 낀 등)의 처치·주기 회복 효과가 호출한다. 최대 체력을 넘지 않는다.</summary>
+    public void Heal(int amount)
+    {
+        if (IsDead || amount <= 0) return;
+        CurrentHp = Mathf.Min(MaxHp, CurrentHp + amount);
+    }
+
+    /// <summary>duration초 동안 stat에 amount를 더한다(같은 스탯에 여러 개가 겹치면 합산된다).
+    /// 광분 바이러스/교향곡:파도/공명의 소리/마지막 발악 등 시간제 디스크 효과가 사용한다.</summary>
+    public void ApplyTempStatBonus(StatType stat, float amount, float duration)
+    {
+        tempStatBonuses.Add((stat, amount, Time.time + duration));
+    }
+
+    /// <summary>stat에 현재 유효한 임시 보너스 합계. 만료된 항목은 조회하면서 함께 정리한다.</summary>
+    public float GetTempStatBonus(StatType stat)
+    {
+        float total = 0f;
+        for (int i = tempStatBonuses.Count - 1; i >= 0; i--)
+        {
+            if (Time.time >= tempStatBonuses[i].expireTime) { tempStatBonuses.RemoveAt(i); continue; }
+            if (tempStatBonuses[i].stat == stat) total += tempStatBonuses[i].amount;
+        }
+        return total;
+    }
+
+    /// <summary>"위장 디스크" 전용 - DiscEffectRuntime이 매 프레임 최신값으로 덮어쓴다.</summary>
+    public void SetConditionalMoveSpeedBonus(float amount) => conditionalMoveSpeedBonus = amount;
+
+    /// <summary>"에너지 베리어 디스크" 전용 - 웨이브 시작마다 DiscEffectRuntime이 상한을 다시 설정한다.</summary>
+    public void SetShieldMaxHp(int amount) => shieldMaxHp = Mathf.Max(0, amount);
+
+    /// <summary>실드를 상한까지 가득 채운다(웨이브 시작 시 호출).</summary>
+    public void RefillShield() => shieldHp = shieldMaxHp;
 
     private void Die()
     {
@@ -381,7 +467,10 @@ public class PlayerRobotController : MonoBehaviour
         }
         else
         {
-            rb.linearVelocity = moveInput * MoveSpeed; // MovePosition 대신 이걸로 교체
+            // 디스크 기획서(2026-08-12) - 광분 바이러스/마지막 발악(시간제) + 위장(조건부, 매 프레임 갱신)의
+            // 이동속도 보너스를 함께 반영한다.
+            float effective_move_speed = MoveSpeed + GetTempStatBonus(StatType.MoveSpeed) + conditionalMoveSpeedBonus;
+            rb.linearVelocity = moveInput * effective_move_speed; // MovePosition 대신 이걸로 교체
         }
 
         PushOverlappingEnemies();
