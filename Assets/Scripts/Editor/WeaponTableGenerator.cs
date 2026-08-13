@@ -34,8 +34,14 @@ public static class WeaponTableGenerator
     /// </summary>
     private const float PowerPerGrade = 1.15f;
 
-    /// <summary>등급별 가격 배율. ShopCatalog.GradeSetting.priceMultiplier와 같은 값을 쓴다.</summary>
-    private static readonly float[] PriceMultipliers = { 1.0f, 1.8f, 3.0f, 5.0f, 8.0f };
+    /// <summary>
+    /// 등급별 가격 배율. ShopCatalog.GradeSetting.priceMultiplier와 같은 값을 쓴다.
+    ///
+    /// 2026-08-13 사용자 요청("고등급 아이템 가격이 급격하게 비싸짐 → 등급마다 25%씩 증가")으로
+    /// 1 / 1.8 / 3 / 5 / 8 (전설이 일반의 8배)에서 <b>1.25^등급</b>으로 완만하게 바꿨다.
+    /// 전설은 일반의 2.44배다.
+    /// </summary>
+    private static readonly float[] PriceMultipliers = { 1.0f, 1.25f, 1.5625f, 1.953125f, 2.44140625f };
 
     // 회전 속도 5단계(도/초) - 기획 문서의 "매우낮음~매우높음" 표현을 수치로 옮긴 것
     private const float RotVeryLow = 180f;
@@ -221,38 +227,47 @@ public static class WeaponTableGenerator
         },
 
         // ===== 근접 3종 (이미지가 방향별로 없어 좌우 공용) =====
-        // range/detect는 ÷100 환산에서 제외한다 - 화면이 아니라 "적 몸통에 닿는 거리" 기준 값이라
-        // 절반으로 줄이면 좀비 공격 사거리(1.6유닛)보다 짧아져 일방적으로 맞기만 한다(위 주석 참고).
+        //
+        // <b>2026-08-13 근접 판정 전면 교체</b>: 사용자 리포트("근접무기는 코앞에서 휘두르는데
+        // 맵 전체의 좀비가 맞는다")로 range 4.95~5.85(화면 세로 반경 5.4에 맞먹는 값)가 그대로
+        // 타격 반경으로 쓰이고 있던 것을 확인했다. 이제 타격 판정은 <b>찌르는 칼 그림의 실제
+        // 월드 범위</b>로 하고(PlayerShootManager.ApplyMeleeHitAtBlade), 여기 range/detect는
+        // "이 거리에 적이 들어오면 찌르기를 시작한다"는 감지 거리 의미만 갖는다.
+        // 값은 실측으로 잡았다: 소켓이 플레이어 원점에서 수평 ±0.60유닛, 칼 그림 반경 0.28~0.40,
+        // 좀비 콜라이더 반폭 0.50이므로 찌르기 거리 0.9~1.05를 더하면 도달 거리가 약 1.1~2.3
+        // (무기를 낀 소켓이 적을 향한 쪽인지에 따라 다르다)이고, 그 중간값을 감지 거리로 잡았다.
+        // atsize는 근접에서 <b>찌르는 거리</b>로 재활용되는 값이라 함께 늘렸다(찔러 나가는 경로
+        // 전체가 판정 범위이므로 시각 동작과 도달 거리가 같이 커진다).
         // imgangle: 세 원본 그림 전부 칼끝이 우측이 아니라 좌상단(~140~145도)을 향하고 있어서
         // (PIL로 불투명 픽셀 주성분축을 실측: 생존단검 140.2도 / 마체테 145.0도 / 전기톱검 141.3도),
         // 그 반대값(-140~-145도)을 보정각으로 넣어야 조준 방향으로 칼끝이 정확히 향한다.
         // duration/atsize는 근접에서 원래 미사용 값이라, 여기서는 "찌르기 애니메이션 총 시간(초)"/
         // "찌르는 거리(유닛)"로 재활용한다(PlayerShootManager.StartMeleeThrustVisual 참고).
         new WeaponDef {
-            // 2026-08-12 사용자 요청으로 사거리(=감지거리) x1.5 추가 상향: 3.3→4.95
+            // 2026-08-13 range/detect를 실측 도달 거리로 교체(4.95 → 1.4), atsize(찌르는 거리) 0.5 → 0.9
             kind = 11, name = "생존단검", wclass = WeaponClass.Melee, wtype = WeaponType.Melee,
-            atk = 33f, atsp = 1.8f, range = 4.95f, detect = 4.95f, speed = 0f, rotspeed = RotVeryHigh,
-            atsize = 0.5f, aim = 0f, rebound = 0f, projectiles = 1,
+            atk = 33f, atsp = 1.8f, range = 1.4f, detect = 1.4f, speed = 0f, rotspeed = RotVeryHigh,
+            atsize = 0.9f, aim = 0f, rebound = 0f, projectiles = 1,
             pierce = 0, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 5f, duration = 0.16f,
             firemode = WeaponFireMode.MeleeSwing,
             imgscale = 0.5f, imgangle = -140f, weight = 1.0f, basePrice = 20,
             tanhwan = "", leftImg = "SurvivalKnife", rightImg = "SurvivalKnife"
         },
         new WeaponDef {
-            // 2026-08-12 사용자 요청으로 사거리(=감지거리) x1.5 추가 상향: 3.9→5.85
+            // 2026-08-13 range/detect를 실측 도달 거리로 교체(5.85 → 1.6), atsize(찌르는 거리) 0.65 → 1.05
             kind = 12, name = "전술 마체테", wclass = WeaponClass.Melee, wtype = WeaponType.Melee,
-            atk = 50f, atsp = 1.2f, range = 5.85f, detect = 5.85f, speed = 0f, rotspeed = RotVeryHigh,
-            atsize = 0.65f, aim = 0f, rebound = 0f, projectiles = 1,
+            atk = 50f, atsp = 1.2f, range = 1.6f, detect = 1.6f, speed = 0f, rotspeed = RotVeryHigh,
+            atsize = 1.05f, aim = 0f, rebound = 0f, projectiles = 1,
             pierce = 0, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 9f, duration = 0.22f,
             firemode = WeaponFireMode.MeleeSwing,
             imgscale = 0.65f, imgangle = -145f, weight = 1.5f, basePrice = 25,
             tanhwan = "", leftImg = "Machete", rightImg = "Machete"
         },
         new WeaponDef {
-            // 2026-08-12 사용자 요청으로 사거리(=감지거리) x1.5 추가 상향: 3.6→5.4
+            // 2026-08-13 range/detect를 실측 도달 거리로 교체(5.4 → 1.5), atsize(찌르는 거리) 0.55 → 0.95
             kind = 13, name = "전기톱검", wclass = WeaponClass.Melee, wtype = WeaponType.Melee,
-            atk = 20f, atsp = 3f, range = 5.4f, detect = 5.4f, speed = 0f, rotspeed = RotVeryHigh,
-            atsize = 0.55f, aim = 0f, rebound = 0f, projectiles = 1,
+            atk = 20f, atsp = 3f, range = 1.5f, detect = 1.5f, speed = 0f, rotspeed = RotVeryHigh,
+            atsize = 0.95f, aim = 0f, rebound = 0f, projectiles = 1,
             pierce = 0, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 5f, duration = 0.12f,
             firemode = WeaponFireMode.MeleeSwing,
             imgscale = 0.65f, imgangle = -141f, weight = 2.0f, basePrice = 30,

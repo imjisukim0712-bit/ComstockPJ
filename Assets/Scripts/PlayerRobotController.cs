@@ -257,8 +257,12 @@ public class PlayerRobotController : MonoBehaviour
         float avoid_roll = Random.Range(0f, 100f);
         if (avoid_roll <= effective_avoid) return; // 회피 성공 - 데미지 계산식 자체가 발동하지 않음
 
+        // 방어력이 적 공격력보다 높아도 <b>반드시 1은 들어간다</b>(2026-08-13 사용자 지정).
+        // 예전에는 하한이 0이라 방어력만 올려두면 특정 적에게 완전 무적이 됐다 - 방어력
+        // 업그레이드 몇 번으로 난이도가 통째로 무너지던 원인이다. 적 쪽 피해 계산
+        // (EnemyUnit.TakeDamage)은 원래부터 최소 1이었으므로 이제 양쪽 규칙이 같다.
         float effective_def = Def + GetTempStatBonus(StatType.Def);
-        int dmg = Mathf.Max(0, enemyAtk - Mathf.RoundToInt(effective_def));
+        int dmg = Mathf.Max(1, enemyAtk - Mathf.RoundToInt(effective_def));
 
         if (shieldHp > 0)
         {

@@ -88,7 +88,13 @@ public class EnemyUnit : MonoBehaviour
     // 처치 시 보상이 나올 확률(사용자 지정). 부품 상자 확률만 PartsCatalog 에셋에 있고
     // 경험치/골드는 데이터로 뺄 자리가 아직 없어 여기 상수로 둔다 - 밸런스 미확정 임시값.
     private const float ExpDropChance = 0.5f;   // 1/2
-    private const float GoldDropChance = 1f / 3f; // 1/3
+
+    // 2026-08-13 "한 웨이브에서 얻는 골드를 평균 25% 증가" 요청.
+    // <b>드랍 확률</b>에 곱한다 - 골드량(MaxHp / GoldPerMaxHp)은 정수라 1골드짜리 몬스터에
+    // 1.25를 곱해도 반올림에서 그대로 1이 되어 아무 변화가 없다. 확률에 곱하면 몬스터 체력과
+    // 무관하게 기대값이 정확히 25% 늘어난다.
+    private const float GoldRewardMultiplier = 1.25f;
+    private const float GoldDropChance = (1f / 3f) * GoldRewardMultiplier; // 1/3 → 0.4167
 
     public void Init(MonsterData data)
     {
@@ -920,7 +926,11 @@ public class EnemyUnit : MonoBehaviour
 
         if (Random.value < GoldDropChance)
         {
-            RewardPickupManager.SpawnReward(RewardType.Gold, Mathf.Max(1, MaxHp / GoldPerMaxHp), transform.position);
+            // 나눗셈을 <b>반올림</b>한다(2026-08-13). 정수 나눗셈(내림)이었을 때는 체력이 낮은
+            // 몬스터일수록 손실률이 커서(체력 110 → 1.83이 1로 깎여 -45%) 이번 체력 하향이
+            // 골드 수입까지 조용히 깎아내렸다.
+            int goldAmount = Mathf.Max(1, Mathf.RoundToInt(MaxHp / (float)GoldPerMaxHp));
+            RewardPickupManager.SpawnReward(RewardType.Gold, goldAmount, transform.position);
         }
 
         TryDropPartBox();

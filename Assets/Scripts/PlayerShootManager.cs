@@ -14,7 +14,9 @@ using UnityEngine;
 /// - weapon_atsp       : 공격속도 → 대기시간 = 1 / atsp 초.
 ///                       <b>대기시간은 발사 동작이 끝난 뒤부터 흐른다</b>(사용자 확정 사항).
 ///                       빔처럼 지속시간이 있는 무기는 (지속시간 + 대기시간)이 한 주기가 된다
-/// - weapon_range      : 탄이 날아가는 최대 거리. 빔은 빔 길이, 근접은 스윙 반경
+/// - weapon_range      : 탄이 날아가는 최대 거리. 빔은 빔 길이. <b>근접무기는 판정에 쓰이지 않는다</b>
+///                       (2026-08-13 - 판정은 찌르는 칼 그림의 실제 범위로 한다. 근접의 range/detect는
+///                        "이 거리에 적이 오면 찌르기를 시작한다"는 감지 거리 의미만 남았다)
 /// - weapon_detect     : 적을 감지해 발사를 시작하는 거리. 사거리와 <b>별개 필드</b>이며 사거리로 잘린다
 ///                       (둘 다 무기 소켓 파츠 등급의 배율이 곱해진다 - ModdingManager.GetWeaponSocketModifiers)
 /// - weapon_speed      : 투사체 이동 속도
@@ -120,12 +122,22 @@ public class PlayerShootManager : MonoBehaviour
         // 다음 발사가 가능해지는 시각. "발사 동작 종료 시각 + 대기시간"으로 계산한다.
         public float next_fire_time;
 
-        // 근접무기 "찌르기" 시각 연출 상태(StartMeleeThrustVisual/UpdateMeleeThrustVisual 참고).
-        // 데미지 판정(MeleeSwing.Execute)과는 분리된 순수 연출용 값이라 판정 로직에 영향을 주지 않는다.
+        // 근접무기 "찌르기" 상태(StartMeleeThrustVisual/UpdateMeleeThrustVisual 참고).
+        // 2026-08-13부터 데미지 판정도 이 연출에 묶여 있다 - 칼이 나가는 프레임마다 칼 그림이
+        // 차지한 범위를 판정하므로, 아래 값들은 연출용이 아니라 판정 파라미터이기도 하다.
         public bool melee_thrust_active;
         public float melee_thrust_start_time;
         public float melee_thrust_duration;
         public float melee_thrust_distance;
+
+        // 찌르는 동안 매 프레임 같은 값으로 판정하기 위해 발사 시점의 데미지 계산 결과를 들고 있는다.
+        public int melee_damage;
+        public float melee_def_ignore;
+        public float melee_knockback;
+
+        // 한 번의 찌르기에서 같은 적이 여러 프레임에 걸쳐 중복으로 맞지 않게 하는 집합.
+        // 찌르기를 새로 시작할 때마다 비운다.
+        public readonly HashSet<EnemyUnit> melee_hit_targets = new HashSet<EnemyUnit>();
         // 소켓의 "복귀 지점"을 부모 기준 로컬 좌표로 저장한다(2026-08-12 수정). 예전에는 월드
         // 좌표를 한 번 찍어서 그대로 썼는데, 찌르기가 재생되는 동안 캐릭터가 이동하면 그 월드
         // 좌표가 캐릭터를 따라가지 못해 "복귀 지점이 몸에서 떨어져 있는" 것처럼 보였다.
@@ -790,12 +802,13 @@ public class PlayerShootManager : MonoBehaviour
                 break;
 
             case WeaponFireMode.MeleeSwing:
-                // 근접은 투사체를 만들지 않고 총구 앞 부채꼴을 즉시 판정한다(데미지는 즉발 - 아래
-                // 찌르기 연출과는 별개다). 판정 자체는 그대로 두고 시각 연출만 추가한다.
-                MeleeSwing.Execute(fire_origin, aim_direction, GetTravelRange(weapon, slot_index), damage,
-                                   weapon.weapon_defignore, weapon.weapon_knockback);
+                // 근접은 투사체를 만들지 않는다. 예전에는 여기서 "총구 기준 weapon_range 반경"을
+                // 즉시 판정했는데, 근접 사거리가 4.95~5.85유닛(화면 세로 반경 5.4에 맞먹는다)이라
+                // 코앞을 찌르는 그림과 달리 화면 안 좀비가 전부 맞았다(2026-08-13 사용자 리포트).
+                // 이제는 찌르는 동작 자체가 판정이다 - StartMeleeThrustVisual이 판정 파라미터를
+                // 저장하고, UpdateMeleeThrustVisual이 칼이 나가는 프레임마다 칼 그림 범위를 판정한다.
                 attack_duration = Mathf.Max(0f, weapon.weapon_duration);
-                StartMeleeThrustVisual(slot_index, slot, weapon, aim_direction);
+                StartMeleeThrustVisual(slot_index, slot, weapon, aim_direction, damage);
                 break;
 
             default:
@@ -814,16 +827,15 @@ public class PlayerShootManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 근접무기가 "찌르듯이 한 번 튀어나갔다가 돌아오는" 연출을 시작한다(2026-08-12 신규).
-    /// 데미지 판정(MeleeSwing.Execute)은 이미 끝난 뒤이므로 이 연출은 순수 시각 효과다 -
-    /// weapon.weapon_range/판정과 무관하게, 무기 소켓(rig_point/muzzle_point)의 <b>월드 위치</b>를
-    /// 잠깐 조준 방향으로 밀었다가 되돌린다. 복귀 지점 자체는 부모(캐릭터) 기준 로컬 좌표로
-    /// 저장한다 - 월드 좌표를 그대로 저장하면 연출이 재생되는 동안 캐릭터가 이동해도 복귀 지점이
-    /// 따라가지 못해 소켓이 몸에서 떨어진 채로 복귀하는 버그가 있었다(2026-08-12 사용자 리포트).
-    /// 밀어내는 거리(offset)는 여전히 월드 단위로 더한다 - 로컬로 하면 부모 스케일/회전에 따라
-    /// 밀리는 거리가 달라지는 문제가 있다(기존 설계 의도 유지).
+    /// 근접무기가 "찌르듯이 한 번 튀어나갔다가 돌아오는" 동작을 시작한다(2026-08-12 신규,
+    /// 2026-08-13부터 데미지 판정도 이 동작이 담당).
+    /// 무기 소켓(rig_point/muzzle_point)의 <b>월드 위치</b>를 잠깐 조준 방향으로 밀었다가 되돌린다.
+    /// 복귀 지점 자체는 부모(캐릭터) 기준 로컬 좌표로 저장한다 - 월드 좌표를 그대로 저장하면
+    /// 동작이 재생되는 동안 캐릭터가 이동해도 복귀 지점이 따라가지 못해 소켓이 몸에서 떨어진 채로
+    /// 복귀하는 버그가 있었다(2026-08-12 사용자 리포트). 밀어내는 거리(offset)는 여전히 월드
+    /// 단위로 더한다 - 로컬로 하면 부모 스케일/회전에 따라 밀리는 거리가 달라진다.
     /// </summary>
-    private void StartMeleeThrustVisual(int slot_index, WeaponSlot slot, WeaponData weapon, Vector3 direction)
+    private void StartMeleeThrustVisual(int slot_index, WeaponSlot slot, WeaponData weapon, Vector3 direction, int damage)
     {
         Transform pivot = slot.rig_point != null ? slot.rig_point : slot.muzzle_point;
         if (pivot == null) return;
@@ -835,6 +847,11 @@ public class PlayerShootManager : MonoBehaviour
         state.melee_thrust_distance = weapon.ProjectileSize; // weapon_atsize를 찌르는 거리로 재활용
         state.melee_thrust_home_local = pivot.localPosition;
         state.melee_thrust_direction = direction;
+
+        state.melee_damage = damage;
+        state.melee_def_ignore = weapon.weapon_defignore;
+        state.melee_knockback = weapon.weapon_knockback;
+        state.melee_hit_targets.Clear(); // 이번 찌르기의 중복 방지 집합을 새로 시작
     }
 
     /// <summary>
@@ -865,6 +882,60 @@ public class PlayerShootManager : MonoBehaviour
 
         float progress = t < 0.5f ? t * 2f : (1f - t) * 2f; // 0→1→0
         pivot.position = home_world + state.melee_thrust_direction * (progress * state.melee_thrust_distance);
+
+        // 찔러 나가는 구간(0 → 최대)에서만 판정한다. 칼이 지나간 자리를 프레임마다 판정하므로
+        // 최대로 뻗은 지점뿐 아니라 <b>찌르는 경로 전체</b>가 타격 범위가 된다.
+        // 돌아오는 구간까지 판정하면 "찔렀다 빼는" 동작의 타격 시점이 흐려진다(중복 방지 집합이
+        // 있어 두 번 맞지는 않는다).
+        if (t < 0.5f) ApplyMeleeHitAtBlade(slot, pivot, home_world, state);
+    }
+
+    /// <summary>
+    /// 지금 이 프레임에 <b>칼 그림이 실제로 차지한 범위</b>를 판정한다(2026-08-13 신규).
+    ///
+    /// 판정 범위를 무기 데이터(weapon_range)에서 가져오지 않는 이유: 근접 3종의 사거리 값은
+    /// 4.95~5.85유닛으로 화면 세로 반경(5.4)에 맞먹어서, 코앞을 찌르는 그림과 판정이 5배 가까이
+    /// 어긋나 있었다. 스프라이트의 월드 bounds를 쓰면 스케일·회전·좌우 반전·소켓 위치가 전부
+    /// 자동으로 반영되므로 "보이는 것 = 맞는 것"이 구조적으로 보장된다.
+    /// (이 프로젝트에서 반복된 "시각 크기와 판정 크기가 서로 다른 상수를 쓰는" 버그 계열의
+    ///  해결 패턴을 그대로 따른다 - EnemyProjectile 콜라이더, 폭발 반경 사례 참고)
+    ///
+    /// <b>높이 보정</b>: 무기는 어깨 높이(플레이어 발밑 기준 y +0.79)에 그려지는데 적 히트박스는
+    /// 발밑에 있다(실측: 좀비 콜라이더는 자기 원점 기준 y -0.62~-0.02). 이 게임의 y축은 화면상
+    /// 높이와 진행 방향을 겸하기 때문에, 칼 그림의 월드 위치를 그대로 판정하면 수직으로 0.5유닛
+    /// 이상 떠서 <b>아무도 맞지 않는다</b>. 그래서 수평 위치는 칼을 그대로 따르고 판정 높이만
+    /// 소켓 높이만큼 내려 발밑 기준으로 맞춘다 - 좀비의 근접 공격 판정(원점 간 거리)이나
+    /// 자동 조준(적의 원점을 겨냥)과 같은 기준이다.
+    /// </summary>
+    private void ApplyMeleeHitAtBlade(WeaponSlot slot, Transform pivot, Vector3 socket_home_world, WeaponRuntimeState state)
+    {
+        Vector3 center;
+        float radius;
+
+        SpriteRenderer blade = slot.hand_sprite_renderer;
+        if (blade != null && blade.sprite != null)
+        {
+            Bounds bounds = blade.bounds; // 월드 AABB - 회전/스케일/부모 스케일이 모두 반영된 값
+            center = bounds.center;
+            radius = Mathf.Max(bounds.extents.x, bounds.extents.y);
+        }
+        else
+        {
+            // 무기 이미지를 못 찾는 예외 상황에서도 근접 공격이 조용히 무력화되지 않도록,
+            // 찌르는 거리의 절반을 반경으로 삼아 소켓 위치를 판정한다.
+            center = pivot.position;
+            radius = Mathf.Max(0.2f, state.melee_thrust_distance * 0.5f);
+        }
+
+        // 소켓이 몸 어디쯤에 달려 있는지(어깨 높이)만큼 판정 높이를 내린다 - 위 주석 참고
+        if (player_stats != null) center.y -= socket_home_world.y - player_stats.transform.position.y;
+
+        center.z = 0f; // X-Y 평면만 사용
+        if (radius <= 0.001f) return;
+
+        MeleeSwing.Execute(center, state.melee_thrust_direction, radius, state.melee_damage,
+                           state.melee_def_ignore, state.melee_knockback,
+                           MeleeSwing.FullAngleDegrees, state.melee_hit_targets);
     }
 
     /// <summary>

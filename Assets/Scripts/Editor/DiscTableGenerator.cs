@@ -17,7 +17,8 @@ using UnityEngine;
 ///
 /// <b>등급/가격</b>: 기획서에 디스크별 등급·가격이 명시돼 있지 않아(예시 스크린샷의 "에픽"
 /// 태그는 UI 목업일 뿐 전체 배정표가 아님), 효과의 강력함을 보고 5등급에 고르게 배분했다
-/// (밸런스 미확정 임시값 - 기존 8종 placeholder 데이터의 등급별 가격 20/35/55/80/120을 그대로 이어받음).
+/// (밸런스 미확정 임시값 - 가격은 등급으로만 정해지며 <see cref="GradePrices"/>에 모아 뒀다.
+///  2026-08-13 사용자 요청으로 20/35/55/80/120 → 20/25/31/39/49로 완만해졌다).
 ///
 /// <b>% 수치 환산</b>: 기획서의 "%"는 스탯이 이미 0~100 스케일인 회피율/치명타확률/치명타피해/
 /// 행운/골드획득량에는 그대로(%p) 적용했지만, 절대값 스탯인 이동속도(기준 2.5)·공격력(기준 3)은
@@ -30,12 +31,21 @@ public static class DiscTableGenerator
     private const string ShopCatalogPath = "Assets/Data/ShopCatalog.asset";
     private const int IdBase = 400000;
 
+    /// <summary>
+    /// 등급별 디스크 가격(일반→전설). 디스크 가격은 원래부터 등급으로만 정해져 있었으므로
+    /// (기존 20 / 35 / 55 / 80 / 120) 개별 정의에 두지 않고 이 표에서 가져온다.
+    ///
+    /// 2026-08-13 사용자 요청("등급마다 가격이 25%씩 증가")으로 일반 20에 1.25^등급을 곱한
+    /// 값으로 교체했다 - 전설이 일반의 6배에서 <b>2.44배</b>로 완만해진다.
+    /// 무기 쪽 등급 배율(WeaponTableGenerator.PriceMultipliers)과 같은 규칙이다.
+    /// </summary>
+    private static readonly int[] GradePrices = { 20, 25, 31, 39, 49 };
+
     private struct DiscDef
     {
         public int num;              // 파일명 번호(디스크01~21) = ID 하위 2자리
         public string name;
         public ItemGrade grade;
-        public int price;
         public DiscEffectType effectType;
         public string description;
 
@@ -56,80 +66,80 @@ public static class DiscTableGenerator
     private static readonly DiscDef[] Defs =
     {
         new DiscDef {
-            num = 1, name = "네잎클로버 디스크", grade = ItemGrade.Normal, price = 20,
+            num = 1, name = "네잎클로버 디스크", grade = ItemGrade.Normal,
             effectType = DiscEffectType.StatModifier,
             description = "행운이 7% 증가합니다.",
             statA = StatType.Luck, amountA = 7f
         },
         new DiscDef {
-            num = 2, name = "염동력 디스크", grade = ItemGrade.Unique, price = 80,
+            num = 2, name = "염동력 디스크", grade = ItemGrade.Unique,
             effectType = DiscEffectType.CritChancePerDisc,
             description = "착용한 디스크의 수만큼 치명타 확률이 3% 증가합니다.",
             amountA = 3f
         },
         new DiscDef {
-            num = 3, name = "777 디스크", grade = ItemGrade.Unique, price = 80,
+            num = 3, name = "777 디스크", grade = ItemGrade.Unique,
             effectType = DiscEffectType.OnAttackChanceBonusDamage,
             description = "공격 시 7%의 확률로 데미지가 77% 증가합니다.",
             chance01 = 0.07f, multiplier = 0.77f
         },
         new DiscDef {
-            num = 4, name = "마지막 발악 디스크", grade = ItemGrade.Legendary, price = 120,
+            num = 4, name = "마지막 발악 디스크", grade = ItemGrade.Legendary,
             effectType = DiscEffectType.LastStand,
             description = "체력이 1 이하로 떨어지면 3초간 체력을 1로 고정하고 무적 상태가 되며 이동속도가 100% 증가합니다 (제한 1회).",
             amountA = 1.0f, duration = 3f, maxUses = 1
         },
         new DiscDef {
-            num = 5, name = "에너지 베리어 디스크", grade = ItemGrade.Legendary, price = 120,
+            num = 5, name = "에너지 베리어 디스크", grade = ItemGrade.Legendary,
             effectType = DiscEffectType.WaveShieldMaxHp,
             description = "회복되지 않는 최대 체력 15가 주어집니다 (웨이브마다 초기화).",
             flatValue = 15f
         },
         new DiscDef {
-            num = 6, name = "포근한 치유 디스크", grade = ItemGrade.Normal, price = 20,
+            num = 6, name = "포근한 치유 디스크", grade = ItemGrade.Normal,
             effectType = DiscEffectType.OnKillHeal,
             description = "적을 처치하면 HP를 1 회복합니다.",
             flatValue = 1f
         },
         new DiscDef {
-            num = 7, name = "교향곡: 암석 디스크", grade = ItemGrade.Rare, price = 35,
+            num = 7, name = "교향곡: 암석 디스크", grade = ItemGrade.Rare,
             effectType = DiscEffectType.OnKillStackStat,
             description = "적을 처치하면 방어력이 0.1 증가합니다 (최대 5).",
             statA = StatType.Def, amountA = 0.1f, cap = 5f
         },
         new DiscDef {
-            num = 8, name = "나무 뭐시기 디스크", grade = ItemGrade.Normal, price = 20,
+            num = 8, name = "나무 뭐시기 디스크", grade = ItemGrade.Normal,
             effectType = DiscEffectType.StatModifier,
             description = "이동속도 5% 감소, 체력 30 증가.",
             statA = StatType.MaxHp, amountA = 30f,
             statB = StatType.MoveSpeed, amountB = -0.125f // 로봇 기준 이동속도 2.5의 5%
         },
         new DiscDef {
-            num = 9, name = "이끼 낀 디스크", grade = ItemGrade.Epic, price = 55,
+            num = 9, name = "이끼 낀 디스크", grade = ItemGrade.Epic,
             effectType = DiscEffectType.PeriodicHeal,
             description = "5초마다 HP가 2만큼 회복됩니다.",
             interval = 5f, flatValue = 2f
         },
         new DiscDef {
-            num = 10, name = "교향곡: 화염 디스크", grade = ItemGrade.Epic, price = 55,
+            num = 10, name = "교향곡: 화염 디스크", grade = ItemGrade.Epic,
             effectType = DiscEffectType.OnKillStackStat,
             description = "적을 처치하면 공격력이 0.1 증가합니다 (최대 5).",
             statA = StatType.Atk, amountA = 0.1f, cap = 5f
         },
         new DiscDef {
-            num = 11, name = "금화의 잔향 디스크", grade = ItemGrade.Epic, price = 55,
+            num = 11, name = "금화의 잔향 디스크", grade = ItemGrade.Epic,
             effectType = DiscEffectType.StatModifier,
             description = "획득하는 골드가 10% 증가합니다.",
             statA = StatType.GoldGain, amountA = 10f
         },
         new DiscDef {
-            num = 12, name = "바람 소리 디스크", grade = ItemGrade.Normal, price = 20,
+            num = 12, name = "바람 소리 디스크", grade = ItemGrade.Normal,
             effectType = DiscEffectType.OnKillStackStat,
             description = "적을 처치하면 이동속도가 0.1% 증가합니다 (최대 5%).",
             statA = StatType.MoveSpeed, amountA = 0.0025f, cap = 0.125f // 로봇 기준 이동속도 2.5의 0.1%/5%
         },
         new DiscDef {
-            num = 13, name = "결정의 마찰음 디스크", grade = ItemGrade.Unique, price = 80,
+            num = 13, name = "결정의 마찰음 디스크", grade = ItemGrade.Unique,
             effectType = DiscEffectType.StatModifier,
             description = "공격력이 15% 감소합니다. 치명타 확률이 5% 증가하고, 치명타 데미지가 15% 증가합니다.",
             statA = StatType.Atk, amountA = -0.45f, // 로봇 기준 공격력 3의 15%
@@ -137,49 +147,49 @@ public static class DiscTableGenerator
             statC = StatType.CritDamage, amountC = 0.15f
         },
         new DiscDef {
-            num = 14, name = "위장 디스크", grade = ItemGrade.Rare, price = 35,
+            num = 14, name = "위장 디스크", grade = ItemGrade.Rare,
             effectType = DiscEffectType.MoveSpeedWhenNotAttacking,
             description = "적을 공격하고 있지 않을 경우 이동속도 20% 증가.",
             amountA = 0.5f // 로봇 기준 이동속도 2.5의 20%
         },
         new DiscDef {
-            num = 15, name = "금속음 디스크", grade = ItemGrade.Rare, price = 35,
+            num = 15, name = "금속음 디스크", grade = ItemGrade.Rare,
             effectType = DiscEffectType.OnKillStackStat,
             description = "적을 처치하면 최대 체력이 1 증가합니다 (최대 10).",
             statA = StatType.MaxHp, amountA = 1f, cap = 10f
         },
         new DiscDef {
-            num = 16, name = "은하수 디스크", grade = ItemGrade.Rare, price = 35,
+            num = 16, name = "은하수 디스크", grade = ItemGrade.Rare,
             effectType = DiscEffectType.SkillCooldownReduction,
             description = "스킬 쿨타임이 15% 감소합니다.",
             amountA = 15f
         },
         new DiscDef {
-            num = 17, name = "공명의 소리 디스크", grade = ItemGrade.Epic, price = 55,
+            num = 17, name = "공명의 소리 디스크", grade = ItemGrade.Epic,
             effectType = DiscEffectType.OscillatingAtkDef,
             description = "10초마다 공격력 +10, 방어력 -5 효과와 공격력 -10, 방어력 +5 효과가 번갈아 적용됩니다.",
             amountA = 10f, amountB = 5f, interval = 10f
         },
         new DiscDef {
-            num = 18, name = "광분 바이러스 디스크", grade = ItemGrade.Epic, price = 55,
+            num = 18, name = "광분 바이러스 디스크", grade = ItemGrade.Epic,
             effectType = DiscEffectType.OnKillTempMoveAtkSpeed,
             description = "적을 처치하면 3초간 이동속도와 공격속도가 2% 증가합니다.",
             amountA = 0.05f, amountB = 0.02f, duration = 3f // 이동속도는 로봇 기준 2.5의 2%, 공격속도는 배율 증가분
         },
         new DiscDef {
-            num = 19, name = "교향곡: 번개 디스크", grade = ItemGrade.Unique, price = 80,
+            num = 19, name = "교향곡: 번개 디스크", grade = ItemGrade.Unique,
             effectType = DiscEffectType.OnKillChainLightning,
             description = "적을 처치하면 다른 적 하나에게 번개가 튀어 20의 피해를 입힙니다.",
             flatValue = 20f
         },
         new DiscDef {
-            num = 20, name = "물 빠지는 소리 디스크", grade = ItemGrade.Rare, price = 35,
+            num = 20, name = "물 빠지는 소리 디스크", grade = ItemGrade.Rare,
             effectType = DiscEffectType.PassiveAuraSlow,
             description = "회피율 +2%. 가까이 있는 적의 이동속도 2% 감소.",
             statA = StatType.Avoid, amountA = 2f, amountB = 2f, radius = 3f
         },
         new DiscDef {
-            num = 21, name = "교향곡: 파도 디스크", grade = ItemGrade.Epic, price = 55,
+            num = 21, name = "교향곡: 파도 디스크", grade = ItemGrade.Epic,
             effectType = DiscEffectType.OnKillTempDefDodge,
             description = "적을 처치하면 3초간 방어력과 회피율이 3% 증가합니다.",
             amountA = 0.15f, amountB = 3f, duration = 3f // 방어력은 로봇 기준 5의 3%, 회피율은 %p 그대로
@@ -204,7 +214,7 @@ public static class DiscTableGenerator
                 discId = IdBase + def.num,
                 discName = def.name,
                 grade = def.grade,
-                price = def.price,
+                price = GradePrices[(int)def.grade],
                 iconName = $"Discs/디스크{def.num:00}",
                 effectDescription = def.description,
                 effectType = def.effectType,

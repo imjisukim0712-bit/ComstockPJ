@@ -3179,15 +3179,16 @@ MonoBehaviour:
   spawnMonsterIds: 410d0300
   unlockSchedule:
   - monsterId: 200003
-    unlockWave: 3
+    unlockWave: 6
   - monsterId: 200002
-    unlockWave: 4
+    unlockWave: 7
   - monsterId: 200004
-    unlockWave: 5
-  - monsterId: 200005
     unlockWave: 8
-  - monsterId: 200006
+  - monsterId: 200005
     unlockWave: 10
+  - monsterId: 200006
+    unlockWave: 12
+  statIncreasePerWave: 0.05
   spawnBatchSize: 2
   spawnInterval: 1
   spawnCenter: {fileID: 0}
@@ -7650,7 +7651,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 12.5
+  m_fontSize: 28
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -9379,7 +9380,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 12.5
+  m_fontSize: 32
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -10029,7 +10030,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 12.5
+  m_fontSize: 32
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -13308,6 +13309,10 @@ MonoBehaviour:
   spawnIntervalDecayPerWave: 0.96
   minSpawnInterval: 0.3
   maxAliveIncreasePerWave: 4
+  easyWaveCount: 5
+  firstWaveIntervalMultiplier: 1.6
+  easyWaveMaxAliveScale: 0.5
+  wavesPerSpawnBatchIncrease: 5
   finalWaveNumber: 20
   bossPrefab: {fileID: 5875351990651437859, guid: 04ae1ca390c6c8643bc030bc19f02b7a, type: 3}
   bossSpawnDistance: 16
@@ -13345,9 +13350,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AiCoreManager
   upgradePool: {fileID: 11400000, guid: e0f51d991c80c0945a95b05215ef4d1f, type: 2}
-  coreMaxLevelPlaceholder: 20
-  expBase: 50
-  expPerLevel: 20
+  coreMaxLevelPlaceholder: 70
+  expBase: 4
+  expPerLevel: 2
 --- !u!114 &1656057953
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16900,7 +16905,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 11.1
+  m_fontSize: 29.8
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -17360,7 +17365,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 14.4
+  m_fontSize: 32
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1

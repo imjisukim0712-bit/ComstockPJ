@@ -20,155 +20,155 @@ MonoBehaviour:
     minWave: 1
   - grade: 1
     statMultiplier: 1.3
-    priceMultiplier: 1.8
+    priceMultiplier: 1.25
     weight: 26
     minWave: 1
   - grade: 2
     statMultiplier: 1.7
-    priceMultiplier: 3
+    priceMultiplier: 1.5625
     weight: 14
     minWave: 3
   - grade: 3
     statMultiplier: 2.2
-    priceMultiplier: 5
+    priceMultiplier: 1.953125
     weight: 7
     minWave: 5
   - grade: 4
     statMultiplier: 3
-    priceMultiplier: 8
+    priceMultiplier: 2.4414062
     weight: 3
     minWave: 7
   weaponEntries:
   - weaponId: 300101
     basePrice: 45
   - weaponId: 300102
-    basePrice: 81
+    basePrice: 56
   - weaponId: 300103
-    basePrice: 135
+    basePrice: 70
   - weaponId: 300104
-    basePrice: 225
+    basePrice: 88
   - weaponId: 300105
-    basePrice: 360
+    basePrice: 110
   - weaponId: 300201
     basePrice: 45
   - weaponId: 300202
-    basePrice: 81
+    basePrice: 56
   - weaponId: 300203
-    basePrice: 135
+    basePrice: 70
   - weaponId: 300204
-    basePrice: 225
+    basePrice: 88
   - weaponId: 300205
-    basePrice: 360
+    basePrice: 110
   - weaponId: 300301
     basePrice: 55
   - weaponId: 300302
-    basePrice: 99
+    basePrice: 69
   - weaponId: 300303
-    basePrice: 165
+    basePrice: 86
   - weaponId: 300304
-    basePrice: 275
+    basePrice: 107
   - weaponId: 300305
-    basePrice: 440
+    basePrice: 134
   - weaponId: 300401
     basePrice: 60
   - weaponId: 300402
-    basePrice: 108
+    basePrice: 75
   - weaponId: 300403
-    basePrice: 180
+    basePrice: 94
   - weaponId: 300404
-    basePrice: 300
+    basePrice: 117
   - weaponId: 300405
-    basePrice: 480
+    basePrice: 146
   - weaponId: 300501
     basePrice: 55
   - weaponId: 300502
-    basePrice: 99
+    basePrice: 69
   - weaponId: 300503
-    basePrice: 165
+    basePrice: 86
   - weaponId: 300504
-    basePrice: 275
+    basePrice: 107
   - weaponId: 300505
-    basePrice: 440
+    basePrice: 134
   - weaponId: 300601
     basePrice: 25
   - weaponId: 300602
-    basePrice: 45
+    basePrice: 31
   - weaponId: 300603
-    basePrice: 75
+    basePrice: 39
   - weaponId: 300604
-    basePrice: 125
+    basePrice: 49
   - weaponId: 300605
-    basePrice: 200
+    basePrice: 61
   - weaponId: 300701
     basePrice: 25
   - weaponId: 300702
-    basePrice: 45
+    basePrice: 31
   - weaponId: 300703
-    basePrice: 75
+    basePrice: 39
   - weaponId: 300704
-    basePrice: 125
+    basePrice: 49
   - weaponId: 300705
-    basePrice: 200
+    basePrice: 61
   - weaponId: 300801
     basePrice: 40
   - weaponId: 300802
-    basePrice: 72
+    basePrice: 50
   - weaponId: 300803
-    basePrice: 120
+    basePrice: 62
   - weaponId: 300804
-    basePrice: 200
+    basePrice: 78
   - weaponId: 300805
-    basePrice: 320
+    basePrice: 98
   - weaponId: 300901
     basePrice: 30
   - weaponId: 300902
-    basePrice: 54
+    basePrice: 38
   - weaponId: 300903
-    basePrice: 90
+    basePrice: 47
   - weaponId: 300904
-    basePrice: 150
+    basePrice: 59
   - weaponId: 300905
-    basePrice: 240
+    basePrice: 73
   - weaponId: 301001
     basePrice: 35
   - weaponId: 301002
-    basePrice: 63
+    basePrice: 44
   - weaponId: 301003
-    basePrice: 105
+    basePrice: 55
   - weaponId: 301004
-    basePrice: 175
+    basePrice: 68
   - weaponId: 301005
-    basePrice: 280
+    basePrice: 85
   - weaponId: 301101
     basePrice: 20
   - weaponId: 301102
-    basePrice: 36
+    basePrice: 25
   - weaponId: 301103
-    basePrice: 60
+    basePrice: 31
   - weaponId: 301104
-    basePrice: 100
+    basePrice: 39
   - weaponId: 301105
-    basePrice: 160
+    basePrice: 49
   - weaponId: 301201
     basePrice: 25
   - weaponId: 301202
-    basePrice: 45
+    basePrice: 31
   - weaponId: 301203
-    basePrice: 75
+    basePrice: 39
   - weaponId: 301204
-    basePrice: 125
+    basePrice: 49
   - weaponId: 301205
-    basePrice: 200
+    basePrice: 61
   - weaponId: 301301
     basePrice: 30
   - weaponId: 301302
-    basePrice: 54
+    basePrice: 38
   - weaponId: 301303
-    basePrice: 90
+    basePrice: 47
   - weaponId: 301304
-    basePrice: 150
+    basePrice: 59
   - weaponId: 301305
-    basePrice: 240
+    basePrice: 73
   discs:
   - discId: 400001
     discName: "\uB124\uC78E\uD074\uB85C\uBC84 \uB514\uC2A4\uD06C"
@@ -194,7 +194,7 @@ MonoBehaviour:
   - discId: 400002
     discName: "\uC5FC\uB3D9\uB825 \uB514\uC2A4\uD06C"
     grade: 3
-    price: 80
+    price: 39
     iconName: "Discs/\uB514\uC2A4\uD06C02"
     effectDescription: "\uCC29\uC6A9\uD55C \uB514\uC2A4\uD06C\uC758 \uC218\uB9CC\uD07C
       \uCE58\uBA85\uD0C0 \uD655\uB960\uC774 3% \uC99D\uAC00\uD569\uB2C8\uB2E4."
@@ -216,7 +216,7 @@ MonoBehaviour:
   - discId: 400003
     discName: "777 \uB514\uC2A4\uD06C"
     grade: 3
-    price: 80
+    price: 39
     iconName: "Discs/\uB514\uC2A4\uD06C03"
     effectDescription: "\uACF5\uACA9 \uC2DC 7%\uC758 \uD655\uB960\uB85C \uB370\uBBF8\uC9C0\uAC00
       77% \uC99D\uAC00\uD569\uB2C8\uB2E4."
@@ -238,7 +238,7 @@ MonoBehaviour:
   - discId: 400004
     discName: "\uB9C8\uC9C0\uB9C9 \uBC1C\uC545 \uB514\uC2A4\uD06C"
     grade: 4
-    price: 120
+    price: 49
     iconName: "Discs/\uB514\uC2A4\uD06C04"
     effectDescription: "\uCCB4\uB825\uC774 1 \uC774\uD558\uB85C \uB5A8\uC5B4\uC9C0\uBA74
       3\uCD08\uAC04 \uCCB4\uB825\uC744 1\uB85C \uACE0\uC815\uD558\uACE0 \uBB34\uC801
@@ -262,7 +262,7 @@ MonoBehaviour:
   - discId: 400005
     discName: "\uC5D0\uB108\uC9C0 \uBCA0\uB9AC\uC5B4 \uB514\uC2A4\uD06C"
     grade: 4
-    price: 120
+    price: 49
     iconName: "Discs/\uB514\uC2A4\uD06C05"
     effectDescription: "\uD68C\uBCF5\uB418\uC9C0 \uC54A\uB294 \uCD5C\uB300 \uCCB4\uB825
       15\uAC00 \uC8FC\uC5B4\uC9D1\uB2C8\uB2E4 (\uC6E8\uC774\uBE0C\uB9C8\uB2E4 \uCD08\uAE30\uD654)."
@@ -305,7 +305,7 @@ MonoBehaviour:
   - discId: 400007
     discName: "\uAD50\uD5A5\uACE1: \uC554\uC11D \uB514\uC2A4\uD06C"
     grade: 1
-    price: 35
+    price: 25
     iconName: "Discs/\uB514\uC2A4\uD06C07"
     effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 \uBC29\uC5B4\uB825\uC774
       0.1 \uC99D\uAC00\uD569\uB2C8\uB2E4 (\uCD5C\uB300 5)."
@@ -349,7 +349,7 @@ MonoBehaviour:
   - discId: 400009
     discName: "\uC774\uB07C \uB080 \uB514\uC2A4\uD06C"
     grade: 2
-    price: 55
+    price: 31
     iconName: "Discs/\uB514\uC2A4\uD06C09"
     effectDescription: "5\uCD08\uB9C8\uB2E4 HP\uAC00 2\uB9CC\uD07C \uD68C\uBCF5\uB429\uB2C8\uB2E4."
     effectType: 10
@@ -370,7 +370,7 @@ MonoBehaviour:
   - discId: 400010
     discName: "\uAD50\uD5A5\uACE1: \uD654\uC5FC \uB514\uC2A4\uD06C"
     grade: 2
-    price: 55
+    price: 31
     iconName: "Discs/\uB514\uC2A4\uD06C10"
     effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 \uACF5\uACA9\uB825\uC774
       0.1 \uC99D\uAC00\uD569\uB2C8\uB2E4 (\uCD5C\uB300 5)."
@@ -392,7 +392,7 @@ MonoBehaviour:
   - discId: 400011
     discName: "\uAE08\uD654\uC758 \uC794\uD5A5 \uB514\uC2A4\uD06C"
     grade: 2
-    price: 55
+    price: 31
     iconName: "Discs/\uB514\uC2A4\uD06C11"
     effectDescription: "\uD68D\uB4DD\uD558\uB294 \uACE8\uB4DC\uAC00 10% \uC99D\uAC00\uD569\uB2C8\uB2E4."
     effectType: 0
@@ -435,7 +435,7 @@ MonoBehaviour:
   - discId: 400013
     discName: "\uACB0\uC815\uC758 \uB9C8\uCC30\uC74C \uB514\uC2A4\uD06C"
     grade: 3
-    price: 80
+    price: 39
     iconName: "Discs/\uB514\uC2A4\uD06C13"
     effectDescription: "\uACF5\uACA9\uB825\uC774 15% \uAC10\uC18C\uD569\uB2C8\uB2E4.
       \uCE58\uBA85\uD0C0 \uD655\uB960\uC774 5% \uC99D\uAC00\uD558\uACE0, \uCE58\uBA85\uD0C0
@@ -458,7 +458,7 @@ MonoBehaviour:
   - discId: 400014
     discName: "\uC704\uC7A5 \uB514\uC2A4\uD06C"
     grade: 1
-    price: 35
+    price: 25
     iconName: "Discs/\uB514\uC2A4\uD06C14"
     effectDescription: "\uC801\uC744 \uACF5\uACA9\uD558\uACE0 \uC788\uC9C0 \uC54A\uC744
       \uACBD\uC6B0 \uC774\uB3D9\uC18D\uB3C4 20% \uC99D\uAC00."
@@ -480,7 +480,7 @@ MonoBehaviour:
   - discId: 400015
     discName: "\uAE08\uC18D\uC74C \uB514\uC2A4\uD06C"
     grade: 1
-    price: 35
+    price: 25
     iconName: "Discs/\uB514\uC2A4\uD06C15"
     effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 \uCD5C\uB300 \uCCB4\uB825\uC774
       1 \uC99D\uAC00\uD569\uB2C8\uB2E4 (\uCD5C\uB300 10)."
@@ -502,7 +502,7 @@ MonoBehaviour:
   - discId: 400016
     discName: "\uC740\uD558\uC218 \uB514\uC2A4\uD06C"
     grade: 1
-    price: 35
+    price: 25
     iconName: "Discs/\uB514\uC2A4\uD06C16"
     effectDescription: "\uC2A4\uD0AC \uCFE8\uD0C0\uC784\uC774 15% \uAC10\uC18C\uD569\uB2C8\uB2E4."
     effectType: 14
@@ -523,7 +523,7 @@ MonoBehaviour:
   - discId: 400017
     discName: "\uACF5\uBA85\uC758 \uC18C\uB9AC \uB514\uC2A4\uD06C"
     grade: 2
-    price: 55
+    price: 31
     iconName: "Discs/\uB514\uC2A4\uD06C17"
     effectDescription: "10\uCD08\uB9C8\uB2E4 \uACF5\uACA9\uB825 +10, \uBC29\uC5B4\uB825
       -5 \uD6A8\uACFC\uC640 \uACF5\uACA9\uB825 -10, \uBC29\uC5B4\uB825 +5 \uD6A8\uACFC\uAC00
@@ -546,7 +546,7 @@ MonoBehaviour:
   - discId: 400018
     discName: "\uAD11\uBD84 \uBC14\uC774\uB7EC\uC2A4 \uB514\uC2A4\uD06C"
     grade: 2
-    price: 55
+    price: 31
     iconName: "Discs/\uB514\uC2A4\uD06C18"
     effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 3\uCD08\uAC04 \uC774\uB3D9\uC18D\uB3C4\uC640
       \uACF5\uACA9\uC18D\uB3C4\uAC00 2% \uC99D\uAC00\uD569\uB2C8\uB2E4."
@@ -568,7 +568,7 @@ MonoBehaviour:
   - discId: 400019
     discName: "\uAD50\uD5A5\uACE1: \uBC88\uAC1C \uB514\uC2A4\uD06C"
     grade: 3
-    price: 80
+    price: 39
     iconName: "Discs/\uB514\uC2A4\uD06C19"
     effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 \uB2E4\uB978 \uC801
       \uD558\uB098\uC5D0\uAC8C \uBC88\uAC1C\uAC00 \uD280\uC5B4 20\uC758 \uD53C\uD574\uB97C
@@ -591,7 +591,7 @@ MonoBehaviour:
   - discId: 400020
     discName: "\uBB3C \uBE60\uC9C0\uB294 \uC18C\uB9AC \uB514\uC2A4\uD06C"
     grade: 1
-    price: 35
+    price: 25
     iconName: "Discs/\uB514\uC2A4\uD06C20"
     effectDescription: "\uD68C\uD53C\uC728 +2%. \uAC00\uAE4C\uC774 \uC788\uB294 \uC801\uC758
       \uC774\uB3D9\uC18D\uB3C4 2% \uAC10\uC18C."
@@ -613,7 +613,7 @@ MonoBehaviour:
   - discId: 400021
     discName: "\uAD50\uD5A5\uACE1: \uD30C\uB3C4 \uB514\uC2A4\uD06C"
     grade: 2
-    price: 55
+    price: 31
     iconName: "Discs/\uB514\uC2A4\uD06C21"
     effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 3\uCD08\uAC04 \uBC29\uC5B4\uB825\uACFC
       \uD68C\uD53C\uC728\uC774 3% \uC99D\uAC00\uD569\uB2C8\uB2E4."

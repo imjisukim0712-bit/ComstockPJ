@@ -14,34 +14,55 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AiCoreUpgradePool
   options:
   - displayName: "\uC0AC\uACA9\uC220 \uCD5C\uC801\uD654"
-    description: "\uACF5\uACA9\uB825 +2.5"
+    description: 
     statType: 1
-    amount: 2.5
+    amount: 0.6
   - displayName: "\uD0C0\uAC9F \uCD94\uC801 \uAE30\uC220"
-    description: "\uCE58\uBA85\uD0C0 \uD655\uB960 +5%"
+    description: 
     statType: 6
-    amount: 5
-  - displayName: "A* \uC54C\uACE0\uB9AC\uC998"
-    description: "\uC774\uB3D9\uC18D\uB3C4 +1.2"
-    statType: 3
     amount: 1.2
+  - displayName: "A* \uC54C\uACE0\uB9AC\uC998"
+    description: 
+    statType: 3
+    amount: 0.3
   - displayName: "\uB0C9\uAC01 \uC2DC\uC2A4\uD15C \uAC15\uD654"
-    description: "\uCCB4\uB825 +10"
+    description: 
     statType: 0
-    amount: 10
-  - displayName: "\uC7A5\uAC11\uD310 \uBCF4\uAC15"
-    description: "\uBC29\uC5B4\uB825 +2"
-    statType: 2
-    amount: 2
-  - displayName: "\uADE0\uD615 \uC870\uC815 \uC54C\uACE0\uB9AC\uC998"
-    description: "\uD68C\uD53C\uC728 +3%"
-    statType: 4
     amount: 3
+  - displayName: "\uC7A5\uAC11\uD310 \uBCF4\uAC15"
+    description: 
+    statType: 2
+    amount: 0.3
+  - displayName: "\uADE0\uD615 \uC870\uC815 \uC54C\uACE0\uB9AC\uC998"
+    description: 
+    statType: 4
+    amount: 0.9
   - displayName: "\uD589\uC6B4\uC758 \uD68C\uB85C"
-    description: "\uD589\uC6B4 +1"
+    description: 
     statType: 5
-    amount: 1
+    amount: 0.3
   - displayName: "\uCE58\uBA85\uD0C0 \uC99D\uD3ED\uAE30"
-    description: "\uCE58\uBA85\uD0C0 \uD53C\uD574 +10%"
+    description: 
     statType: 7
-    amount: 0.1
+    amount: 0.03
+  gradeSettings:
+  - grade: 0
+    amountMultiplier: 1
+    weight: 50
+    minWave: 1
+  - grade: 1
+    amountMultiplier: 1.6666666
+    weight: 26
+    minWave: 1
+  - grade: 2
+    amountMultiplier: 2.3333333
+    weight: 14
+    minWave: 3
+  - grade: 3
+    amountMultiplier: 3.3333333
+    weight: 7
+    minWave: 5
+  - grade: 4
+    amountMultiplier: 5
+    weight: 3
+    minWave: 7

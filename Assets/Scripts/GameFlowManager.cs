@@ -111,6 +111,13 @@ public class GameFlowManager : MonoBehaviour
         PlayerRobotController player = FindFirstObjectByType<PlayerRobotController>();
         if (player != null) player.Heal(player.MaxHp);
 
+        // 필드에 날아다니던 투사체는 여기서 <b>즉시</b> 전부 없앤다(2026-08-13 버그 수정).
+        // 웨이브가 끝나면 남은 적은 소멸하는데(WaveManager.EndWave) 그 적들이 이미 쏴 둔 투사체는
+        // 남아 있었다. timeScale=0으로 정지 화면에 들어가면 그 상태로 얼어 있다가 다음 웨이브가
+        // 시작되는 순간 그대로 날아와 플레이어를 때린다.
+        int clearedNow = ClearFieldProjectiles();
+        if (clearedNow > 0) Debug.Log($"웨이브 종료 - 필드에 남은 투사체 {clearedNow}개 정리");
+
         // 정비는 "전체 화면 UI + 인게임 완전 정지" 상태여야 한다(사용자 확정 사항).
         // 필드 정리를 먼저 하고 나서 시간을 멈춘다 - timeScale=0 상태에서 물리 이동을 시키면
         // Rigidbody가 그대로 반영되지 않을 수 있기 때문. 자석 연출이 여러 프레임에 걸쳐 재생돼야
@@ -187,13 +194,8 @@ public class GameFlowManager : MonoBehaviour
             if (pickup != null) pickup.CollectImmediately();
         }
 
-        int clearedProjectiles = 0;
-        foreach (Projectile projectile in FindObjectsByType<Projectile>(FindObjectsSortMode.None))
-        {
-            if (projectile == null) continue;
-            Destroy(projectile.gameObject);
-            clearedProjectiles++;
-        }
+        // 자석 연출이 끝나는 동안(0.35초) 늦게 사라진 적이 쏜 투사체가 새로 생겼을 수 있어 한 번 더 훑는다.
+        int clearedProjectiles = ClearFieldProjectiles();
 
         if (player != null) player.ReturnToStartPosition();
 
@@ -204,6 +206,43 @@ public class GameFlowManager : MonoBehaviour
         }
 
         EnterIntermissionScreens();
+    }
+
+    /// <summary>
+    /// 필드에 날아다니는 <b>모든 종류의</b> 투사체를 없앤다.
+    ///
+    /// 예전에는 플레이어가 쏘는 <see cref="Projectile"/>만 지웠고, <see cref="EnemyProjectile"/>
+    /// (스피터가 뱉는 탄)과 <see cref="BeamProjectile"/>(플라즈마캐논 빔)은 그대로 남아 있었다.
+    /// 그래서 "이전 웨이브의 투사체가 다음 웨이브에 남아있다"는 버그가 있었다(2026-08-13 수정).
+    /// 앞으로 투사체 종류를 추가하면 반드시 여기에도 등록해야 한다.
+    /// </summary>
+    /// <returns>정리한 투사체 개수(로그/검증용)</returns>
+    private int ClearFieldProjectiles()
+    {
+        int cleared = 0;
+
+        foreach (Projectile projectile in FindObjectsByType<Projectile>(FindObjectsSortMode.None))
+        {
+            if (projectile == null) continue;
+            Destroy(projectile.gameObject);
+            cleared++;
+        }
+
+        foreach (EnemyProjectile projectile in FindObjectsByType<EnemyProjectile>(FindObjectsSortMode.None))
+        {
+            if (projectile == null) continue;
+            Destroy(projectile.gameObject);
+            cleared++;
+        }
+
+        foreach (BeamProjectile beam in FindObjectsByType<BeamProjectile>(FindObjectsSortMode.None))
+        {
+            if (beam == null) continue;
+            Destroy(beam.gameObject);
+            cleared++;
+        }
+
+        return cleared;
     }
 
     /// <summary>
@@ -280,7 +319,7 @@ public class GameFlowManager : MonoBehaviour
         Button[] buttons = { option1Button, option2Button, option3Button };
         TextMeshProUGUI[] texts = { option1Text, option2Text, option3Text };
 
-        List<AiCoreUpgradePool.Option> choices = aiCoreManager.DrawChoices(buttons.Length);
+        List<AiCoreManager.UpgradeChoice> choices = aiCoreManager.DrawChoices(buttons.Length);
 
         for (int i = 0; i < buttons.Length; i++)
         {
@@ -291,10 +330,11 @@ public class GameFlowManager : MonoBehaviour
 
             if (i < choices.Count)
             {
-                AiCoreUpgradePool.Option option = choices[i];
-                if (texts[i] != null) texts[i].text = $"{option.displayName}\n{option.description}";
+                // 등급까지 확정된 카드다(2026-08-13) - 문구도 등급 색상 + 그 등급의 실제 증가량으로 만든다
+                AiCoreManager.UpgradeChoice choice = choices[i];
+                if (texts[i] != null) texts[i].text = choice.BuildLabel();
                 button.gameObject.SetActive(true);
-                button.onClick.AddListener(() => HandleUpgradeChosen(option));
+                button.onClick.AddListener(() => HandleUpgradeChosen(choice));
             }
             else
             {
@@ -305,9 +345,9 @@ public class GameFlowManager : MonoBehaviour
         if (aiCoreUpgradePanel != null) aiCoreUpgradePanel.SetActive(true);
     }
 
-    private void HandleUpgradeChosen(AiCoreUpgradePool.Option option)
+    private void HandleUpgradeChosen(AiCoreManager.UpgradeChoice choice)
     {
-        aiCoreManager.ApplyChoice(option);
+        aiCoreManager.ApplyChoice(choice);
 
         if (aiCoreUpgradePanel != null) aiCoreUpgradePanel.SetActive(false);
         ShowNextIntermissionStep(); // 레벨업이 여러 번 밀려있으면 다음 선택 카드를 이어서 보여준다

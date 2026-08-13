@@ -38,6 +38,23 @@ public class WaveManager : MonoBehaviour
     [Tooltip("웨이브가 오를 때마다 최대 동시 생존 몬스터 수에 더해지는 값")]
     [SerializeField] private int maxAliveIncreasePerWave = 4;
 
+    [Header("초반 완충 구간 (2026-08-13 사용자 지정: 5웨이브까지는 쉽게)")]
+    [Tooltip("이 웨이브까지는 스폰 압력을 완만하게 올리는 '연습 구간'으로 취급한다")]
+    [SerializeField] private int easyWaveCount = 5;
+
+    [Tooltip("웨이브 1의 스폰 간격에 곱해지는 배율(1보다 크면 더 느리게 나온다). " +
+             "easyWaveCount 웨이브에 걸쳐 1.0으로 선형 복귀한다")]
+    [SerializeField] private float firstWaveIntervalMultiplier = 1.6f;
+
+    [Tooltip("완충 구간에서 최대 동시 생존 수 증가폭에 곱해지는 배율. " +
+             "초반에는 화면이 적으로 메워지지 않게 절반만 올린다")]
+    [SerializeField] private float easyWaveMaxAliveScale = 0.5f;
+
+    [Tooltip("한 번에 스폰하는 마리 수를 1 늘리는 데 필요한 웨이브 수(5면 6·11·16웨이브에 +1). " +
+             "완충 구간(easyWaveCount=5) 안에서 배치가 늘지 않도록 같은 값으로 맞춰 두는 것이 좋다. " +
+             "0 이하면 배치 수를 늘리지 않는다")]
+    [SerializeField] private int wavesPerSpawnBatchIncrease = 5;
+
     [Header("보스 웨이브 (전부 밸런스 미확정 임시값)")]
     [Tooltip("이 웨이브 번호에 도달하면 보스를 스폰한다. 기획서 확정: 20")]
     [SerializeField] private int finalWaveNumber = 20;
@@ -113,9 +130,7 @@ public class WaveManager : MonoBehaviour
 
         if (enemySpawner != null)
         {
-            float spawnInterval = Mathf.Max(minSpawnInterval, enemySpawner.BaseSpawnInterval * Mathf.Pow(spawnIntervalDecayPerWave, wave - 1));
-            int maxAlive = enemySpawner.BaseMaxAliveEnemies + maxAliveIncreasePerWave * (wave - 1);
-            enemySpawner.ConfigureDifficulty(spawnInterval, maxAlive);
+            enemySpawner.ConfigureDifficulty(ComputeSpawnInterval(wave), ComputeMaxAlive(wave), ComputeSpawnBatchSize(wave));
             enemySpawner.SetCurrentWave(wave);
             enemySpawner.SetSpawningEnabled(true);
         }
@@ -131,6 +146,56 @@ public class WaveManager : MonoBehaviour
 
         Debug.Log($"웨이브 {wave} 시작 (제한시간 {duration:F0}초)" + (wave == finalWaveNumber ? " - 보스 웨이브" : ""));
         OnWaveStarted?.Invoke(wave);
+    }
+
+    /// <summary>
+    /// 이 웨이브의 스폰 간격(초). 완충 구간(1~easyWaveCount)은 웨이브 1을
+    /// firstWaveIntervalMultiplier배로 느리게 시작해 완충 구간이 끝나는 웨이브에 기준값(x1.0)이
+    /// 되고, 그 뒤부터 기존 감소율(spawnIntervalDecayPerWave)이 적용된다.
+    ///
+    /// 계산의 기준은 항상 <see cref="EnemySpawner.BaseSpawnInterval"/>(웨이브 1 원본값)이다 -
+    /// 예전에는 이미 조정된 값에 다시 배율을 곱해 난이도가 이중으로 누적됐다(2026-08-13 수정).
+    /// </summary>
+    private float ComputeSpawnInterval(int wave)
+    {
+        float multiplier;
+
+        if (wave <= easyWaveCount && easyWaveCount > 1)
+        {
+            float t = (wave - 1) / (float)(easyWaveCount - 1); // 0 → 1
+            multiplier = Mathf.Lerp(Mathf.Max(1f, firstWaveIntervalMultiplier), 1f, t);
+        }
+        else
+        {
+            int wavesAfterEasy = Mathf.Max(0, wave - Mathf.Max(1, easyWaveCount));
+            multiplier = Mathf.Pow(spawnIntervalDecayPerWave, wavesAfterEasy);
+        }
+
+        return Mathf.Max(minSpawnInterval, enemySpawner.BaseSpawnInterval * multiplier);
+    }
+
+    /// <summary>
+    /// 이 웨이브의 최대 동시 생존 수. 완충 구간에서는 증가폭을 easyWaveMaxAliveScale배로 줄인다
+    /// ("초반 5라운드까지는 쉽게" - 사용자 지정).
+    /// </summary>
+    private int ComputeMaxAlive(int wave)
+    {
+        int easyWaves = Mathf.Clamp(wave - 1, 0, Mathf.Max(0, easyWaveCount - 1));
+        int hardWaves = Mathf.Max(0, wave - 1 - easyWaves);
+
+        float increase = maxAliveIncreasePerWave * (easyWaves * easyWaveMaxAliveScale + hardWaves);
+        return enemySpawner.BaseMaxAliveEnemies + Mathf.RoundToInt(increase);
+    }
+
+    /// <summary>
+    /// 이 웨이브에 한 번에 스폰하는 마리 수. 웨이브가 오를수록 조금씩(wavesPerSpawnBatchIncrease
+    /// 웨이브마다 +1) 늘어난다 - "웨이브가 지날수록 스폰량을 조금씩 늘린다"(사용자 지정).
+    /// </summary>
+    private int ComputeSpawnBatchSize(int wave)
+    {
+        if (wavesPerSpawnBatchIncrease <= 0) return enemySpawner.BaseSpawnBatchSize;
+
+        return enemySpawner.BaseSpawnBatchSize + (wave - 1) / wavesPerSpawnBatchIncrease;
     }
 
     private void SpawnBoss()

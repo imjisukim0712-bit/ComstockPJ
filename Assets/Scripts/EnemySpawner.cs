@@ -46,11 +46,20 @@ public class EnemySpawner : MonoBehaviour
         new MonsterUnlockEntry { monsterId = 200006, unlockWave = 10 }, // 리더
     };
 
+    [Header("웨이브별 체력·공격력 상승 (2026-08-13 사용자 지정)")]
+    [Tooltip("웨이브가 하나 지날 때마다 몬스터 체력과 공격력에 곱해지는 증가율(0.05 = 5%). " +
+             "웨이브 N의 값 = 데이터 값 x (1 + 이 값)^(N-1). 보스는 WaveManager가 직접 " +
+             "스탯을 만들어 스폰하므로 이 배율을 받지 않는다(사용자 지정: 보스 제외)")]
+    [SerializeField] private float statIncreasePerWave = 0.05f;
+
     private int currentWave = 1;
     private readonly List<int> spawn_pool_buffer = new List<int>();
 
     /// <summary>WaveManager가 웨이브 시작 시 호출해 상위 몬스터 해금 여부를 갱신한다.</summary>
     public void SetCurrentWave(int wave) => currentWave = wave;
+
+    /// <summary>현재 웨이브의 몬스터 체력·공격력 배율. HUD/검증용으로도 조회할 수 있게 공개한다.</summary>
+    public float CurrentStatMultiplier => Mathf.Pow(1f + Mathf.Max(0f, statIncreasePerWave), Mathf.Max(0, currentWave - 1));
 
     [Tooltip("한 번에 몇 마리씩 스폰할지. 뱀서라이크 문법상 화면이 적으로 가득 차야 하므로 1보다 크게 둔다")]
     [SerializeField] private int spawnBatchSize = 3;
@@ -87,16 +96,27 @@ public class EnemySpawner : MonoBehaviour
     // WaveManager가 웨이브 사이(정비/상점)에는 스폰을 멈추고, 웨이브별 난이도(간격/최대 생존수)를
     // 조절할 수 있도록 노출하는 제어 인터페이스. 기본값은 항상 스폰 진행.
     public bool IsSpawningEnabled { get; private set; } = true;
-    public float BaseSpawnInterval => spawnInterval;
-    public int BaseMaxAliveEnemies => maxAliveEnemies;
+
+    // 웨이브 1 기준값(인스펙터에 적힌 원본). <b>Awake에서 한 번만 찍어둔다</b> -
+    // 2026-08-13 발견한 버그: 예전에는 이 프로퍼티들이 spawnInterval/maxAliveEnemies 필드를
+    // 그대로 돌려줬는데, WaveManager가 매 웨이브 "기준값 x 웨이브 배율"을 계산해 같은 필드에
+    // 덮어쓰기 때문에 다음 웨이브의 "기준값"이 이미 조정된 값이 되어 난이도가 <b>이중으로</b>
+    // 누적됐다(최대 생존수 실측: 웨이브 10에 의도한 54마리가 아니라 198마리, 웨이브 20에는 778마리).
+    // 초반 3~4웨이브부터 화면이 적으로 메워져 진행이 막힌 원인 중 하나다.
+    public float BaseSpawnInterval { get; private set; }
+    public int BaseMaxAliveEnemies { get; private set; }
+    public int BaseSpawnBatchSize { get; private set; }
 
     public void SetSpawningEnabled(bool enabled) => IsSpawningEnabled = enabled;
 
-    // 웨이브 번호에 따른 스폰 간격/최대 생존수를 직접 지정한다. 0 이하 값은 무시(변경 없음)한다.
-    public void ConfigureDifficulty(float newSpawnInterval, int newMaxAliveEnemies)
+    // 웨이브 번호에 따른 스폰 간격/최대 생존수/배치 크기를 직접 지정한다. 0 이하 값은 무시(변경 없음)한다.
+    // 배치 크기는 2026-08-13 "웨이브가 지나며 스폰량을 조금씩 늘린다" 요청으로 추가됐다 -
+    // 예전에는 간격만 줄여서 초반을 완만하게 만들면 후반 물량도 같이 얇아졌다.
+    public void ConfigureDifficulty(float newSpawnInterval, int newMaxAliveEnemies, int newSpawnBatchSize = 0)
     {
         if (newSpawnInterval > 0f) spawnInterval = newSpawnInterval;
         if (newMaxAliveEnemies > 0) maxAliveEnemies = newMaxAliveEnemies;
+        if (newSpawnBatchSize > 0) spawnBatchSize = newSpawnBatchSize;
     }
 
     // 웨이브 종료 시 화면에 남은 적을 한꺼번에 정리한다(기획서: 웨이브 종료 후 정비 진입).
@@ -111,6 +131,11 @@ public class EnemySpawner : MonoBehaviour
 
     private void Awake()
     {
+        // 웨이브 배율 계산의 기준이 되는 원본 값을 먼저 확보한다(ConfigureDifficulty가 필드를 덮어쓰기 전에).
+        BaseSpawnInterval = spawnInterval;
+        BaseMaxAliveEnemies = maxAliveEnemies;
+        BaseSpawnBatchSize = spawnBatchSize;
+
         prefabMap = new Dictionary<int, GameObject>();
         foreach (var entry in monsterPrefabs)
             prefabMap[entry.monsterId] = entry.prefab;
@@ -331,6 +356,13 @@ public class EnemySpawner : MonoBehaviour
             Debug.LogWarning($"몬스터ID {monsterId}의 데이터가 아직 로드되지 않았습니다.");
             return null;
         }
+
+        // 웨이브가 지날수록 체력과 공격력을 조금씩 올린다(2026-08-13 사용자 지정 5%/웨이브).
+        // MonsterData는 struct라 여기서 값을 바꿔도 GameDataManager의 원본 데이터는 그대로다
+        // (class였다면 딕셔너리 안의 원본이 영구히 오염돼 웨이브마다 값이 누적 상승한다).
+        float statMultiplier = CurrentStatMultiplier;
+        data.monster_hp = Mathf.Max(1, Mathf.RoundToInt(data.monster_hp * statMultiplier));
+        data.monster_atk = Mathf.Max(1, Mathf.RoundToInt(data.monster_atk * statMultiplier));
 
         GameObject obj = Instantiate(prefab, position, Quaternion.identity);
 
