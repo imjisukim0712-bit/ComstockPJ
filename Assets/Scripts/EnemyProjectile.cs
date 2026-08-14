@@ -78,7 +78,7 @@ public class EnemyProjectile : MonoBehaviour
         if (player == null) player = other.GetComponentInParent<PlayerRobotController>();
         if (player == null) return;
 
-        player.TakeDamage(damage);
+        player.TakeDamage(damage, transform.position);
         Destroy(gameObject);
     }
 

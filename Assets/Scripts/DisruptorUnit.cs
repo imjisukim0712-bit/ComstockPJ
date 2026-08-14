@@ -51,7 +51,7 @@ public class DisruptorUnit : EnemyUnit
             if (hit_player == null) hit_player = hit.GetComponentInParent<PlayerRobotController>();
             if (hit_player != null)
             {
-                hit_player.TakeDamage(Atk);
+                hit_player.TakeDamage(Atk, transform.position);
                 break; // 플레이어는 한 명뿐이라 찾으면 바로 종료
             }
         }

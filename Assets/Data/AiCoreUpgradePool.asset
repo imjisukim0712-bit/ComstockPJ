@@ -45,6 +45,10 @@ MonoBehaviour:
     description: 
     statType: 7
     amount: 0.03
+  - displayName: "\uC0AC\uAC70\uB9AC \uC99D\uD3ED"
+    description: 
+    statType: 10
+    amount: 0.5
   gradeSettings:
   - grade: 0
     amountMultiplier: 1

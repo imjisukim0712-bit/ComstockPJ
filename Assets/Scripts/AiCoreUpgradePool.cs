@@ -133,6 +133,7 @@ public class AiCoreUpgradePool : ScriptableObject
             case StatType.Avoid:
             case StatType.CritChance:
             case StatType.GoldGain:
+            case StatType.WeaponRangeBonus:
                 return $"{name} +{amount:0.##}%";
 
             // 비율(0.1 = 10%)로 들어있는 스탯

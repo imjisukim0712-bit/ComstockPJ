@@ -27,6 +27,13 @@ public class CameraFollow : MonoBehaviour
     private Vector3 velocity;
     private Camera cam;
 
+    // 피격 카메라 흔들림(2026-08-14). DesiredPosition()의 추적 목표에는 섞지 않고 LateUpdate
+    // 최종 대입 단계에서만 더한다 - smoothTime>0인 경우 SmoothDamp의 저역통과 필터를 거치면
+    // 흔들림이 뭉개져 버리기 때문이다.
+    private float shakeDuration;
+    private float shakeTimeLeft;
+    private float shakeMagnitude;
+
     private void Awake()
     {
         cam = GetComponent<Camera>();
@@ -44,15 +51,52 @@ public class CameraFollow : MonoBehaviour
         if (target != null) transform.position = DesiredPosition();
     }
 
+    /// <summary>
+    /// 짧게 카메라를 흔든다. 이미 더 강한 흔들림이 진행 중이면 약한 흔들림으로 끊지 않는다.
+    /// </summary>
+    public void Shake(float duration, float magnitude)
+    {
+        if (shakeTimeLeft > 0f && magnitude <= shakeMagnitude) return;
+
+        shakeDuration = duration;
+        shakeTimeLeft = duration;
+        shakeMagnitude = magnitude;
+    }
+
     // 이동 처리가 모두 끝난 뒤에 카메라를 옮겨야 한 프레임 밀리지 않는다
     private void LateUpdate()
     {
         if (target == null) return;
+        if (shakeTimeLeft > 0f) shakeTimeLeft -= Time.deltaTime;
 
         Vector3 desired = DesiredPosition();
-        transform.position = smoothTime > 0f
+        Vector3 followed = smoothTime > 0f
             ? Vector3.SmoothDamp(transform.position, desired, ref velocity, smoothTime)
             : desired;
+
+        transform.position = ApplyShake(followed);
+    }
+
+    /// <summary>
+    /// 흔들림 오프셋을 더한다. 오프셋 때문에 맵 밖 빈 공간이 비치지 않도록
+    /// MapBounds.ClampCameraCenter로 한 번 더 클램프한다(순수 함수라 두 번 호출해도 안전).
+    /// </summary>
+    private Vector3 ApplyShake(Vector3 basePosition)
+    {
+        if (shakeTimeLeft <= 0f) return basePosition;
+
+        float strength = shakeMagnitude * (shakeDuration > 0f ? shakeTimeLeft / shakeDuration : 0f);
+        Vector2 offset = Random.insideUnitCircle * strength;
+        Vector3 shaken = basePosition + new Vector3(offset.x, offset.y, 0f);
+
+        if (clampToMap && TryGetViewHalfExtents(out float halfWidth, out float halfHeight))
+        {
+            Vector3 clamped = MapBounds.ClampCameraCenter(shaken, halfWidth, halfHeight);
+            shaken.x = clamped.x;
+            shaken.y = clamped.y;
+        }
+
+        return shaken;
     }
 
     private Vector3 DesiredPosition()

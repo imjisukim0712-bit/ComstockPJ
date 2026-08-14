@@ -1,0 +1,104 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+/// <summary>
+/// 짧은 효과음(SFX) 재생을 전담하는 전역 매니저. <see cref="MusicManager"/>와 같은 방식
+/// (부트스트랩 + 싱글톤 + DontDestroyOnLoad)으로 스스로 살아남되, 크로스페이드/재생목록 없이
+/// PlayOneShot만 한다(여러 효과음이 겹쳐도 서로 끊지 않고 믹싱된다). AudioListener는
+/// MusicManager.EnsureSingleAudioListener()가 이미 씬마다 정확히 하나로 맞춰주므로 여기서
+/// 따로 신경 쓰지 않는다.
+///
+/// <b>2026-08-14</b>: 프로젝트에 SFX 오디오 파일이 아직 없어서, <c>Resources/SFX</c> 폴더에서
+/// 찾지 못한 클립 이름은 절차적으로 생성한 짧은 비프음으로 대신 채운다. 나중에 같은 이름의
+/// 실제 오디오 파일을 그 폴더에 넣기만 하면(코드 수정 없이) 자동으로 그 파일이 우선 쓰인다 -
+/// 폴더 스캔이 먼저 실행되고, 그때 채워지지 않은 빈 키만 절차 생성으로 채우기 때문이다.
+/// </summary>
+public class SFXManager : MonoBehaviour
+{
+    /// <summary>Resources 안의 효과음 폴더. 폴더가 없어도 Resources.LoadAll은 빈 배열을 돌려줄 뿐 예외를 던지지 않는다.</summary>
+    private const string SfxFolder = "SFX";
+
+    private const string PlayerHitClipName = "Player_Hit";
+
+    public static SFXManager Instance { get; private set; }
+
+    private AudioSource source;
+    private readonly Dictionary<string, AudioClip> clips = new Dictionary<string, AudioClip>();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void Bootstrap()
+    {
+        if (Instance != null) return;
+
+        var go = new GameObject("SFXManager");
+        go.AddComponent<SFXManager>();
+    }
+
+    private void Awake()
+    {
+        // 두 번째 인스턴스는 즉시 자살한다(MusicManager와 동일 정책).
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+
+        source = gameObject.AddComponent<AudioSource>();
+        source.playOnAwake = false;
+        source.spatialBlend = 0f; // 2D
+        source.ignoreListenerPause = true; // 정비/상점 화면(Time.timeScale=0)에서도 재생 가능하도록
+
+        foreach (AudioClip clip in Resources.LoadAll<AudioClip>(SfxFolder))
+        {
+            if (clip != null) clips[clip.name] = clip;
+        }
+
+        // 실제 파일이 없는 키만 절차적 비프음으로 채운다 - 폴더 스캔이 이미 채운 키는 건드리지 않는다.
+        EnsurePlaceholderClip(PlayerHitClipName, frequency: 880f, duration: 0.08f);
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+    }
+
+    /// <summary>클립이 없으면(에셋 미준비) 조용히 스킵한다 - 어떤 호출부도 null 체크를 할 필요가 없다.</summary>
+    public static void Play(string clipName, float volumeScale = 1f)
+    {
+        if (Instance == null || string.IsNullOrEmpty(clipName)) return;
+        if (!Instance.clips.TryGetValue(clipName, out AudioClip clip) || clip == null) return;
+
+        Instance.source.PlayOneShot(clip, Mathf.Clamp01(volumeScale));
+    }
+
+    private void EnsurePlaceholderClip(string clipName, float frequency, float duration)
+    {
+        if (clips.ContainsKey(clipName)) return;
+
+        clips[clipName] = CreateBeepClip(clipName, frequency, duration);
+    }
+
+    /// <summary>정식 효과음이 생기기 전까지 쓸 임시 사인파 비프음을 코드로 생성한다.</summary>
+    private static AudioClip CreateBeepClip(string clipName, float frequency, float duration)
+    {
+        int sampleRate = AudioSettings.outputSampleRate;
+        int sampleCount = Mathf.Max(1, Mathf.RoundToInt(sampleRate * duration));
+
+        var samples = new float[sampleCount];
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = (float)i / sampleRate;
+            // 끝에서 뚝 끊기는 클릭 노이즈가 나지 않도록 마지막 20% 구간을 선형으로 페이드아웃한다.
+            float fadeWindow = Mathf.Max(1f, sampleCount * 0.2f);
+            float fade = Mathf.Clamp01((sampleCount - i) / fadeWindow);
+            samples[i] = Mathf.Sin(2f * Mathf.PI * frequency * t) * 0.25f * fade;
+        }
+
+        AudioClip clip = AudioClip.Create(clipName, sampleCount, 1, sampleRate, false);
+        clip.SetData(samples, 0);
+        return clip;
+    }
+}

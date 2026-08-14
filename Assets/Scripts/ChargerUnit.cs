@@ -97,7 +97,7 @@ public class ChargerUnit : EnemyUnit
         if (hit_player == null) hit_player = other.GetComponentInParent<PlayerRobotController>();
         if (hit_player == null) return;
 
-        hit_player.TakeDamage(Atk);
+        hit_player.TakeDamage(Atk, transform.position);
 
         float cooldown = AtSp > 0f ? 1f / AtSp : 1f;
         next_ram_time = Time.time + cooldown;

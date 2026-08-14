@@ -83,8 +83,16 @@ public class PlayerRobotController : MonoBehaviour
     [Tooltip("구르는 동안 몸을 회전시킬 절차적 리그. 비어 있으면 자식에서 자동 탐색")]
     [SerializeField] private ProceduralCharacterRig proceduralRig;
 
+    [Header("피격 넉백")]
+    [Tooltip("피격당했을 때 공격자 반대 방향으로 밀려나는 속도(유닛/초)")]
+    [SerializeField] private float knockbackStrength = 3.5f;
+    [Tooltip("넉백 속도가 초당 이만큼씩 감쇠한다(EnemyUnit의 감쇠와 비슷한 오더)")]
+    [SerializeField] private float knockbackDecay = 30f;
+    private Vector3 knockbackVelocity;
+
     private Rigidbody rb;
     private HitFlash hitFlash;
+    private PlayerHitFeedback hitFeedback;
     private Vector3 moveInput;
     private bool hasIsMovingParam;
     private bool wasMoving;
@@ -163,6 +171,11 @@ public class PlayerRobotController : MonoBehaviour
 
         DiscEffects = GetComponent<DiscEffectRuntime>();
         if (DiscEffects == null) DiscEffects = gameObject.AddComponent<DiscEffectRuntime>();
+
+        // 피격 시 카메라 흔들림·화면 비네트·효과음(2026-08-14). HitFlash/DiscEffects와 동일하게
+        // 자동 부착한다.
+        hitFeedback = GetComponent<PlayerHitFeedback>();
+        if (hitFeedback == null) hitFeedback = gameObject.AddComponent<PlayerHitFeedback>();
 
         rb.isKinematic = false; // 물리 충돌이 필요하므로 false로
         rb.useGravity = false;
@@ -247,7 +260,7 @@ public class PlayerRobotController : MonoBehaviour
     /// 4) 이 데미지로 체력이 0 이하가 되는 순간 "마지막 발악" 디스크가 남아있으면 대신 발동한다.
     /// 체력이 0 이하가 되면 1회차 게임오버 처리를 한다.
     /// </summary>
-    public void TakeDamage(int enemyAtk)
+    public void TakeDamage(int enemyAtk, Vector3? attackerPosition = null)
     {
         if (IsDead) return;
         if (IsDashing) return; // 구르기 중에는 무적 - 회피 판정조차 하지 않는다
@@ -279,14 +292,34 @@ public class PlayerRobotController : MonoBehaviour
             lastStandInvulnUntil = Time.time + invulnDuration;
             ApplyTempStatBonus(StatType.MoveSpeed, MoveSpeed * speedBonusRatio, invulnDuration);
             if (hitFlash != null) hitFlash.Play();
+            ApplyHitKnockback(attackerPosition);
+            hitFeedback?.OnHit(dmg, attackerPosition);
             return;
         }
 
         CurrentHp = Mathf.Max(0, new_hp);
 
         if (hitFlash != null) hitFlash.Play(); // 피격 시 0.25초 흰색
+        ApplyHitKnockback(attackerPosition);
+        hitFeedback?.OnHit(dmg, attackerPosition);
 
         if (CurrentHp <= 0) Die();
+    }
+
+    /// <summary>
+    /// 피격 시 공격자 반대 방향으로 짧게 밀려난다(2026-08-14). 세기를 누적하지 않고 덮어써서
+    /// 연타를 맞아도 무한 가속하지 않는다(EnemyUnit.ApplyKnockback과 동일 정책). 방향을 알 수
+    /// 없거나(attackerPosition 미전달) 완전히 겹친 경우는 조용히 생략한다.
+    /// </summary>
+    private void ApplyHitKnockback(Vector3? attackerPosition)
+    {
+        if (knockbackStrength <= 0f || !attackerPosition.HasValue) return;
+
+        Vector3 diff = transform.position - attackerPosition.Value;
+        diff.z = 0f;
+        if (diff.sqrMagnitude <= 0.0001f) return;
+
+        knockbackVelocity = diff.normalized * knockbackStrength;
     }
 
     /// <summary>디스크(포근한 치유/이끼 낀 등)의 처치·주기 회복 효과가 호출한다. 최대 체력을 넘지 않는다.</summary>
@@ -470,6 +503,11 @@ public class PlayerRobotController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        // 넉백은 매 프레임 감쇠한다(EnemyUnit의 넉백 감쇠와 동일한 방식). 구르기 중에는 아래에서
+        // 더하지 않지만, 감쇠 자체는 계속 진행시켜야 구르기가 끝난 뒤 잔여 넉백이 자연스럽게
+        // 이어진다(팝핑 방지).
+        knockbackVelocity = Vector3.MoveTowards(knockbackVelocity, Vector3.zero, knockbackDecay * Time.fixedDeltaTime);
+
         // 구르기 중에는 입력과 무관하게 정해진 방향으로 고정 속도(거리/지속시간)로 밀려난다.
         if (IsDashing && dashDuration > 0f)
         {
@@ -480,7 +518,7 @@ public class PlayerRobotController : MonoBehaviour
             // 디스크 기획서(2026-08-12) - 광분 바이러스/마지막 발악(시간제) + 위장(조건부, 매 프레임 갱신)의
             // 이동속도 보너스를 함께 반영한다.
             float effective_move_speed = MoveSpeed + GetTempStatBonus(StatType.MoveSpeed) + conditionalMoveSpeedBonus;
-            rb.linearVelocity = moveInput * effective_move_speed; // MovePosition 대신 이걸로 교체
+            rb.linearVelocity = moveInput * effective_move_speed + knockbackVelocity; // MovePosition 대신 이걸로 교체
         }
 
         PushOverlappingEnemies();

@@ -18,5 +18,11 @@ public enum StatType
     // 골드 획득량에 곱해지는 비율(%)이라 RobotStats.ApplyBonus에는 연결하지 않는다
     // (해당 switch에 case가 없어도 안전하게 무시된다). RewardPickup.CollectImmediately()가
     // RunState.DiscStatBonuses에서 직접 읽어 골드 수령량에 곱한다.
-    GoldGain
+    GoldGain,
+
+    // 2026-08-14 AI 코어 업그레이드 "사거리 증폭" 반영 - GoldGain과 같은 성격(로봇 스탯이 아니라
+    // 무기 사거리·감지거리에 곱해지는 비율(%))이라 RobotStats.ApplyBonus에는 연결하지 않는다.
+    // PlayerShootManager.GetTravelRange()/GetDetectRange()가 RunState.CoreStatBonuses에서
+    // 직접 읽어 사거리·감지거리 양쪽에 함께 곱한다.
+    WeaponRangeBonus
 }

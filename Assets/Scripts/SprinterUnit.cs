@@ -96,7 +96,7 @@ public class SprinterUnit : EnemyUnit
         if (hit_player == null) hit_player = other.GetComponentInParent<PlayerRobotController>();
         if (hit_player == null) return;
 
-        hit_player.TakeDamage(Atk);
+        hit_player.TakeDamage(Atk, transform.position);
         hit_this_dash = true;
         is_dashing = false; // 맞히면 그 자리에서 멈춘다 - 계속 밀고 나가지 않는다
     }

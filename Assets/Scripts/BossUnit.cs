@@ -77,7 +77,7 @@ public class BossUnit : EnemyUnit
                 if (player == null) player = hit.GetComponentInParent<PlayerRobotController>();
                 if (player != null)
                 {
-                    player.TakeDamage(aoeDamage);
+                    player.TakeDamage(aoeDamage, target);
                     break; // 플레이어는 한 명뿐이라 찾으면 바로 종료
                 }
             }

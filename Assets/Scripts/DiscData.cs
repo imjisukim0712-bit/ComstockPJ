@@ -134,6 +134,7 @@ public static class StatTypeNames
             case StatType.CritDamage: return "치명타 피해";
             case StatType.Mass: return "질량";
             case StatType.GoldGain: return "골드 획득량";
+            case StatType.WeaponRangeBonus: return "무기 사거리";
             default: return type.ToString();
         }
     }

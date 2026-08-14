@@ -550,7 +550,7 @@ public class EnemyUnit : MonoBehaviour
     /// </summary>
     protected virtual void ExecuteAttackEffect()
     {
-        player.TakeDamage(Atk);
+        player.TakeDamage(Atk, transform.position);
     }
 
     /// <summary>공격 판정 시점에 플레이어가 여전히 사거리(+몸통 여유) 안에 있는지 재확인한다.</summary>

@@ -661,21 +661,32 @@ public class PlayerShootManager : MonoBehaviour
         TryFireSlot(slot_index, slot, weapon, target);
     }
 
-    /// <summary>탄이 실제로 날아가는 최대 거리 = 무기 사거리 x 이 소켓의 사거리 배율.</summary>
+    /// <summary>
+    /// AI 코어 업그레이드 "사거리 증폭"이 누적한 % 보너스. 사거리·감지거리 둘 다 이 배율을
+    /// 함께 곱해야 사용자가 확정한 대로 "사거리와 감지거리가 항상 함께" 오른다(2026-08-14).
+    /// GoldGain과 같은 성격이라 RobotStats에는 연결하지 않고 여기서 직접 읽는다.
+    /// </summary>
+    private static float GetWeaponRangeBonusMultiplier()
+    {
+        RunState.CoreStatBonuses.TryGetValue(StatType.WeaponRangeBonus, out float bonusPercent);
+        return 1f + bonusPercent / 100f;
+    }
+
+    /// <summary>탄이 실제로 날아가는 최대 거리 = 무기 사거리 x 이 소켓의 사거리 배율 x AI 코어 사거리 증폭.</summary>
     private float GetTravelRange(WeaponData weapon, int slot_index)
     {
-        return weapon.TravelRange * GetSocketModifiers(slot_index).Range;
+        return weapon.TravelRange * GetSocketModifiers(slot_index).Range * GetWeaponRangeBonusMultiplier();
     }
 
     /// <summary>
-    /// 적을 감지해 발사를 시작하는 거리 = 무기 감지거리(weapon_detect) x 이 소켓의 감지거리 배율.
-    /// 두 가지로 한 번 더 잘린다:
+    /// 적을 감지해 발사를 시작하는 거리 = 무기 감지거리(weapon_detect) x 이 소켓의 감지거리 배율
+    /// x AI 코어 사거리 증폭. 두 가지로 한 번 더 잘린다:
     /// 1) 사거리 - 감지한 적에게 탄이 닿아야 의미가 있다
     /// 2) max_detect_range - 화면 밖의 보이지 않는 적과 교전하지 않도록 하는 상한
     /// </summary>
     private float GetDetectRange(WeaponData weapon, int slot_index)
     {
-        float detect = weapon.DetectRange * GetSocketModifiers(slot_index).DetectRange;
+        float detect = weapon.DetectRange * GetSocketModifiers(slot_index).DetectRange * GetWeaponRangeBonusMultiplier();
         detect = Mathf.Min(detect, GetTravelRange(weapon, slot_index));
 
         if (max_detect_range > 0f) detect = Mathf.Min(detect, max_detect_range);
