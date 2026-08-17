@@ -70,9 +70,9 @@ MonoBehaviour:
     monster_size: 1
   - monster_id: 200006
     monster_name: "\uB9AC\uB354"
-    monster_hp: 170
+    monster_hp: 600
     monster_atk: 25
-    monster_def: 3
+    monster_def: 10
     monster_speed: 2.5
     monster_range: 2.4
     monster_type: 1
