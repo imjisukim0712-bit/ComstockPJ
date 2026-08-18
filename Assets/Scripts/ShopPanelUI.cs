@@ -113,11 +113,8 @@ public class ShopPanelUI : MonoBehaviour
             if (offerSlots[i].lockButton != null) offerSlots[i].lockButton.onClick.AddListener(() => HandleLockClicked(index));
         }
 
-        for (int i = 0; i < socketButtons.Length; i++)
-        {
-            int index = i;
-            if (socketButtons[i] != null) socketButtons[i].onClick.AddListener(() => HandleSocketChosen(index));
-        }
+        // 소켓 버튼 리스너는 여기서 달지 않는다 - 소켓 수가 로봇마다 다르고(최대 6) 씬에 깔린
+        // 개수보다 많을 수 있어, 창을 열 때 EnsureSocketButtons()가 만들면서 함께 연결한다.
 
         SetupDetailInspector();
 
@@ -227,6 +224,91 @@ public class ShopPanelUI : MonoBehaviour
         OpenSocketPicker(index);
     }
 
+    /// <summary>
+    /// 무기 소켓 시스템 상한(2026-08-18 사용자 확정: "게임 최대는 6개 맞음. 기본 로봇만 4개가
+    /// 최대고 다른 로봇은 6개인 로봇도 있음"). 소켓 선택 창은 여기까지 잘리지 않아야 한다.
+    /// </summary>
+    public const int MaxWeaponSockets = 6;
+
+    /// <summary>
+    /// 소켓 선택 버튼을 <b>소켓 수에 맞춰</b> 만들고 배치한다(2026-08-18 `UI 기획서.pdf` Phase C-5).
+    ///
+    /// 예전에는 씬에 고정 좌표로 깔린 버튼 4개를 그대로 쓰고 남는 것만 숨겼다. 6소켓 로봇이
+    /// 생기면 5·6번 버튼이 아예 없어서 그 소켓에는 무기를 못 끼우게 되므로, 모자라면 1번 버튼을
+    /// <b>복제</b>해 채우고 자리는 개수에 맞춰 다시 계산한다(정비 화면의 머리+소켓 줄이 열 수를
+    /// 동적으로 늘리는 것과 같은 취급).
+    /// </summary>
+    private void EnsureSocketButtons(int socketCount)
+    {
+        int count = Mathf.Clamp(socketCount, 1, MaxWeaponSockets);
+
+        if (socketButtons.Length < count)
+        {
+            System.Array.Resize(ref socketButtons, count);
+            System.Array.Resize(ref socketButtonTexts, count);
+        }
+
+        Transform parent = socketButtons[0] != null ? socketButtons[0].transform.parent : null;
+
+        for (int i = 0; i < socketButtons.Length; i++)
+        {
+            if (socketButtons[i] == null)
+            {
+                if (socketButtons[0] == null || parent == null) continue;
+
+                Button clone = Instantiate(socketButtons[0], parent);
+                clone.name = $"SocketButton{i + 1}";
+                socketButtons[i] = clone;
+                socketButtonTexts[i] = clone.GetComponentInChildren<TextMeshProUGUI>(true);
+            }
+
+            // 복제본은 원본의 onClick 리스너까지 복사해 오고(=엉뚱한 소켓에 장착된다), 이 메서드는
+            // 창을 열 때마다 불리므로 매번 지우고 자기 인덱스로 다시 단다.
+            int index = i;
+            socketButtons[i].onClick.RemoveAllListeners();
+            socketButtons[i].onClick.AddListener(() => HandleSocketChosen(index));
+
+            if (socketButtonTexts[i] == null)
+                socketButtonTexts[i] = socketButtons[i].GetComponentInChildren<TextMeshProUGUI>(true);
+
+            // 6칸이 되면 칸이 작아지는데 소켓 버튼 글은 3줄("소켓 N/현재 무기/경고")이라
+            // 자동 크기 조절을 걸어두지 않으면 넘친다.
+            if (socketButtonTexts[i] != null) ItemCellUI.ApplyTextSizing(socketButtonTexts[i], 24f);
+        }
+
+        LayoutSocketButtons(count);
+    }
+
+    // 소켓 선택 창 안쪽의 빈 띠(제목 아래 ~ 취소 버튼 위)를 1열 또는 2열 격자로 나눠 쓴다.
+    private void LayoutSocketButtons(int count)
+    {
+        const float top = 0.84f, bottom = 0.24f, left = 0.06f, right = 0.94f;
+        const float gapX = 0.06f, gapY = 0.04f;
+
+        int columns = count == 1 ? 1 : 2;
+        int rows = Mathf.CeilToInt(count / (float)columns);
+
+        float cellWidth = (right - left - gapX * (columns - 1)) / columns;
+        float cellHeight = (top - bottom - gapY * (rows - 1)) / rows;
+
+        for (int i = 0; i < count; i++)
+        {
+            if (socketButtons[i] == null) continue;
+
+            int column = i % columns;
+            int row = i / columns;
+
+            float xMin = left + column * (cellWidth + gapX);
+            float yMax = top - row * (cellHeight + gapY);
+
+            var rect = (RectTransform)socketButtons[i].transform;
+            rect.anchorMin = new Vector2(xMin, yMax - cellHeight);
+            rect.anchorMax = new Vector2(xMin + cellWidth, yMax);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+    }
+
     // 무기는 어느 소켓을 교체할지 골라야 해서 소켓 선택 줄을 연다.
     private void OpenSocketPicker(int offerIndex)
     {
@@ -244,6 +326,8 @@ public class ShopPanelUI : MonoBehaviour
         {
             socketPickerTitleText.text = $"'{offer.DisplayName}'({offer.Grade.ToKorean()})을(를) 어느 소켓에 장착할까요?";
         }
+
+        EnsureSocketButtons(shootManager.SocketCount);
 
         for (int i = 0; i < socketButtons.Length; i++)
         {
@@ -273,7 +357,15 @@ public class ShopPanelUI : MonoBehaviour
                 : $"소켓 {i + 1}\n{current}";
         }
 
-        if (socketPickerRoot != null) socketPickerRoot.SetActive(true);
+        if (socketPickerRoot != null)
+        {
+            // 보유·장착 목록 격자(PartsGrid/WeaponsGrid/DiscsGrid)와 음악 볼륨 슬라이더는 전부
+            // 런타임에 만들어져 이 패널의 <b>마지막 자식</b>으로 붙는다. 씬에 있는 SocketPicker는
+            // 그보다 앞 형제라 UI 그리기 순서상 격자에 가려진다(2026-08-18 아이콘화 이후 생긴
+            // 문제 - 실측 캡처로 발견). 열 때마다 맨 뒤로 보내 항상 위에 그려지게 한다.
+            socketPickerRoot.transform.SetAsLastSibling();
+            socketPickerRoot.SetActive(true);
+        }
     }
 
     private void CloseSocketPicker()
@@ -344,9 +436,12 @@ public class ShopPanelUI : MonoBehaviour
     {
         if (shopManager == null) return;
 
+        EnsureCardDecor();
+
         for (int i = 0; i < offerSlots.Length; i++)
         {
             OfferSlotUI ui = offerSlots[i];
+            CardDecor decor = i < card_decor.Length ? card_decor[i] : default;
             bool hasOffer = i < shopManager.Offers.Count && shopManager.Offers[i] != null;
 
             if (ui.cardButton != null) ui.cardButton.gameObject.SetActive(hasOffer);
@@ -356,6 +451,7 @@ public class ShopPanelUI : MonoBehaviour
 
             ShopManager.Offer offer = shopManager.Offers[i];
 
+            // ① 아이콘
             if (ui.iconImage != null)
             {
                 Sprite icon = ResolveOfferIcon(offer);
@@ -363,23 +459,264 @@ public class ShopPanelUI : MonoBehaviour
                 ui.iconImage.enabled = icon != null;
             }
 
-            // 기획서 표기 형식: "전설 · 무기"
+            // ② 종류 - 기획서 표기 형식: "전설 · 무기"
             if (ui.headerText != null)
             {
                 ui.headerText.text = $"<color={offer.Grade.ToColorHex()}>{offer.Grade.ToKorean()}</color> · {offer.CategoryName}";
             }
 
-            if (ui.bodyText != null)
+            // ③ 이름 - 등급색으로 칠해 카드 안에서 가장 먼저 눈에 들어오게 한다.
+            if (decor.nameText != null)
             {
-                ui.bodyText.text = offer.Purchased
-                    ? $"{offer.DisplayName}\n{offer.BuildDescription()}\n<color=#88FF88>구매 완료</color>"
-                    : $"{offer.DisplayName}\n{offer.BuildDescription()}\n{offer.Price}골드";
+                decor.nameText.text = $"<color={offer.Grade.ToColorHex()}>{offer.DisplayName}</color>";
             }
+
+            // ④ 능력치 - 씬의 BodyText는 이제 성능 요약만 담는다.
+            if (ui.bodyText != null) ui.bodyText.text = offer.BuildDescription();
+
+            // ⑤ 가격 - 카드 하단 박스. 이미 산 카드는 가격 대신 "구매함"이라 코인도 숨긴다.
+            if (decor.priceText != null)
+            {
+                decor.priceText.text = offer.Purchased ? "구매함" : offer.Price.ToString();
+                decor.priceText.color = offer.Purchased ? PurchasedGray : Color.white;
+            }
+            if (decor.priceCoin != null) decor.priceCoin.enabled = !offer.Purchased && decor.priceCoin.sprite != null;
+
+            // 구매 완료 스탬프 / 잠금 강조
+            if (decor.stamp != null) decor.stamp.SetActive(offer.Purchased);
+            if (decor.lockGlow != null) decor.lockGlow.SetActive(offer.Locked && !offer.Purchased);
+            if (decor.lockIcon != null) decor.lockIcon.color = offer.Locked ? LockYellow : Color.white;
 
             if (ui.cardButton != null) ui.cardButton.interactable = !offer.Purchased;
             if (ui.lockButton != null) ui.lockButton.interactable = !offer.Purchased;
             if (ui.lockText != null) ui.lockText.text = offer.Locked ? "잠금 해제" : "잠금";
         }
+    }
+
+    // ── 상점 카드 내부 필드 분리 ─────────────────────────────────────
+    // 2026-08-18 `UI 기획서.pdf` Phase C-1~C-3. 씬의 카드에는 아이콘·헤더·본문 3개뿐이라
+    // 이름·능력치·가격이 본문 텍스트 하나에 뭉쳐 있었다. 씬을 건드리지 않고 카드마다 하위
+    // 요소를 코드로 덧붙여 필드를 나눈다(Phase D/E의 일시정지·환경설정 화면과 같은 방식).
+    //
+    // 카드 안(로컬 0~1) 세로 배치:
+    //   0.72~0.98 아이콘 + 종류      (씬에 이미 있음, 건드리지 않는다)
+    //   0.55~0.70 이름               (신규)
+    //   0.26~0.54 능력치             (씬의 BodyText를 이 자리로 옮긴다)
+    //   0.05~0.24 가격 박스          (신규)
+
+    private struct CardDecor
+    {
+        public TextMeshProUGUI nameText;
+        public TextMeshProUGUI priceText;
+        public Image priceCoin;
+        public GameObject stamp;    // 빨간 대각선 "구매 완료"
+        public GameObject lockGlow; // 잠긴 카드를 감싸는 노란 테두리
+        public Image lockIcon;      // 잠금 버튼의 자물쇠
+    }
+
+    private CardDecor[] card_decor = new CardDecor[0];
+
+    /// <summary>정비 화면의 슬롯 강조와 같은 노란색(파랑 계열은 희귀 등급과 헷갈린다).</summary>
+    private static readonly Color LockYellow = new Color(0.949f, 0.749f, 0.149f, 1f); // #F2BF26
+
+    /// <summary>구매 완료 스탬프의 빨강. 등급색 빨강(전설)보다 진해 서로 구분된다.</summary>
+    private static readonly Color StampRed = new Color(0.87f, 0.16f, 0.16f, 1f);
+
+    private static readonly Color PurchasedGray = new Color(0.65f, 0.65f, 0.65f, 1f);
+
+    /// <summary>스탬프를 비스듬히 눕히는 각도(도장을 찍은 느낌).</summary>
+    private const float StampAngle = 14f;
+
+    private void EnsureCardDecor()
+    {
+        // 에디터 도메인 리로드로 참조만 날아가고 오브젝트는 씬에 남아 있을 수 있다
+        // (2026-08-18 AiCoreExtraButtonsUI에서 겪은 함정) - 그래서 개수뿐 아니라 실제 참조가
+        // 살아 있는지까지 확인하고, 다시 만들 때는 같은 이름의 옛 오브젝트를 먼저 지운다.
+        if (card_decor.Length == offerSlots.Length)
+        {
+            bool alive = true;
+            for (int i = 0; i < card_decor.Length; i++)
+            {
+                if (offerSlots[i].cardButton == null) continue;
+                if (card_decor[i].nameText != null) continue;
+                alive = false;
+                break;
+            }
+            if (alive) return;
+        }
+
+        card_decor = new CardDecor[offerSlots.Length];
+        for (int i = 0; i < offerSlots.Length; i++) card_decor[i] = BuildCardDecor(i);
+    }
+
+    private CardDecor BuildCardDecor(int index)
+    {
+        var decor = new CardDecor();
+
+        Button card = offerSlots[index].cardButton;
+        if (card == null) return decor;
+
+        var root = (RectTransform)card.transform;
+
+        DestroyIfExists(root, "NameText");
+        DestroyIfExists(root, "PriceBox");
+        DestroyIfExists(root, "LockGlow");
+        DestroyIfExists(root, "PurchasedStamp");
+
+        // 씬의 BodyText를 "능력치" 자리로 좁힌다. 이 파일의 EnsureGridContainer가 보유 목록
+        // 제목 텍스트를 같은 방식으로 옮기고 있어서 새로운 수법은 아니다.
+        if (offerSlots[index].bodyText != null)
+        {
+            RectTransform body = offerSlots[index].bodyText.rectTransform;
+            body.anchorMin = new Vector2(0.05f, 0.26f);
+            body.anchorMax = new Vector2(0.95f, 0.54f);
+            body.offsetMin = Vector2.zero;
+            body.offsetMax = Vector2.zero;
+            offerSlots[index].bodyText.alignment = TextAlignmentOptions.TopLeft;
+            ItemCellUI.ApplyTextSizing(offerSlots[index].bodyText, 20f);
+        }
+
+        decor.nameText = MakeText(root, "NameText", 0.05f, 0.55f, 0.95f, 0.70f, 30f, TextAlignmentOptions.Left);
+
+        // 가격 박스 - 카드 안쪽 박스라 아이콘 칸(IconImage_BG)과 같은 아트를 써서 톤을 맞춘다.
+        RectTransform priceBox = MakeChild(root, "PriceBox", 0.05f, 0.05f, 0.95f, 0.24f,
+                                           typeof(CanvasRenderer), typeof(Image));
+        var boxImage = priceBox.GetComponent<Image>();
+        Sprite boxSprite = Resources.Load<Sprite>("UI/Black_ui04");
+        if (boxSprite != null)
+        {
+            boxImage.sprite = boxSprite;
+            boxImage.type = Image.Type.Sliced;
+            boxImage.color = Color.white;
+        }
+        else
+        {
+            boxImage.color = new Color(0f, 0f, 0f, 0.45f); // 아트를 못 찾으면 단색 박스
+        }
+        boxImage.raycastTarget = false;
+
+        RectTransform coin = MakeChild(priceBox, "Coin", 0.03f, 0.14f, 0.20f, 0.86f,
+                                        typeof(CanvasRenderer), typeof(Image));
+        decor.priceCoin = coin.GetComponent<Image>();
+        decor.priceCoin.sprite = Resources.Load<Sprite>("UI/Gold_icon00"); // 헤더 골드와 같은 코인
+        decor.priceCoin.preserveAspect = true;
+        decor.priceCoin.raycastTarget = false;
+        decor.priceCoin.enabled = decor.priceCoin.sprite != null;
+
+        decor.priceText = MakeText(priceBox, "PriceText", 0.23f, 0.05f, 0.97f, 0.95f, 28f,
+                                    TextAlignmentOptions.Left);
+
+        // 잠긴 카드 강조 - 카드 전체를 감싸는 노란 테두리.
+        RectTransform glow = MakeChild(root, "LockGlow", 0f, 0f, 1f, 1f,
+                                        typeof(CanvasRenderer), typeof(Image));
+        var glowImage = glow.GetComponent<Image>();
+        glowImage.sprite = UiIconLibrary.Frame();
+        glowImage.type = Image.Type.Sliced;
+        glowImage.color = LockYellow;
+        glowImage.raycastTarget = false;
+        decor.lockGlow = glow.gameObject;
+        glow.gameObject.SetActive(false);
+
+        // 구매 완료 스탬프 - 마지막에 만들어야 카드의 다른 요소 위에 그려진다.
+        RectTransform stamp = MakeChild(root, "PurchasedStamp", 0f, 0f, 1f, 1f);
+
+        RectTransform dim = MakeChild(stamp, "Dim", 0f, 0f, 1f, 1f, typeof(CanvasRenderer), typeof(Image));
+        var dimImage = dim.GetComponent<Image>();
+        dimImage.color = new Color(0f, 0f, 0f, 0.55f);
+        dimImage.raycastTarget = false;
+
+        RectTransform badge = MakeChild(stamp, "Badge", 0.06f, 0.34f, 0.94f, 0.62f,
+                                         typeof(CanvasRenderer), typeof(Image));
+        var badgeImage = badge.GetComponent<Image>();
+        badgeImage.sprite = UiIconLibrary.Frame();
+        badgeImage.type = Image.Type.Sliced;
+        badgeImage.color = StampRed;
+        badgeImage.raycastTarget = false;
+        badge.localRotation = Quaternion.Euler(0f, 0f, StampAngle);
+
+        TextMeshProUGUI stampText = MakeText(badge, "Label", 0.05f, 0.05f, 0.95f, 0.95f, 44f,
+                                              TextAlignmentOptions.Center);
+        stampText.text = "구매 완료";
+        stampText.color = StampRed;
+        stampText.fontStyle = FontStyles.Bold;
+
+        decor.stamp = stamp.gameObject;
+        stamp.gameObject.SetActive(false);
+
+        // 잠금 버튼에 자물쇠 아이콘을 붙이고 글자 자리를 오른쪽으로 밀어 준다.
+        Button lockButton = offerSlots[index].lockButton;
+        if (lockButton != null)
+        {
+            var lockRoot = (RectTransform)lockButton.transform;
+            DestroyIfExists(lockRoot, "LockIcon");
+
+            if (offerSlots[index].lockText != null)
+            {
+                RectTransform label = offerSlots[index].lockText.rectTransform;
+                label.anchorMin = new Vector2(0.30f, 0f);
+                label.anchorMax = new Vector2(1f, 1f);
+                label.offsetMin = Vector2.zero;
+                label.offsetMax = Vector2.zero;
+            }
+
+            RectTransform icon = MakeChild(lockRoot, "LockIcon", 0.06f, 0.14f, 0.26f, 0.86f,
+                                            typeof(CanvasRenderer), typeof(Image));
+            decor.lockIcon = icon.GetComponent<Image>();
+            decor.lockIcon.sprite = UiIconLibrary.Lock();
+            decor.lockIcon.preserveAspect = true;
+            decor.lockIcon.raycastTarget = false;
+        }
+
+        return decor;
+    }
+
+    // ── 코드로 UI 요소를 만들 때 쓰는 공용 도구 ──────────────────────
+
+    private static RectTransform MakeChild(Transform parent, string name,
+                                            float xMin, float yMin, float xMax, float yMax,
+                                            params System.Type[] components)
+    {
+        var types = new System.Type[components.Length + 1];
+        types[0] = typeof(RectTransform);
+        System.Array.Copy(components, 0, types, 1, components.Length);
+
+        var go = new GameObject(name, types);
+        go.transform.SetParent(parent, false);
+
+        var rect = (RectTransform)go.transform;
+        rect.anchorMin = new Vector2(xMin, yMin);
+        rect.anchorMax = new Vector2(xMax, yMax);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        return rect;
+    }
+
+    private static TextMeshProUGUI MakeText(Transform parent, string name,
+                                             float xMin, float yMin, float xMax, float yMax,
+                                             float maxFontSize, TextAlignmentOptions alignment)
+    {
+        RectTransform rect = MakeChild(parent, name, xMin, yMin, xMax, yMax,
+                                        typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+
+        var text = rect.GetComponent<TextMeshProUGUI>();
+        text.alignment = alignment;
+        text.color = Color.white;
+        text.raycastTarget = false;
+        ItemCellUI.ApplyTextSizing(text, maxFontSize);
+        return text;
+    }
+
+    /// <summary>
+    /// 같은 이름의 옛 오브젝트를 지운다. Destroy()는 프레임 끝에야 실제로 파괴되므로 먼저 부모에서
+    /// 떼어내야 바로 뒤에 만드는 새 오브젝트와 이름이 겹치지 않는다(ItemCellUI.ClearChildren과 같은 이유).
+    /// </summary>
+    private static void DestroyIfExists(RectTransform parent, string name)
+    {
+        Transform existing = parent.Find(name);
+        if (existing == null) return;
+
+        existing.SetParent(null, false);
+        Destroy(existing.gameObject);
     }
 
     // 이미지 이름 → 스프라이트 캐시(Resources.Load 반복 호출 방지). PlayerShootManager의
@@ -544,8 +881,19 @@ public class ShopPanelUI : MonoBehaviour
         ItemCellUI.EnsureGrid(weaponsGrid, new Vector2(120f, 92f), columns, rows);
         ItemCellUI.ClearChildren(weaponsGrid);
 
+        // 개수 표기(2026-08-18 `UI 기획서.pdf` Phase C-4) - 디스크 줄의 "N/M"과 같은 형식으로
+        // 맞춘다. 분모는 실제로 쓸 수 있는 소켓 수라 6소켓 로봇이면 저절로 "N/6"이 된다.
+        int equippedWeapons = 0;
+        if (shootManager != null)
+        {
+            for (int i = 0; i < socketCount; i++)
+            {
+                if (shootManager.TryGetSocketInfo(i, out _, out _)) equippedWeapons++;
+            }
+        }
+
         if (equippedWeaponsText != null)
-            equippedWeaponsText.text = $"[장착 무기] {DetailHint}";
+            equippedWeaponsText.text = $"[장착 무기] {equippedWeapons}/{socketCount} {DetailHint}";
 
         if (shootManager == null) return;
 
