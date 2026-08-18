@@ -5,9 +5,12 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 상점 화면 표시/입력 담당(로직은 ShopManager). 기획서 p.13의 8개 요소를 모두 채운다.
-///  1. 현재 웨이브        2. 골드            3. 다음 웨이브 시작 버튼
+///  1. 현재 웨이브        2. 골드            3. "정비 종료" 버튼(= 다음 웨이브 시작)
 ///  4. 로봇 모딩 상태     5. 장착된 무기     6. 장착된 디스크
-///  7. 현재 능력치        8. 상점 품목 4칸 + 새로고침(비용) + 개별 잠금
+///  7. 현재 능력치        8. 상점 품목 4칸 + 상점 초기화(비용) + 개별 잠금
+///
+/// 헤더 문구는 2026-08-18 `UI 기획서.pdf` Phase A에서 로봇 정비 화면과 통일했다
+/// (제목 / `WAVE 07 / 20` / 코인 아이콘 + 숫자).
 ///
 /// 4번(로봇 모딩 상태)은 팔/다리 파츠 시스템이 아직 없어서(Phase 4) 머리 파츠가 정하는 값만
 /// 실제로 보여주고 나머지 부위는 "기본"으로 표기한다. 필살기도 데모 범위 밖이라 슬롯만 노출한다.
@@ -66,8 +69,11 @@ public class ShopPanelUI : MonoBehaviour
     [Header("무기 소켓 선택 (무기 구매 시 열림)")]
     [SerializeField] private GameObject socketPickerRoot;
     [SerializeField] private TextMeshProUGUI socketPickerTitleText;
-    [SerializeField] private Button[] socketButtons = new Button[2];
-    [SerializeField] private TextMeshProUGUI[] socketButtonTexts = new TextMeshProUGUI[2];
+    [Tooltip("2026-08-18 기본 무기 소켓 4개로 확장 - 배열 크기가 곧 소켓 선택 UI에 노출되는 버튼 수다. " +
+             "실제로 몇 개까지 쓰이는지는 PlayerShootManager.SocketCount(리깅된 소켓 수와 로봇 " +
+             "weaponSocketCount 중 작은 값)가 정하며, 그보다 뒤 인덱스의 버튼은 자동으로 숨겨진다")]
+    [SerializeField] private Button[] socketButtons = new Button[4];
+    [SerializeField] private TextMeshProUGUI[] socketButtonTexts = new TextMeshProUGUI[4];
     [SerializeField] private Button socketPickerCancelButton;
 
     [Header("안내 메시지")]
@@ -180,7 +186,7 @@ public class ShopPanelUI : MonoBehaviour
 
         if (!shopManager.TryRefresh())
         {
-            SetMessage($"골드가 부족합니다 (새로고침 {shopManager.CurrentRefreshCost}골드)");
+            SetMessage($"골드가 부족합니다 (상점 초기화 {shopManager.CurrentRefreshCost}골드)");
             return;
         }
 
@@ -315,12 +321,22 @@ public class ShopPanelUI : MonoBehaviour
 
     private void RefreshHeader()
     {
-        if (waveText != null) waveText.text = $"웨이브 {RunState.WaveNumber}";
-        if (goldText != null) goldText.text = $"골드 {RunState.Gold}";
+        // 헤더 표기는 로봇 정비 화면(ModdingPanelUI.RefreshHeader)과 같은 형식으로 맞춘다.
+        // 골드는 옆에 코인 아이콘 오브젝트가 따로 있으므로 숫자만 출력한다.
+        if (waveText != null)
+        {
+            WaveManager waveManager = FindFirstObjectByType<WaveManager>();
+            int finalWave = waveManager != null ? waveManager.FinalWaveNumber : 0;
+            waveText.text = finalWave > 0
+                ? $"WAVE {RunState.WaveNumber:00} / {finalWave}"
+                : $"WAVE {RunState.WaveNumber:00}";
+        }
+
+        if (goldText != null) goldText.text = RunState.Gold.ToString();
 
         if (refreshText != null && shopManager != null)
         {
-            refreshText.text = $"새로고침 ({shopManager.CurrentRefreshCost}골드)";
+            refreshText.text = $"상점 초기화 - {shopManager.CurrentRefreshCost}";
         }
     }
 
@@ -396,96 +412,207 @@ public class ShopPanelUI : MonoBehaviour
         return sprite;
     }
 
+    // 보유·장착 목록을 그리는 아이콘 격자. 씬을 건드리지 않고 코드로 만들며, 에디터 도메인
+    // 리로드로 참조가 날아가면 다시 만든다(2026-08-18 AiCoreExtraButtonsUI에서 겪은 함정).
+    private RectTransform partsGrid;
+    private RectTransform weaponsGrid;
+    private RectTransform discsGrid;
+
+    /// <summary>정비 화면의 기본 칸 색과 같은 값(일반 등급일 때 쓰는 바탕색).</summary>
+    private static readonly Color CellPlainColor = new Color(0.20f, 0.22f, 0.25f, 1f);
+
+    /// <summary>
+    /// 세 목록(장착 파츠 / 장착 무기 / 디스크)을 아이콘 격자로 바꾼다(2026-08-18 사용자 요청:
+    /// "상점에서도 보유, 장착 파츠와 아이템은 인벤토리와 같이 전부 아이콘으로 표시").
+    /// 기존 TMP 텍스트는 <b>제목 줄</b>로만 남기고, 그 아래를 격자가 차지한다.
+    /// </summary>
+    private void EnsureEquipGrids()
+    {
+        if (partsGrid != null && weaponsGrid != null && discsGrid != null) return;
+
+        var panel = (RectTransform)transform;
+
+        partsGrid = EnsureGridContainer(panel, "PartsGrid", moddingStatusText,
+                                        0.02f, 0.44f, 0.30f, 0.88f, 0.825f);
+        weaponsGrid = EnsureGridContainer(panel, "WeaponsGrid", equippedWeaponsText,
+                                          0.32f, 0.68f, 0.60f, 0.88f, 0.825f);
+        discsGrid = EnsureGridContainer(panel, "DiscsGrid", equippedDiscsText,
+                                        0.32f, 0.44f, 0.60f, 0.66f, 0.605f);
+    }
+
+    /// <param name="titleBottom">제목 줄의 아래쪽 경계(정규화). 격자는 이 아래를 쓴다.</param>
+    private static RectTransform EnsureGridContainer(RectTransform panel, string name, TextMeshProUGUI title,
+                                                     float xMin, float yMin, float xMax, float yMax,
+                                                     float titleBottom)
+    {
+        if (title != null)
+        {
+            RectTransform t = title.rectTransform;
+            t.anchorMin = new Vector2(xMin, titleBottom);
+            t.anchorMax = new Vector2(xMax, yMax);
+            t.offsetMin = Vector2.zero;
+            t.offsetMax = Vector2.zero;
+            title.alignment = TextAlignmentOptions.Left;
+            ItemCellUI.ApplyTextSizing(title, 30f);
+        }
+
+        Transform existing = panel.Find(name);
+        if (existing != null) Destroy(existing.gameObject);
+
+        var go = new GameObject(name, typeof(RectTransform));
+        go.transform.SetParent(panel, false);
+        var rect = (RectTransform)go.transform;
+        rect.anchorMin = new Vector2(xMin, yMin);
+        rect.anchorMax = new Vector2(xMax, titleBottom - 0.005f);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        return rect;
+    }
+
     private void RefreshEquipment()
     {
+        EnsureEquipGrids();
+
         ModdingManager modding = FindFirstObjectByType<ModdingManager>();
+        PlayerShootManager shootManager = FindFirstObjectByType<PlayerShootManager>();
+        int socketCount = shootManager != null ? shootManager.SocketCount : 0;
 
-        // 5. 장착된 무기 (소켓 개수는 머리 파츠가 정해야 하지만 지금은 인스펙터 설정 그대로 - 알려진 이슈)
-        if (equippedWeaponsText != null)
+        RefreshPartsGrid(modding, socketCount);
+        RefreshWeaponsGrid(shootManager, socketCount);
+        RefreshDiscsGrid();
+    }
+
+    // 4. 로봇 모딩 상태 - 머리 + 무기 소켓 파츠 N개 + 나머지 파츠 슬롯을 아이콘 칸으로.
+    private void RefreshPartsGrid(ModdingManager modding, int socketCount)
+    {
+        if (partsGrid == null) return;
+
+        int cellCount = 1 + socketCount + PartSlotExtensions.DisplayOrder.Length;
+        int columns = 3;
+        int rows = Mathf.CeilToInt(cellCount / (float)columns);
+
+        ItemCellUI.EnsureGrid(partsGrid, new Vector2(120f, 92f), columns, rows);
+        ItemCellUI.ClearChildren(partsGrid);
+
+        if (moddingStatusText != null)
         {
-            PlayerShootManager shootManager = FindFirstObjectByType<PlayerShootManager>();
-            var lines = new List<string> { $"[장착 무기] {DetailHint}" };
+            float weight = modding != null ? modding.GetTotalWeight() : 0f;
+            float capacity = modding != null ? modding.GetTotalWeightCapacity() : 0f;
+            string weightLine = weight > capacity
+                ? $"<color=#FF5555>{weight:0.#}/{capacity:0.#}</color>"
+                : $"{weight:0.#}/{capacity:0.#}";
+            moddingStatusText.text = $"[장착 파츠] <size=75%>AI 코어 Lv {RunState.CoreLevel} · 무게 {weightLine} {DetailHint}</size>";
+        }
 
-            if (shootManager == null)
+        ItemCellUI.CreateIconCell(partsGrid, "Cell_Head", Resources.Load<Sprite>("Parts/Body"),
+                                  new Color(0.16f, 0.17f, 0.19f, 1f), "머리", true, () => ShowDetail("head"));
+
+        for (int i = 0; i < socketCount; i++)
+        {
+            int index = i;
+            PartData socketPart = default;
+            bool has = modding != null && modding.TryGetEquippedWeaponSocketPart(i, out socketPart);
+            ItemGrade grade = has ? socketPart.grade : ItemGrade.Normal;
+
+            ItemCellUI.CreateIconCell(partsGrid, $"Cell_SocketPart_{i}",
+                                      PartIconLibrary.Get(PartSlot.ArmWeaponSocket),
+                                      grade.ToCellColor(CellPlainColor), $"소켓 {i + 1}", has,
+                                      () => ShowDetail($"ws:{index}"));
+        }
+
+        foreach (PartSlot slot in PartSlotExtensions.DisplayOrder)
+        {
+            PartSlot captured = slot;
+            PartData part = default;
+            bool has = modding != null && modding.TryGetEquippedPart(slot, out part);
+            ItemGrade grade = has ? part.grade : ItemGrade.Normal;
+
+            ItemCellUI.CreateIconCell(partsGrid, $"Cell_Part_{slot}", PartIconLibrary.Get(slot),
+                                      grade.ToCellColor(CellPlainColor), slot.ToKorean(), has,
+                                      () => ShowDetail($"p:{captured}"));
+        }
+    }
+
+    // 5. 장착된 무기 - 소켓마다 손에 드는 무기 이미지를 아이콘으로 쓴다(무기 전용 아이콘은 없다).
+    private void RefreshWeaponsGrid(PlayerShootManager shootManager, int socketCount)
+    {
+        if (weaponsGrid == null) return;
+
+        int columns = 3;
+        int rows = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(1, socketCount) / (float)columns));
+
+        ItemCellUI.EnsureGrid(weaponsGrid, new Vector2(120f, 92f), columns, rows);
+        ItemCellUI.ClearChildren(weaponsGrid);
+
+        if (equippedWeaponsText != null)
+            equippedWeaponsText.text = $"[장착 무기] {DetailHint}";
+
+        if (shootManager == null) return;
+
+        for (int i = 0; i < socketCount; i++)
+        {
+            int index = i;
+            bool has = shootManager.TryGetSocketInfo(i, out WeaponData weapon, out ItemGrade grade);
+
+            // 무기를 안 낀 소켓은 완전히 빈 칸으로 두면 "칸이 왜 있지?" 싶으므로,
+            // 무기 소켓 아이콘을 흐리게 깔아 "여기에 무기를 낄 수 있다"는 것을 보여준다.
+            Sprite icon = has ? ResolveWeaponIcon(weapon) : PartIconLibrary.Get(PartSlot.ArmWeaponSocket);
+
+            ItemCellUI.CreateIconCell(weaponsGrid, $"Cell_Weapon_{i}", icon,
+                                      has ? grade.ToCellColor(CellPlainColor) : CellPlainColor,
+                                      $"소켓 {i + 1}", has,
+                                      has ? (System.Action)(() => ShowDetail($"w:{index}")) : null);
+        }
+    }
+
+    // 6. 장착된 디스크 - 슬롯 수만큼 칸을 만들고 낀 디스크만 아이콘을 채운다.
+    private void RefreshDiscsGrid()
+    {
+        if (discsGrid == null) return;
+
+        int slotCount = shopManager != null ? shopManager.DiscSlotCount : 0;
+        int cellCount = Mathf.Max(slotCount, RunState.EquippedDiscIds.Count);
+        int columns = 4;
+        int rows = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(1, cellCount) / (float)columns));
+
+        ItemCellUI.EnsureGrid(discsGrid, new Vector2(120f, 92f), columns, rows);
+        ItemCellUI.ClearChildren(discsGrid);
+
+        if (equippedDiscsText != null)
+            equippedDiscsText.text = $"[디스크] {RunState.EquippedDiscIds.Count}/{slotCount} {DetailHint}";
+
+        for (int i = 0; i < cellCount; i++)
+        {
+            // DiscData도 struct라 null을 못 쓴다(PartData와 같은 이유).
+            DiscData disc = default;
+            bool has = i < RunState.EquippedDiscIds.Count && TryFindDisc(RunState.EquippedDiscIds[i], out disc);
+
+            if (has)
             {
-                lines.Add("(무기 정보를 찾을 수 없음)");
+                int discId = disc.discId;
+                ItemCellUI.CreateIconCell(discsGrid, $"Cell_Disc_{i}", disc.LoadIcon(),
+                                          disc.grade.ToCellColor(CellPlainColor), null, true,
+                                          () => ShowDetail($"d:{discId}"));
             }
             else
             {
-                for (int i = 0; i < shootManager.SocketCount; i++)
-                {
-                    if (shootManager.TryGetSocketInfo(i, out WeaponData weapon, out ItemGrade grade))
-                    {
-                        lines.Add(Clickable($"w:{i}",
-                            $"소켓 {i + 1}: <color={grade.ToColorHex()}>{grade.ToKorean()}</color> {weapon.weapon_name}"));
-                    }
-                    else
-                    {
-                        lines.Add($"소켓 {i + 1}: (비어 있음)");
-                    }
-                }
+                ItemCellUI.CreateIconCell(discsGrid, $"Cell_DiscEmpty_{i}", null, CellPlainColor * 0.6f, null, false, null);
             }
-
-            equippedWeaponsText.text = string.Join("\n", lines);
         }
+    }
 
-        // 6. 장착된 디스크
-        if (equippedDiscsText != null)
+    private bool TryFindDisc(int discId, out DiscData found)
+    {
+        found = default;
+        if (shopManager == null || shopManager.Catalog == null) return false;
+
+        foreach (DiscData disc in shopManager.Catalog.Discs)
         {
-            int slotCount = shopManager != null ? shopManager.DiscSlotCount : 0;
-            var lines = new List<string> { $"[디스크] {RunState.EquippedDiscIds.Count}/{slotCount} {DetailHint}" };
-
-            if (RunState.EquippedDiscIds.Count == 0)
-            {
-                lines.Add("(없음)");
-            }
-            else if (shopManager != null && shopManager.Catalog != null)
-            {
-                foreach (int discId in RunState.EquippedDiscIds)
-                {
-                    string name = discId.ToString();
-                    foreach (DiscData disc in shopManager.Catalog.Discs)
-                    {
-                        if (disc.discId != discId) continue;
-                        // 이름 줄 + 효과 설명 줄(작게) - 기획서 21종은 효과가 서로 많이 달라서
-                        // 이름만으로는 뭘 하는 디스크인지 알 수 없다.
-                        name = Clickable($"d:{disc.discId}",
-                                   $"<color={disc.grade.ToColorHex()}>{disc.grade.ToKorean()}</color> {disc.discName}") + "\n" +
-                               $"<size=80%><color=#AAAAAA>{disc.BuildDescription()}</color></size>";
-                        break;
-                    }
-                    lines.Add(name);
-                }
-            }
-
-            equippedDiscsText.text = string.Join("\n", lines);
+            if (disc.discId != discId) continue;
+            found = disc;
+            return true;
         }
-
-        // 4. 로봇 모딩 상태 (조회 전용) - 팔/다리 6부위는 Phase 4에서 ModdingManager로부터 실제 값을 가져온다
-        if (moddingStatusText != null)
-        {
-            int discSlots = shopManager != null ? shopManager.DiscSlotCount : 0;
-            int socketCount = 0;
-            PlayerShootManager shootManager = FindFirstObjectByType<PlayerShootManager>();
-            if (shootManager != null) socketCount = shootManager.SocketCount;
-
-            moddingStatusText.text =
-                $"[로봇 모딩 상태] {DetailHint}\n" +
-                Clickable("head", $"헤드: {GetRobotName()}") + "\n" +
-                // 예전에는 "헬멧: 기본"이 하드코딩돼 있어 실제로 낀 헬멧이 반영되지 않았다(2026-08-12 수정)
-                $"헬멧: {PartLine(modding, PartSlot.Helmet)}\n" +
-                $"메모리 카드: AI 코어 Lv {RunState.CoreLevel}\n" +
-                $"{BuildWeaponSocketPartsBlock(modding, socketCount)}\n" +
-                $"팔 장갑: {PartLine(modding, PartSlot.ArmArmor)}\n" +
-                $"디스크 슬롯({discSlots}칸): {PartLine(modding, PartSlot.DiscSlot)}\n" +
-                "필살기 슬롯: 1칸 (데모 범위 밖)\n" +
-                $"자기장 코어: {PartLine(modding, PartSlot.MagneticCore)}\n" +
-                $"다리: {PartLine(modding, PartSlot.Leg)}\n" +
-                $"다리 장갑: {PartLine(modding, PartSlot.LegArmor)}\n" +
-                $"발: {PartLine(modding, PartSlot.Foot)}\n" +
-                $"무게 지탱 {(modding != null ? modding.GetTotalWeight() : 0f):0.#} / " +
-                $"{(modding != null ? modding.GetTotalWeightCapacity() : 0f):0.#}";
-        }
+        return false;
     }
 
     // 파츠 하나를 "등급 이름 (설명)" 형태로 요약한다. 장착된 파츠가 있으면 클릭해서

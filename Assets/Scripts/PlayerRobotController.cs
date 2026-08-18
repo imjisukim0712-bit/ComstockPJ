@@ -373,7 +373,7 @@ public class PlayerRobotController : MonoBehaviour
         // 정비(AI 코어/로봇 정비/상점) 화면이 열려 있는 동안에는 조작을 완전히 막는다.
         // Time.timeScale=0으로도 이동은 멈추지만, 입력 폴링과 애니메이션까지 확실히 정지시켜
         // "인게임이 뒤에서 계속 진행되는 것처럼 보이는" 상태를 없앤다.
-        if (GameFlowManager.IsIntermission || GameOverManager.IsGameOver || GameWinManager.IsGameWon)
+        if (GameFlowManager.IsIntermission || GameFlowManager.IsPaused || GameOverManager.IsGameOver || GameWinManager.IsGameWon)
         {
             moveInput = Vector3.zero;
             UpdateAnimation(0f);

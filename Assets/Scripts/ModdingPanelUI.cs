@@ -35,7 +35,10 @@ public class ModdingPanelUI : MonoBehaviour
     [SerializeField] private int inventoryColumns = 4;
 
     [Header("파츠 슬롯 (우측)")]
-    [Tooltip("파츠 슬롯 칸이 생성될 부모. GridLayoutGroup이 없으면 자동으로 붙는다")]
+    [Tooltip("머리 + 무기 소켓 카드가 생성될 부모(2026-08-18 UI 기획서 반영 - 한 줄로 따로 묶는다). " +
+             "비워두면 예전처럼 slotContent 맨 앞에 섞어 그린다(호환용)")]
+    [SerializeField] private RectTransform headSocketRow;
+    [Tooltip("나머지 파츠 슬롯 칸이 생성될 부모. GridLayoutGroup이 없으면 자동으로 붙는다")]
     [SerializeField] private RectTransform slotContent;
     [SerializeField] private Vector2 slotCellSize = new Vector2(120f, 92f);
     [SerializeField] private int slotColumns = 3;
@@ -68,9 +71,20 @@ public class ModdingPanelUI : MonoBehaviour
     private int selectedInventoryIndex = -1;
 
     private readonly List<Image> inventoryCellImages = new List<Image>();
-    private readonly List<GameObject> spawnedCells = new List<GameObject>();
 
     private PlayerRobotController player;
+    private AiCoreManager aiCoreManager; // 2026-08-18 "레벨: N (MAX:M)" 표시용
+
+    // 인벤토리 오른쪽에 코드로 만드는 설명 칸(2026-08-18 사용자 요청: 팝업이 아니라 옆 공간에
+    // 설명을 띄우고, 교체 대상 파츠 설명도 함께 보여준다). 씬에 배치하지 않으므로 에디터
+    // 도메인 리로드로 참조가 날아갈 수 있다 - AiCoreExtraButtonsUI에서 겪은 함정이라
+    // Open()/Refresh()에서 없으면 다시 만든다.
+    private RectTransform detailPanel;
+    private Image detailSelectedIcon;
+    private TextMeshProUGUI detailSelectedText;
+    private Image detailTargetIcon;
+    private TextMeshProUGUI detailTargetText;
+    private TextMeshProUGUI detailTargetTitle;
 
     private void Awake()
     {
@@ -88,12 +102,24 @@ public class ModdingPanelUI : MonoBehaviour
     {
         if (inventoryContent != null) EnsureGrid(inventoryContent, inventoryCellSize, inventoryColumns);
         if (slotContent != null) EnsureGrid(slotContent, slotCellSize, slotColumns, SlotRowCount);
+
+        // 2026-08-18 UI 기획서 반영 - 머리 + 무기 소켓은 한 줄(1행)에 나란히 그린다.
+        // 소켓 수(WeaponSocketCount)만큼 열이 늘어나므로 여기서 매 프레임 열 수를 다시 맞춘다.
+        if (headSocketRow != null) EnsureGrid(headSocketRow, slotCellSize, 1 + WeaponSocketCount, fitRows: 1);
     }
 
-    /// <summary>파츠 슬롯 칸 수(머리 1 + 무기 소켓 N + 나머지 모딩 슬롯) 기준 행 수. 슬롯 영역은
-    /// 스크롤이 없어 이 행이 전부 들어가야 한다. 무기 소켓은 DisplayOrder에 없고 소켓 개수만큼
-    /// 별도로 그려지므로(2026-08-12 "무기 소켓 개별화" 플랜) 여기서 따로 더한다.</summary>
-    private int SlotRowCount => Mathf.CeilToInt((1 + WeaponSocketCount + PartSlotExtensions.DisplayOrder.Length) / (float)Mathf.Max(1, slotColumns));
+    /// <summary>파츠 슬롯(slotContent) 칸 수 기준 행 수. headSocketRow가 따로 있으면 머리·무기
+    /// 소켓은 거기서 그려지므로 여기는 DisplayOrder 항목만 센다. headSocketRow가 없으면(씬에
+    /// 아직 안 뚫려 있으면) 예전처럼 머리 1 + 소켓 N까지 여기서 함께 채운다(호환용).</summary>
+    private int SlotRowCount
+    {
+        get
+        {
+            int count = PartSlotExtensions.DisplayOrder.Length;
+            if (headSocketRow == null) count += 1 + WeaponSocketCount;
+            return Mathf.CeilToInt(count / (float)Mathf.Max(1, slotColumns));
+        }
+    }
 
     private int WeaponSocketCount => moddingManager != null ? moddingManager.ActiveSocketCount : 0;
 
@@ -257,10 +283,13 @@ public class ModdingPanelUI : MonoBehaviour
     {
         if (!gameObject.activeInHierarchy) return;
 
+        EnsureDetailPanel();
+
         RefreshHeader();
         RebuildInventory();
         RebuildSlots();
         RefreshStats();
+        RefreshDetail();
     }
 
     private void RefreshHeader()
@@ -299,11 +328,20 @@ public class ModdingPanelUI : MonoBehaviour
             int index = i; // 클로저가 반복 변수를 캡처하지 않도록 복사
 
             bool isSelected = index == selectedInventoryIndex;
-            string label = $"<color={part.grade.ToColorHex()}>{part.grade.ToKorean()}</color>\n{part.partName}\n<size=70%>{part.slot.ToKorean()}</size>";
 
-            Image cellImage = CreateCell(inventoryContent, $"InventoryCell_{index}", label,
-                                          isSelected ? cellSelectedColor : cellNormalColor,
-                                          () => HandleInventoryCellClicked(index));
+            // 사용자 확정(2026-08-18): 인벤토리는 글씨 없이 아이콘만 보여주고, 일반 등급이
+            // 아니면 칸을 등급색으로 칠한다. 이름·수치는 옆 설명 칸이 맡는다.
+            // 선택 표시는 등급색과 섞지 않고 **슬롯 강조와 같은 노란색**으로 덮는다.
+            // 섞으면 희귀(파랑)·서사(보라) 등급색과 구분이 안 된다(실측에서 헷갈렸다).
+            // 노란색은 어떤 등급색과도 겹치지 않고, "이 파츠가 저 노란 슬롯에 들어간다"는
+            // 짝도 눈으로 바로 이어진다.
+            Color cellColor = isSelected
+                ? slotHighlightColor
+                : part.grade.ToCellColor(cellNormalColor);
+
+            Image cellImage = CreateIconCell(inventoryContent, $"InventoryCell_{index}",
+                                             PartIconLibrary.Get(part.slot), cellColor, null, true,
+                                             () => HandleInventoryCellClicked(index));
             inventoryCellImages.Add(cellImage);
         }
 
@@ -314,20 +352,13 @@ public class ModdingPanelUI : MonoBehaviour
 
         for (int i = 0; i < emptyCells; i++)
         {
-            CreateCell(inventoryContent, $"InventoryEmpty_{i}", string.Empty, cellNormalColor * 0.6f, null);
+            CreateIconCell(inventoryContent, $"InventoryEmpty_{i}", null, cellNormalColor * 0.6f, null, false, null);
         }
     }
 
     private void RebuildSlots()
     {
         if (slotContent == null) return;
-
-        EnsureGrid(slotContent, slotCellSize, slotColumns, SlotRowCount);
-        ClearChildren(slotContent);
-
-        // 머리는 곧 로봇 종류 자체라 런 중 교체할 수 없다(조회 전용). 시안처럼 칸은 보여준다.
-        CreateCell(slotContent, "Slot_Head", $"머리\n{GetRobotName()}\n<size=70%>런 중 교체 불가</size>",
-                   slotReadOnlyColor, null);
 
         // 선택된 파츠가 들어갈 수 있는 슬롯만 노란색으로 연다.
         bool hasSelection = selectedInventoryIndex >= 0 &&
@@ -340,17 +371,43 @@ public class ModdingPanelUI : MonoBehaviour
         // 개별화" 플랜) - 선택된 파츠가 무기 소켓 종류면 N칸이 전부 노란색으로 열린다.
         bool highlightWeaponSockets = hasSelection && highlightSlot == PartSlot.ArmWeaponSocket;
 
+        // 2026-08-18 UI 기획서 반영 - 머리 + 무기 소켓은 별도 컨테이너(headSocketRow)에 한 줄로
+        // 그린다. 씬에 아직 안 뚫려 있으면(headSocketRow == null) 예전처럼 slotContent 맨 앞에
+        // 섞어 그려서 호환을 유지한다.
+        RectTransform headRow = headSocketRow != null ? headSocketRow : slotContent;
+        if (headSocketRow != null)
+        {
+            EnsureGrid(headSocketRow, slotCellSize, 1 + WeaponSocketCount, fitRows: 1);
+            ClearChildren(headSocketRow);
+        }
+
+        EnsureGrid(slotContent, slotCellSize, slotColumns, SlotRowCount);
+        ClearChildren(slotContent);
+
+        // 머리는 곧 로봇 종류 자체라 런 중 교체할 수 없다(조회 전용). 시안처럼 칸은 보여준다.
+        // 머리는 파츠가 아니라 로봇 자체라 슬롯 아이콘이 없다 - 리그용 몸통 스프라이트를 쓴다.
+        CreateIconCell(headRow, "Slot_Head", Resources.Load<Sprite>("Parts/Body"),
+                       slotReadOnlyColor, "머리", true, null);
+
+        // 슬롯 칸도 인벤토리와 같은 규칙으로 그린다 - 슬롯 이름(작게) + 아이콘 + 등급색.
+        // 예전에는 칸 안에 이름과 설명까지 밀어 넣어 글씨가 칸 밖으로 삐져나왔다(사용자 지적).
         for (int i = 0; i < WeaponSocketCount; i++)
         {
             int socketIndex = i;
 
-            string body = moddingManager != null && moddingManager.TryGetEquippedWeaponSocketPart(i, out PartData socketPart)
-                ? $"<color={socketPart.grade.ToColorHex()}>{socketPart.partName}</color>\n<size=70%>{socketPart.BuildDescription()}</size>"
-                : "<size=70%>(비어 있음)</size>";
+            // PartData는 struct라 &&로 단락되면 out 변수가 미할당으로 잡힌다 - 먼저 default로 둔다.
+            PartData socketPart = default;
+            bool equipped = moddingManager != null && moddingManager.TryGetEquippedWeaponSocketPart(i, out socketPart);
+            ItemGrade grade = equipped ? socketPart.grade : ItemGrade.Normal;
 
-            CreateCell(slotContent, $"Slot_WeaponSocket_{i}", $"무기 소켓 {i + 1}\n{body}",
-                       highlightWeaponSockets ? slotHighlightColor : slotNormalColor,
-                       () => HandleWeaponSocketCellClicked(socketIndex));
+            Color color = highlightWeaponSockets
+                ? slotHighlightColor
+                : grade.ToCellColor(slotNormalColor);
+
+            CreateIconCell(headRow, $"Slot_WeaponSocket_{i}",
+                           PartIconLibrary.Get(PartSlot.ArmWeaponSocket), color,
+                           $"무기 소켓 {i + 1}", equipped,
+                           () => HandleWeaponSocketCellClicked(socketIndex));
         }
 
         foreach (PartSlot slot in PartSlotExtensions.DisplayOrder)
@@ -358,13 +415,17 @@ public class ModdingPanelUI : MonoBehaviour
             PartSlot captured = slot;
             bool isHighlighted = hasSelection && highlightSlot == slot;
 
-            string body = moddingManager != null && moddingManager.TryGetEquippedPart(slot, out PartData part)
-                ? $"<color={part.grade.ToColorHex()}>{part.partName}</color>\n<size=70%>{part.BuildDescription()}</size>"
-                : "<size=70%>(비어 있음)</size>";
+            PartData part = default;
+            bool equipped = moddingManager != null && moddingManager.TryGetEquippedPart(slot, out part);
+            ItemGrade grade = equipped ? part.grade : ItemGrade.Normal;
 
-            CreateCell(slotContent, $"Slot_{slot}", $"{slot.ToKorean()}\n{body}",
-                       isHighlighted ? slotHighlightColor : slotNormalColor,
-                       () => HandleSlotClicked(captured));
+            Color color = isHighlighted
+                ? slotHighlightColor
+                : grade.ToCellColor(slotNormalColor);
+
+            CreateIconCell(slotContent, $"Slot_{slot}", PartIconLibrary.Get(slot), color,
+                           slot.ToKorean(), equipped,
+                           () => HandleSlotClicked(captured));
         }
     }
 
@@ -386,7 +447,15 @@ public class ModdingPanelUI : MonoBehaviour
         int discSlots = moddingManager != null ? moddingManager.DiscSlotCount : 0;
         bool overweight = weightSum > weightCapacity;
 
+        // 2026-08-18 UI 기획서 반영 - 정비 화면엔 레벨 표시가 아예 없었다. 메모리 파츠가 정하는
+        // 최대 레벨(AiCoreManager.MaxLevel)과 함께 보여준다(기획서 "레벨: 26 (MAX:50)" 표기).
+        if (aiCoreManager == null) aiCoreManager = FindFirstObjectByType<AiCoreManager>();
+        string levelLine = aiCoreManager != null
+            ? $"레벨: {RunState.CoreLevel} (MAX:{aiCoreManager.MaxLevel})\n"
+            : string.Empty;
+
         statsText.text =
+            levelLine +
             "[능력치]\n" +
             $"체력 {player.CurrentHp}/{player.MaxHp}\n" +
             $"공격력 {player.Atk}\n" +
@@ -414,101 +483,175 @@ public class ModdingPanelUI : MonoBehaviour
     }
 
     // ---------------------------------------------------------------------
-    // UI 생성 헬퍼 (칸 개수가 데이터에 따라 달라져 씬에 미리 배치할 수 없다)
+    // 파츠 설명 칸 (인벤토리 오른쪽)
     // ---------------------------------------------------------------------
 
     /// <summary>
-    /// 컨테이너에 GridLayoutGroup이 없으면 붙이고 칸 크기/열 수를 맞춘다.
-    ///
-    /// Canvas가 ConstantPixelSize라 Game View 해상도에 따라 캔버스 픽셀 크기가 크게 달라진다
-    /// (실측 640x480 ~ 3840x2160). 칸 크기를 고정 픽셀로 두면 해상도에 따라 칸이 우스꽝스럽게
-    /// 커지거나 작아지므로, 컨테이너의 실제 폭에서 열 수에 맞춰 계산한다. 인스펙터의
-    /// cellSize는 레이아웃이 아직 계산되지 않았을 때 쓰는 폴백값 겸 가로세로 비율 기준이다.
+    /// 인벤토리 오른쪽 빈 칸에 설명 패널을 만든다(2026-08-18 사용자 요청 - 팝업 대신 옆 공간).
+    /// 씬을 건드리지 않으려고 코드로 만들며, 도메인 리로드로 참조가 날아가면 다시 만든다.
+    /// 위치는 인벤토리(x 0~0.24)와 파츠 칸(x 0.44~) 사이라 슬롯 격자를 침범하지 않는다.
     /// </summary>
-    /// <param name="fitRows">
-    /// 0보다 크면 칸 높이도 컨테이너 높이를 이 행 수로 나눠 맞춘다(스크롤이 없는 슬롯 영역용).
-    /// 0이면 가로세로 비율만 유지한다 - 인벤토리는 스크롤이 있어 세로로 넘쳐도 되기 때문.
-    /// </param>
-    private static void EnsureGrid(RectTransform container, Vector2 fallbackCellSize, int columns, int fitRows = 0)
+    private void EnsureDetailPanel()
     {
-        GridLayoutGroup grid = container.GetComponent<GridLayoutGroup>();
-        if (grid == null) grid = container.gameObject.AddComponent<GridLayoutGroup>();
+        if (detailPanel != null && detailSelectedText != null && detailTargetText != null) return;
 
-        const float spacing = 6f;
-        int columnCount = Mathf.Max(1, columns);
+        Transform root = transform.Find("Root");
+        if (root == null) return;
 
-        // ContentSizeFitter는 스크롤 뷰의 content일 때만 필요하다. 스크롤이 없는 슬롯 격자에도
-        // 붙어 있었는데, 그러면 "컨테이너 높이 → 칸 높이 → (fitter가) 컨테이너 높이" 되먹임이
-        // 생겨 화면을 열 때마다 칸이 점점 납작해진다(실측: 칸 높이 75 → 34.65, 컨테이너 rect
-        // 높이가 -106까지 내려갔다). 그래서 스크롤 밖이면 세로 fit을 끄고 높이를 앵커 기준으로
-        // 되돌린 뒤에 칸 크기를 계산한다(2026-08-13).
-        bool insideScrollRect = container.GetComponentInParent<ScrollRect>() != null;
-        ContentSizeFitter fitter = container.GetComponent<ContentSizeFitter>();
+        Transform existing = root.Find("DetailPanel");
+        if (existing != null) Destroy(existing.gameObject);
 
-        if (!insideScrollRect)
+        var panelGo = new GameObject("DetailPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        panelGo.transform.SetParent(root, false);
+        detailPanel = (RectTransform)panelGo.transform;
+        detailPanel.anchorMin = new Vector2(0.26f, 0f);
+        detailPanel.anchorMax = new Vector2(0.42f, 0.88f);
+        detailPanel.offsetMin = Vector2.zero;
+        detailPanel.offsetMax = Vector2.zero;
+
+        Image bg = panelGo.GetComponent<Image>();
+        Sprite bgSprite = Resources.Load<Sprite>("UI/Black_ui03");
+        if (bgSprite != null)
         {
-            if (fitter != null) fitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
-            container.sizeDelta = new Vector2(container.sizeDelta.x, 0f); // 앵커가 정한 높이로 복귀
+            bg.sprite = bgSprite;
+            bg.type = Image.Type.Sliced;
+            bg.color = Color.white;
+        }
+        else
+        {
+            bg.color = new Color(0.10f, 0.11f, 0.13f, 0.95f);
+        }
+        bg.raycastTarget = false;
+
+        CreateDetailLabel(detailPanel, "Title", "파츠 설명", 0.06f, 0.945f, 0.94f, 0.995f, TextAlignmentOptions.Center, 28f);
+
+        detailSelectedIcon = CreateDetailIcon(detailPanel, "SelectedIcon", 0.30f, 0.775f, 0.70f, 0.935f);
+        detailSelectedText = CreateDetailLabel(detailPanel, "SelectedText", string.Empty,
+                                               0.07f, 0.45f, 0.93f, 0.765f, TextAlignmentOptions.Top);
+
+        detailTargetTitle = CreateDetailLabel(detailPanel, "TargetTitle", "교체 대상",
+                                              0.06f, 0.385f, 0.94f, 0.435f, TextAlignmentOptions.Center, 28f);
+
+        detailTargetIcon = CreateDetailIcon(detailPanel, "TargetIcon", 0.30f, 0.215f, 0.70f, 0.375f);
+        detailTargetText = CreateDetailLabel(detailPanel, "TargetText", string.Empty,
+                                             0.07f, 0.02f, 0.93f, 0.205f, TextAlignmentOptions.Top);
+    }
+
+    /// <param name="maxFontSize">설명 칸은 폭이 좁아 칸 글씨(42)와 같은 상한을 쓰면 몇 글자만으로
+    /// 여러 줄이 되어 넘친다(실측). 제목 28 / 본문 22 정도가 적당하다.</param>
+    private static TextMeshProUGUI CreateDetailLabel(RectTransform parent, string name, string content,
+                                                     float xMin, float yMin, float xMax, float yMax,
+                                                     TextAlignmentOptions alignment, float maxFontSize = 22f)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        go.transform.SetParent(parent, false);
+        var rect = (RectTransform)go.transform;
+        rect.anchorMin = new Vector2(xMin, yMin);
+        rect.anchorMax = new Vector2(xMax, yMax);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        var text = go.GetComponent<TextMeshProUGUI>();
+        text.text = content;
+        text.alignment = alignment;
+        text.color = Color.white;
+        text.raycastTarget = false;
+        ApplyCellTextSizing(text, maxFontSize);
+        return text;
+    }
+
+    private static Image CreateDetailIcon(RectTransform parent, string name,
+                                          float xMin, float yMin, float xMax, float yMax)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+        var rect = (RectTransform)go.transform;
+        rect.anchorMin = new Vector2(xMin, yMin);
+        rect.anchorMax = new Vector2(xMax, yMax);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        var img = go.GetComponent<Image>();
+        img.preserveAspect = true;
+        img.raycastTarget = false;
+        img.enabled = false;
+        return img;
+    }
+
+    /// <summary>선택한 파츠와 그 파츠가 밀어낼 <b>교체 대상</b>을 나란히 보여준다.</summary>
+    private void RefreshDetail()
+    {
+        if (detailSelectedText == null || detailTargetText == null) return;
+
+        List<PartData> parts = moddingManager != null ? moddingManager.GetInventoryParts() : new List<PartData>();
+        bool hasSelection = selectedInventoryIndex >= 0 && selectedInventoryIndex < parts.Count;
+
+        if (!hasSelection)
+        {
+            detailSelectedIcon.enabled = false;
+            detailSelectedText.text = "<color=#9AA3AB>인벤토리에서 파츠를 누르면\n여기에 설명이 나옵니다.</color>";
+            detailTargetTitle.gameObject.SetActive(false);
+            detailTargetIcon.enabled = false;
+            detailTargetText.text = string.Empty;
+            return;
         }
 
-        Vector2 cellSize = fallbackCellSize;
-        float availableWidth = container.rect.width;
-        if (availableWidth > 1f && fallbackCellSize.x > 0f)
+        PartData selected = parts[selectedInventoryIndex];
+
+        detailSelectedIcon.enabled = true;
+        detailSelectedIcon.sprite = PartIconLibrary.Get(selected.slot);
+        detailSelectedIcon.color = Color.white;
+        detailSelectedText.text = BuildPartDetail(selected);
+
+        detailTargetTitle.gameObject.SetActive(true);
+        detailTargetIcon.enabled = true;
+        detailTargetIcon.sprite = PartIconLibrary.Get(selected.slot);
+
+        // 무기 소켓 파츠는 소켓이 여러 개라 "교체 대상"이 하나로 정해지지 않는다 - 소켓별로 나열한다.
+        if (selected.slot == PartSlot.ArmWeaponSocket)
         {
-            float cellWidth = (availableWidth - spacing * (columnCount - 1)) / columnCount;
-            if (cellWidth > 1f)
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < WeaponSocketCount; i++)
             {
-                float aspect = fallbackCellSize.y / fallbackCellSize.x;
-                float cellHeight = cellWidth * aspect;
-
-                // 슬롯 영역은 스크롤이 없어서 비율대로 두면 아래로 넘쳐 다른 패널을 덮는다
-                // (실측: 3행이 컨테이너 높이의 1.7배가 됐다). 높이도 컨테이너에 맞춘다.
-                if (fitRows > 0)
-                {
-                    float availableHeight = container.rect.height;
-                    if (availableHeight > 1f)
-                    {
-                        float fitted = (availableHeight - spacing * (fitRows - 1)) / fitRows;
-                        if (fitted > 1f) cellHeight = fitted;
-                    }
-                }
-
-                cellSize = new Vector2(cellWidth, cellHeight);
+                PartData socketPart = default;
+                bool has = moddingManager != null && moddingManager.TryGetEquippedWeaponSocketPart(i, out socketPart);
+                sb.AppendLine(has
+                    ? $"소켓 {i + 1}: <color={socketPart.grade.ToColorHex()}>{socketPart.partName}</color>"
+                    : $"소켓 {i + 1}: <color=#7B858E>(비어 있음)</color>");
             }
+            detailTargetIcon.color = new Color(1f, 1f, 1f, 0.55f);
+            detailTargetText.text = sb.ToString().TrimEnd();
+            return;
         }
 
-        grid.cellSize = cellSize;
-        grid.spacing = new Vector2(spacing, spacing);
-        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        grid.constraintCount = columnCount;
-        grid.childAlignment = TextAnchor.UpperLeft;
-
-        // 스크롤 뷰의 content로 쓰일 때만 칸이 늘어난 만큼 높이가 자라야 한다.
-        if (insideScrollRect)
+        if (moddingManager != null && moddingManager.TryGetEquippedPart(selected.slot, out PartData equipped))
         {
-            if (fitter == null) fitter = container.gameObject.AddComponent<ContentSizeFitter>();
-            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            detailTargetIcon.color = Color.white;
+            detailTargetText.text = BuildPartDetail(equipped);
+        }
+        else
+        {
+            detailTargetIcon.color = new Color(1f, 1f, 1f, 0.28f);
+            detailTargetText.text = $"<color=#7B858E>{selected.slot.ToKorean()} 슬롯이 비어 있습니다.</color>";
         }
     }
 
-    private void ClearChildren(RectTransform container)
+    private static string BuildPartDetail(PartData part)
     {
-        // Destroy()는 프레임 끝에야 실제로 파괴되므로, 같은 프레임에 Refresh가 두 번 돌면
-        // (Open()의 명시적 호출 + OpenAllBoxesIntoInventory()의 NotifyChanged) 아직 살아있는
-        // 이전 칸 위에 새 칸이 겹쳐 쌓인다 - 실측에서 슬롯이 9개가 아니라 18개로 잡혔다.
-        //
-        // DestroyImmediate는 물리 트리거 콜백 중에는 금지되어 쓸 수 없다(정비 화면이 열린 채
-        // 보상 픽업이 흡수되면 OnTriggerEnter → NotifyChanged → 여기로 들어와 예외가 났다).
-        // 그래서 부모에서 먼저 떼어내 childCount를 즉시 정확하게 만들고, 파괴는 Unity에 맡긴다.
-        for (int i = container.childCount - 1; i >= 0; i--)
-        {
-            GameObject child = container.GetChild(i).gameObject;
-            spawnedCells.Remove(child);
-            child.transform.SetParent(null, false);
-            Destroy(child);
-        }
+        return $"<color={part.grade.ToColorHex()}>{part.grade.ToKorean()}</color> {part.partName}\n" +
+               $"<size=85%><color=#9AA3AB>{part.slot.ToKorean()}</color></size>\n" +
+               $"<size=90%>{part.BuildDescription()}</size>";
     }
+
+    // ---------------------------------------------------------------------
+    // UI 생성 헬퍼 (칸 개수가 데이터에 따라 달라져 씬에 미리 배치할 수 없다)
+    // ---------------------------------------------------------------------
+
+    // 격자 설정과 칸 비우기도 상점 화면과 공유한다(ItemCellUI).
+    private static void EnsureGrid(RectTransform container, Vector2 fallbackCellSize, int columns, int fitRows = 0)
+        => ItemCellUI.EnsureGrid(container, fallbackCellSize, columns, fitRows);
+
+    private void ClearChildren(RectTransform container) => ItemCellUI.ClearChildren(container);
 
     /// <summary>
     /// 칸 하나(배경 Image + 클릭 Button + 가운데 정렬 TMP 텍스트)를 만든다.
@@ -516,44 +659,7 @@ public class ModdingPanelUI : MonoBehaviour
     /// </summary>
     private Image CreateCell(RectTransform parent, string name, string label, Color color, System.Action onClick)
     {
-        var cell = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        cell.transform.SetParent(parent, false);
-
-        // 칸은 "테두리 아트(고정) + 안쪽 상태색(가변)" 두 겹이다(2026-08-13 UI 아트 적용).
-        // 예전처럼 칸 이미지 하나에 색을 칠하면, 테두리 스프라이트가 거의 검정이라 색을 곱하는
-        // 순간 노란 슬롯 강조·파란 선택 강조가 전부 검게 죽어버린다. 그래서 아트는 흰색으로 두고
-        // 상태색은 안쪽에 따로 깐 뒤, **안쪽 이미지를 돌려줘서** 기존 색 변경 코드가 그대로 돌게 한다.
-        Image frame = cell.GetComponent<Image>();
-        Sprite frameSprite = Resources.Load<Sprite>("UI/Black_ui03");
-        if (frameSprite != null)
-        {
-            frame.sprite = frameSprite;
-            frame.type = Image.Type.Sliced;
-            frame.color = Color.white;
-        }
-        else
-        {
-            frame.color = color; // 아트를 못 찾으면 예전처럼 단색 칸으로 동작
-        }
-
-        var stateGo = new GameObject("State", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        stateGo.transform.SetParent(cell.transform, false);
-        var stateRect = (RectTransform)stateGo.transform;
-        stateRect.anchorMin = new Vector2(0.07f, 0.07f);
-        stateRect.anchorMax = new Vector2(0.93f, 0.93f);
-        stateRect.offsetMin = Vector2.zero;
-        stateRect.offsetMax = Vector2.zero;
-
-        Image image = stateGo.GetComponent<Image>();
-        image.color = color;
-        image.raycastTarget = false; // 클릭은 바깥 칸(프레임)이 받는다
-
-        if (onClick != null)
-        {
-            Button button = cell.AddComponent<Button>();
-            button.targetGraphic = image;
-            button.onClick.AddListener(() => onClick());
-        }
+        Image image = ItemCellUI.CreateShell(parent, name, color, onClick, out GameObject cell);
 
         var textGo = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
         textGo.transform.SetParent(cell.transform, false);
@@ -561,27 +667,32 @@ public class ModdingPanelUI : MonoBehaviour
         var rect = (RectTransform)textGo.transform;
         rect.anchorMin = Vector2.zero;
         rect.anchorMax = Vector2.one;
-        rect.offsetMin = new Vector2(4f, 4f);
-        rect.offsetMax = new Vector2(-4f, -4f);
+        rect.offsetMin = new Vector2(6f, 6f);
+        rect.offsetMax = new Vector2(-6f, -6f);
 
         var text = textGo.GetComponent<TextMeshProUGUI>();
         text.text = label;
         text.alignment = TextAlignmentOptions.Center;
         text.color = Color.white;
-        text.richText = true;
+        ApplyCellTextSizing(text);
 
-        // Canvas가 ConstantPixelSize라 해상도에 따라 고정 픽셀 폰트가 칸을 넘친다
-        // (프로젝트 안내.md 참고). 새로 만드는 텍스트는 자동 크기 조절을 켠다.
-        // 상한을 낮게 잡으면 고해상도에서 큰 칸에 깨알 같은 글씨가 남으므로(실측 3840x2160에서
-        // 칸 352px에 16px 글씨) 넉넉히 두고, 실제 크기는 자동 조절에 맡긴다.
-        text.enableAutoSizing = true;
-        text.fontSizeMin = 6f;
-        text.fontSizeMax = 42f;
-        text.enableWordWrapping = true;
-
-        spawnedCells.Add(cell);
         return image;
     }
+
+    /// <summary>
+    /// 아이콘 칸 하나를 만든다. 사용자 확정(2026-08-18): 인벤토리·슬롯의 아이템은 <b>아이콘만</b>
+    /// 보여주고(아이콘 뒤에 별도 사각형을 깔지 않는다 - 칸 자체가 배경이다), <b>일반 등급이 아니면
+    /// 칸을 등급색으로</b> 칠한다. 이름·수치는 옆 설명 칸에서 본다.
+    /// </summary>
+    /// <param name="caption">칸 위에 작게 붙일 이름(슬롯 칸용). null이면 아이콘만.</param>
+    /// <param name="iconBright">false면 아이콘을 흐리게 그린다(빈 슬롯 표시용).</param>
+    // 칸 생김새는 상점 화면과 공유한다(ItemCellUI). 여기서는 얇게 감싸기만 한다.
+    private Image CreateIconCell(RectTransform parent, string name, Sprite icon, Color color,
+                                 string caption, bool iconBright, System.Action onClick)
+        => ItemCellUI.CreateIconCell(parent, name, icon, color, caption, iconBright, onClick);
+
+    private static void ApplyCellTextSizing(TextMeshProUGUI text, float maxFontSize = 42f)
+        => ItemCellUI.ApplyTextSizing(text, maxFontSize);
 
     private static int RoundUpToMultiple(int value, int multiple)
     {

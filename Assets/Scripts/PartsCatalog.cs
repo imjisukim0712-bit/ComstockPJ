@@ -155,11 +155,14 @@ public class PartsCatalog : ScriptableObject
             return info;
         }
 
-        // 데이터가 아직 없는 로봇ID면 안전한 기본값으로 폴백
+        // 데이터가 아직 없는 로봇ID면 안전한 기본값으로 폴백.
+        // 2026-08-18 사용자 지정: "모든 로봇의 무기 기본 최대치 4개(더 적을 수도 있으나 특별한
+        // 경우)" - 기본값을 4로 올렸다. 예외적으로 소켓이 더 적은 로봇은 headModdingInfos에
+        // 그 로봇 전용 항목을 등록해서 이 폴백을 우회하면 된다.
         return new HeadModdingInfo
         {
             robotId = robotId,
-            weaponSocketCount = 2,
+            weaponSocketCount = 4,
             discSlotCount = 6,
             partBoxCapacity = DefaultPartBoxCapacity
         };

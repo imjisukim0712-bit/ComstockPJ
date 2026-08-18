@@ -15,7 +15,7 @@ MonoBehaviour:
   monsters:
   - monster_id: 200001
     monster_name: "\uC880\uBE44"
-    monster_hp: 70
+    monster_hp: 40
     monster_atk: 15
     monster_def: 1
     monster_speed: 2
@@ -26,9 +26,9 @@ MonoBehaviour:
     monster_size: 0
   - monster_id: 200002
     monster_name: "\uCC28\uC800"
-    monster_hp: 180
+    monster_hp: 103
     monster_atk: 35
-    monster_def: 3
+    monster_def: 2
     monster_speed: 3
     monster_range: 6
     monster_type: 1
@@ -37,7 +37,7 @@ MonoBehaviour:
     monster_size: 2
   - monster_id: 200003
     monster_name: "\uC2A4\uD53C\uD130"
-    monster_hp: 75
+    monster_hp: 43
     monster_atk: 18
     monster_def: 0
     monster_speed: 1.5
@@ -48,9 +48,9 @@ MonoBehaviour:
     monster_size: 0
   - monster_id: 200004
     monster_name: "\uC2A4\uD504\uB9B0\uD130"
-    monster_hp: 100
+    monster_hp: 57
     monster_atk: 35
-    monster_def: 2
+    monster_def: 1
     monster_speed: 5
     monster_range: 1.6
     monster_type: 1
@@ -59,9 +59,9 @@ MonoBehaviour:
     monster_size: 0
   - monster_id: 200005
     monster_name: "\uB514\uC2A4\uB7ED\uD130"
-    monster_hp: 110
+    monster_hp: 63
     monster_atk: 75
-    monster_def: 2
+    monster_def: 1
     monster_speed: 1.6
     monster_range: 2.4
     monster_type: 1
@@ -70,9 +70,9 @@ MonoBehaviour:
     monster_size: 1
   - monster_id: 200006
     monster_name: "\uB9AC\uB354"
-    monster_hp: 600
+    monster_hp: 343
     monster_atk: 25
-    monster_def: 10
+    monster_def: 4
     monster_speed: 2.5
     monster_range: 2.4
     monster_type: 1

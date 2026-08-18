@@ -307,6 +307,11 @@ public class PlayerShootManager : MonoBehaviour
         for (int i = 0; i < weapon_slots.Count; i++)
         {
             int weapon_id = weapon_slots[i].weapon_id;
+
+            // weapon_id 0 이하 = 빈 소켓(무기 미장착). 정상 상태이므로 경고하지 않고 건너뛴다.
+            // weapon_data_by_slot에 항목이 없으면 UpdateSlot이 알아서 발사를 건너뛴다.
+            if (weapon_id <= 0) continue;
+
             if (GameDataManager.Instance.Weapons.TryGetValue(weapon_id, out WeaponData data))
             {
                 weapon_data_by_slot[i] = data;
@@ -336,7 +341,7 @@ public class PlayerShootManager : MonoBehaviour
                 continue;
             }
 
-            if (weapon_slots[i].hand_sprite_renderer != null) weapon_slots[i].hand_sprite_renderer.enabled = true;
+            // 켜고 끄는 판단은 RefreshWeaponVisual이 한다(빈 소켓이면 손 이미지를 끈다).
             RefreshWeaponVisual(i);
         }
     }
@@ -350,7 +355,23 @@ public class PlayerShootManager : MonoBehaviour
         WeaponSlot slot = weapon_slots[slot_index];
         if (slot.hand_sprite_renderer == null) return;
 
-        if (!GameDataManager.Instance.Weapons.TryGetValue(slot.weapon_id, out WeaponData data)) return;
+        if (!GameDataManager.Instance.Weapons.TryGetValue(slot.weapon_id, out WeaponData data))
+        {
+            // 빈 소켓(weapon_id 0 이하)이면 손 이미지를 끈다. 씬에 기본 무기 스프라이트가 그대로
+            // 남아 있어서, 끄지 않으면 장착하지도 않은 무기가 계속 손에 보인다.
+            // (weapon_id는 있는데 데이터를 못 찾은 경우는 데이터 오류이므로 아래 주석대로
+            //  기존 이미지를 유지한 채 그냥 빠져나간다.)
+            if (slot.weapon_id <= 0)
+            {
+                expected_weapon_sprite_by_slot.Remove(slot_index);
+                slot.hand_sprite_renderer.enabled = false;
+            }
+            return;
+        }
+
+        // 빈 소켓에 무기를 새로 장착했을 때 다시 보이게 하려면 여기서 켜야 한다
+        // (상점 구매 → EquipWeapon → RefreshWeaponVisual 경로가 이 지점을 지난다).
+        slot.hand_sprite_renderer.enabled = true;
 
         string sprite_name = slot.use_left_hand_image ? data.weapon_lfwpimg : data.weapon_rgwpimg;
         Sprite sprite = ResolveWeaponSprite(sprite_name, data);
@@ -514,7 +535,7 @@ public class PlayerShootManager : MonoBehaviour
     {
         // 게임오버/승리 이후, 그리고 정비 화면(AI 코어/로봇 정비/상점)이 열려 있는 동안에는
         // 조준/발사 모두 정지 - 정비 중에는 인게임이 완전히 멈춰 있어야 한다(사용자 확정 사항).
-        if (GameOverManager.IsGameOver || GameWinManager.IsGameWon || GameFlowManager.IsIntermission) return;
+        if (GameOverManager.IsGameOver || GameWinManager.IsGameWon || GameFlowManager.IsIntermission || GameFlowManager.IsPaused) return;
 
         // 구르는 동안에는 무기가 머리 위로 올라가 캐릭터와 함께 돌 뿐, 조준·발사는 완전히
         // 멈춘다(빠르게 이동하는 대신 잠깐 공격을 못 하는 패널티 - 사용자 확정 사항).

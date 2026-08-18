@@ -912,8 +912,11 @@ public class EnemyUnit : MonoBehaviour
     // 최종적으로 원래 값 대비 3배다. 이 상수를 같이 맞추지 않으면 체력만 바꾼 것으로
     // 경험치·골드가 같은 배율로 따라 변해 레벨업/골드 획득 속도가 의도치 않게 바뀐다.
     // 체력을 다시 조정하면 이 상수도 반드시 같은 배율로 맞출 것.
-    private const int ExpPerMaxHp = 30;
-    private const int GoldPerMaxHp = 60;
+    //
+    // 2026-08-18 기본 장착 무기가 4정 -> 1정이 되면서 화력이 약 1/4로 줄어, 좀비 체력을
+    // 70 -> 40(약 1.75배 감소)으로 재앵커했다. 그에 맞춰 이 상수도 1.75배 내린다(30/60 -> 17/34).
+    private const int ExpPerMaxHp = 17;
+    private const int GoldPerMaxHp = 34;
 
     private void GrantKillRewards()
     {

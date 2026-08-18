@@ -11,8 +11,8 @@ using UnityEngine.UI;
 ///
 /// AI 코어 업그레이드 카드는 레벨업이 있었을 때만 노출되고(RunState.PendingCoreUpgradeChoices),
 /// 로봇 정비 화면은 획득한 부품 상자가 있을 때만 노출된다(RunState.UnopenedPartBoxCount).
-/// 상점은 기획서대로 웨이브 종료 후 항상 노출되며, "다음 웨이브 시작" 버튼도 상점 화면
-/// 안에 있다(기획서 p.13의 3번 요소).
+/// 상점은 기획서대로 웨이브 종료 후 항상 노출되며, 다음 웨이브로 넘어가는 버튼("정비 종료")도
+/// 상점 화면 안에 있다(기획서 p.13의 3번 요소).
 /// </summary>
 public class GameFlowManager : MonoBehaviour
 {
@@ -65,12 +65,25 @@ public class GameFlowManager : MonoBehaviour
     public static bool IsIntermission { get; private set; }
 
     /// <summary>
+    /// ESC 일시정지 메뉴(<see cref="PauseMenuUI"/>)가 열려 있는지. IsIntermission과 별개의
+    /// 플래그다 - 정비/상점 화면(그 자체로 전체 화면 UI)과 일시정지(어느 화면 위에도 반투명하게
+    /// 덮이는 오버레이)는 여는 이유도 겪는 부작용도 다르다. 입력을 멈추는 Update 가드들
+    /// (PlayerRobotController/PlayerShootManager/DiscEffectRuntime)은 이 값도 함께 확인한다.
+    /// </summary>
+    public static bool IsPaused { get; private set; }
+
+    /// <summary>PauseMenuUI만 호출한다. GameFlowManager가 이 상태의 유일한 진실 공급원이라
+    /// 다른 스크립트의 Update 가드들이 안심하고 참조할 수 있다.</summary>
+    public static void SetPaused(bool paused) => IsPaused = paused;
+
+    /// <summary>
     /// 씬을 다시 시작할 때 이전 판의 값이 남지 않도록 PlayerRobotController.Awake()가 호출한다
     /// (EnemyUnit.ResetStaticCaches()와 같은 이유).
     /// </summary>
     public static void ResetStaticState()
     {
         IsIntermission = false;
+        IsPaused = false;
         Time.timeScale = 1f; // 정비 중에 플레이모드를 껐다 켠 경우 0으로 굳어있지 않도록
     }
 
@@ -81,10 +94,26 @@ public class GameFlowManager : MonoBehaviour
     // 그 배열에 섞지 않고 여기서 한 번만 리스너를 단다(ShopPanelUI.Awake와 같은 관례).
     private AiCoreExtraButtonsUI aiCoreExtraButtons;
 
+    // ESC 일시정지 메뉴(2026-08-18). 씬에 깔지 않고 Canvas 밑에 코드로 만들어 붙인다.
+    private PauseMenuUI pauseMenu;
+
     private void Awake()
     {
         if (aiCoreUpgradePanel != null) aiCoreUpgradePanel.SetActive(false);
         EnsureAiCoreExtraButtons();
+        EnsurePauseMenu();
+    }
+
+    /// <summary>일시정지 메뉴가 없으면 만들어 붙인다. AiCoreExtraButtons와 같은 이유로
+    /// Awake에서 한 번, 필요하면 그 이후에도 다시 확인할 수 있게 열어 둔다.</summary>
+    private void EnsurePauseMenu()
+    {
+        if (pauseMenu != null) return;
+
+        Canvas canvas = FindFirstObjectByType<Canvas>();
+        if (canvas == null) return;
+
+        pauseMenu = PauseMenuUI.EnsureAttached((RectTransform)canvas.transform);
     }
 
     /// <summary>

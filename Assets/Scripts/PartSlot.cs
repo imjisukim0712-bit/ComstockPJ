@@ -14,11 +14,18 @@ public enum PartSlot
     ArmWeaponSocket, // 팔 - 무기 소켓 (장착 가능 무기 타입을 결정)
     ArmArmor,        // 팔 - 팔 장갑 (방어력)
     MagneticCore,    // 팔 - 자기장 코어 (지탱 가능 무기 무게)
-    Leg,             // 다리 (무게 지탱 + 회피 판정에 쓰이는 이동 기술)
+    Leg,             // 다리 (무게 지탱 + 회피, 2026-08-18부터 이동속도까지 - 아래 Foot 참고)
     LegArmor,        // 다리 - 다리 장갑 (방어력)
-    Foot,            // 다리 - 발 (기동력/이동속도)
+
+    // 2026-08-18 `UI 기획서.pdf` 반영: "메모리 추가 / 발 삭제"(사용자 확정). enum은 int로
+    // 직렬화되므로 값을 지울 수 없어 자리만 남겨둔다 - PartsCatalog에는 이 슬롯의 파츠 데이터가
+    // 이제 없고(GetDefaultPart가 null 반환), DisplayOrder에도 없어 UI에 나타나지 않는다.
+    // 발이 주던 이동속도 보너스는 다리(Leg) 파츠로 옮겨졌다(경량 부츠/제트 부스터 계열).
+    Foot,
     Helmet,          // 머리 - 헬멧 (방어력)
-    DiscSlot         // 머리 - 디스크 슬롯 (장착 가능한 최대 디스크 개수)
+    DiscSlot,        // 머리 - 디스크 슬롯 (장착 가능한 최대 디스크 개수)
+
+    Memory           // 머리 - 메모리 카드 (AI 코어 최대 레벨을 결정, 2026-08-18 신설)
 }
 
 public static class PartSlotExtensions
@@ -31,15 +38,18 @@ public static class PartSlotExtensions
     /// 소켓 인덱스별로 카드가 N개(ModdingManager.ActiveSocketCount) 그려지므로, 이 슬롯 하나로
     /// 표현할 수 없어 UI가 별도로 처리한다(ModdingPanelUI.RebuildSlots 참고).
     /// </summary>
+    /// <summary>2026-08-18 `UI 기획서.pdf` 반영 - 메모리/헬멧/팔장갑 3열, 다리/코어/다리장갑
+    /// 3열, 디스크 슬롯 1개가 그 아래 홀로 남는 배치(3열 그리드에 7개를 순서대로 채우면
+    /// 자동으로 이 모양이 된다). Foot은 더 이상 나열하지 않는다.</summary>
     public static readonly PartSlot[] DisplayOrder =
     {
+        PartSlot.Memory,          // 머리
         PartSlot.Helmet,          // 머리
-        PartSlot.DiscSlot,        // 머리
         PartSlot.ArmArmor,        // 팔
-        PartSlot.MagneticCore,    // 팔
         PartSlot.Leg,             // 다리
+        PartSlot.MagneticCore,    // 팔
         PartSlot.LegArmor,        // 다리
-        PartSlot.Foot             // 다리
+        PartSlot.DiscSlot         // 머리
     };
 
     public static string ToKorean(this PartSlot slot)
@@ -54,6 +64,7 @@ public static class PartSlotExtensions
             case PartSlot.Foot: return "발";
             case PartSlot.Helmet: return "헬멧";
             case PartSlot.DiscSlot: return "디스크 슬롯";
+            case PartSlot.Memory: return "메모리";
             default: return slot.ToString();
         }
     }

@@ -20,7 +20,26 @@ public class SFXManager : MonoBehaviour
 
     private const string PlayerHitClipName = "Player_Hit";
 
+    private const string VolumePrefsKey = "comstock_sfx_volume";
+    private const float DefaultVolume = 0.7f;
+
     public static SFXManager Instance { get; private set; }
+
+    /// <summary>0~1 효과음 전역 볼륨(2026-08-18 환경설정 화면 추가). PlayerPrefs에 저장되며,
+    /// 설정하는 즉시 반영된다(배경음 <see cref="MusicManager.Volume"/>과 같은 방식).
+    /// 실제 효과음 재생(<see cref="Play"/>)이 이 값을 곱해서 쓴다.</summary>
+    public static float Volume
+    {
+        get => Mathf.Clamp01(PlayerPrefs.GetFloat(VolumePrefsKey, DefaultVolume));
+        set
+        {
+            PlayerPrefs.SetFloat(VolumePrefsKey, Mathf.Clamp01(value));
+            OnVolumeChanged?.Invoke(Mathf.Clamp01(value));
+        }
+    }
+
+    /// <summary>볼륨이 바뀌면 알린다(설정 화면의 슬라이더가 다른 화면에서 바뀐 값을 따라가도록).</summary>
+    public static event System.Action<float> OnVolumeChanged;
 
     private AudioSource source;
     private readonly Dictionary<string, AudioClip> clips = new Dictionary<string, AudioClip>();
@@ -71,7 +90,7 @@ public class SFXManager : MonoBehaviour
         if (Instance == null || string.IsNullOrEmpty(clipName)) return;
         if (!Instance.clips.TryGetValue(clipName, out AudioClip clip) || clip == null) return;
 
-        Instance.source.PlayOneShot(clip, Mathf.Clamp01(volumeScale));
+        Instance.source.PlayOneShot(clip, Mathf.Clamp01(volumeScale) * Volume);
     }
 
     private void EnsurePlaceholderClip(string clipName, float frequency, float duration)

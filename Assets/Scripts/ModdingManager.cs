@@ -64,6 +64,11 @@ public class ModdingManager : MonoBehaviour
             // 무기 소켓은 슬롯 하나가 아니라 소켓 인덱스별로 채워야 하므로 아래에서 따로 처리한다.
             if (slot == PartSlot.ArmWeaponSocket) continue;
 
+            // 2026-08-18 "메모리 추가 / 발 삭제" - Foot은 더 이상 장착 대상이 아니다(PartsCatalog에
+            // 이 슬롯의 파츠 데이터 자체가 없다). 건너뛰지 않으면 매 런마다
+            // "PartsCatalog에 발 슬롯의 기본 파츠가 없습니다" 경고만 찍힌다.
+            if (slot == PartSlot.Foot) continue;
+
             string key = slot.ToString();
             if (RunState.EquippedPartIds.ContainsKey(key)) continue;
 
@@ -134,9 +139,11 @@ public class ModdingManager : MonoBehaviour
     {
         if (catalog == null)
         {
+            // 2026-08-18: 모든 로봇의 무기 기본 최대치를 4로 올렸다(PartsCatalog.GetHeadModdingInfo와
+            // 동일한 폴백값 - 카탈로그 자체가 없는 극단적인 경우에도 일관되게 4를 쓴다).
             return new PartsCatalog.HeadModdingInfo
             {
-                weaponSocketCount = 2,
+                weaponSocketCount = 4,
                 discSlotCount = 6,
                 partBoxCapacity = PartsCatalog.DefaultPartBoxCapacity
             };
@@ -180,6 +187,26 @@ public class ModdingManager : MonoBehaviour
                 return discSlotPart.discSlotCount;
 
             return Mathf.Max(0, GetHeadInfo().discSlotCount);
+        }
+    }
+
+    /// <summary>기본 상한(카탈로그에 메모리 파츠가 아직 없는 극단적인 경우의 폴백).
+    /// 기획서 표기(MAX:50)와 맞춘 값 - 기본(일반 등급) 메모리 파츠의 값과 같다.</summary>
+    private const int DefaultCoreMaxLevel = 50;
+
+    /// <summary>
+    /// AI 코어가 도달할 수 있는 최대 레벨. 2026-08-18부터 메모리(Memory) 파츠가 정한다
+    /// (이전에는 AiCoreManager 인스펙터의 고정값이었다). <see cref="AiCoreManager.MaxLevel"/>이
+    /// 이 값을 그대로 읽는다.
+    /// </summary>
+    public int CoreMaxLevel
+    {
+        get
+        {
+            if (TryGetEquippedPart(PartSlot.Memory, out PartData memory) && memory.coreMaxLevelBonus > 0)
+                return memory.coreMaxLevelBonus;
+
+            return DefaultCoreMaxLevel;
         }
     }
 

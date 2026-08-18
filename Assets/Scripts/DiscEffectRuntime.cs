@@ -52,7 +52,7 @@ public class DiscEffectRuntime : MonoBehaviour
     private void Update()
     {
         if (player == null || player.IsDead) return;
-        if (GameOverManager.IsGameOver || GameWinManager.IsGameWon || GameFlowManager.IsIntermission) return;
+        if (GameOverManager.IsGameOver || GameWinManager.IsGameWon || GameFlowManager.IsIntermission || GameFlowManager.IsPaused) return;
         if (!EnsureCatalog() || RunState.EquippedDiscIds.Count == 0) return;
 
         UpdatePeriodicAndOscillating();

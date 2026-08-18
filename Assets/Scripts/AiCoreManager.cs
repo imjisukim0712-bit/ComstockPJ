@@ -19,10 +19,9 @@ public class AiCoreManager : MonoBehaviour
 {
     [SerializeField] private AiCoreUpgradePool upgradePool;
 
-    [Tooltip("메모리(머리 파츠)가 정하는 AI 코어 최대 레벨의 임시값. " +
-             "실제 값은 로봇 모딩(Phase 4)에서 머리 파츠 데이터로 대체된다. " +
-             "2026-08-13 레벨업 빈도를 약 3.5배로 올리면서 20 → 70으로 함께 올렸다")]
-    [SerializeField] private int coreMaxLevelPlaceholder = 70;
+    [Tooltip("ModdingManager(메모리 파츠)를 찾지 못하는 극단적인 경우에만 쓰는 폴백값. " +
+             "2026-08-18부터 실제 최대 레벨은 메모리(Memory) 파츠가 정한다 - MaxLevel 참고")]
+    [SerializeField] private int coreMaxLevelFallback = 50;
 
     [Tooltip("레벨 N -> N+1에 필요한 경험치 = expBase + expPerLevel * N. " +
              "2026-08-13 '레벨업을 훨씬 자주' 요청으로 50+20*N → 4+2*N (계수 1/12)")]
@@ -41,10 +40,11 @@ public class AiCoreManager : MonoBehaviour
 
     private void HandleRunStateChanged()
     {
-        if (RunState.CoreLevel >= coreMaxLevelPlaceholder) return;
+        int maxLevel = MaxLevel;
+        if (RunState.CoreLevel >= maxLevel) return;
 
         int required = RequiredExpForNextLevel();
-        while (RunState.CoreExp >= required && RunState.CoreLevel < coreMaxLevelPlaceholder)
+        while (RunState.CoreExp >= required && RunState.CoreLevel < maxLevel)
         {
             RunState.CoreExp -= required;
             RunState.CoreLevel++;
@@ -58,10 +58,12 @@ public class AiCoreManager : MonoBehaviour
     /// <summary>HUD의 경험치 바 표시용. 최대 레벨이면 다음 레벨이 없다는 뜻으로 -1을 돌려준다.</summary>
     public int GetRequiredExpForNextLevel()
     {
-        return RunState.CoreLevel >= coreMaxLevelPlaceholder ? -1 : RequiredExpForNextLevel();
+        return RunState.CoreLevel >= MaxLevel ? -1 : RequiredExpForNextLevel();
     }
 
-    public int MaxLevel => coreMaxLevelPlaceholder;
+    /// <summary>2026-08-18부터 메모리(Memory) 파츠가 정한다(ModdingManager.CoreMaxLevel).
+    /// ModdingManager를 못 찾는 극단적인 경우에만 인스펙터 폴백값을 쓴다.</summary>
+    public int MaxLevel => ModdingManager.Instance != null ? ModdingManager.Instance.CoreMaxLevel : coreMaxLevelFallback;
 
     /// <summary>
     /// 카드 한 장 = 업그레이드 종류 + 등급 + 그 등급에서의 실제 증가량.

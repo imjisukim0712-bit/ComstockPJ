@@ -57,6 +57,11 @@ public struct PartData
     [Tooltip("장착 가능한 최대 디스크 개수. 이 파츠를 끼우면 로봇(머리) 기본값 대신 이 값이 쓰인다")]
     public int discSlotCount;
 
+    [Header("메모리 카드 (Memory 슬롯 전용, 2026-08-18 신설)")]
+    [Tooltip("AI 코어가 도달할 수 있는 최대 레벨. 기본(일반 등급) 파츠가 기획서 표기(MAX:50)와 " +
+             "일치하도록 50을 준다 - AiCoreManager.MaxLevel이 장착된 메모리 파츠에서 이 값을 읽는다")]
+    public int coreMaxLevelBonus;
+
     /// <summary>배율 필드가 0(미설정)인 옛 데이터를 만나도 1배로 안전하게 동작하도록 보정한다.</summary>
     public float RangeMultiplier => socketRangeMultiplier > 0f ? socketRangeMultiplier : 1f;
     public float DetectRangeMultiplier => socketDetectRangeMultiplier > 0f ? socketDetectRangeMultiplier : 1f;
@@ -74,6 +79,11 @@ public struct PartData
         if (slot == PartSlot.DiscSlot)
         {
             return $"디스크 슬롯 {discSlotCount}칸";
+        }
+
+        if (slot == PartSlot.Memory)
+        {
+            return $"AI 코어 최대 레벨 {coreMaxLevelBonus}";
         }
 
         string statPart = bonusAmount != 0f ? $"{StatTypeNames.ToKorean(bonusStat)} +{bonusAmount:0.##}" : string.Empty;

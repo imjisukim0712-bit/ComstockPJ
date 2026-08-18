@@ -57,7 +57,7 @@ MonoBehaviour:
   - grade: 1
     amountMultiplier: 1.6666666
     weight: 26
-    minWave: 1
+    minWave: 2
   - grade: 2
     amountMultiplier: 2.3333333
     weight: 14

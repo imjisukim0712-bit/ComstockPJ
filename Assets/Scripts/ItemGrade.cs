@@ -43,4 +43,27 @@ public static class ItemGradeExtensions
             default: return "#FFFFFF";
         }
     }
+
+    /// <summary>ToColorHex()와 같은 색을 Color로 돌려준다(아이템 칸을 등급색으로 칠할 때 사용).</summary>
+    public static UnityEngine.Color ToColor(this ItemGrade grade)
+    {
+        return UnityEngine.ColorUtility.TryParseHtmlString(grade.ToColorHex(), out UnityEngine.Color c)
+            ? c
+            : UnityEngine.Color.white;
+    }
+
+    /// <summary>일반 등급인가(= 칸을 등급색으로 칠하지 않는 등급인가).</summary>
+    public static bool IsPlainGrade(this ItemGrade grade) => grade == ItemGrade.Normal;
+
+    /// <summary>
+    /// 아이템 칸 배경에 칠할 색. 사용자 확정(2026-08-18): <b>일반 등급이 아니면</b> 칸을 등급색으로
+    /// 칠한다. 원색 그대로 깔면 흰색 아이콘·글씨가 묻히므로 어둡게 눌러서 쓴다.
+    /// </summary>
+    public static UnityEngine.Color ToCellColor(this ItemGrade grade, UnityEngine.Color plainColor)
+    {
+        if (grade.IsPlainGrade()) return plainColor;
+
+        UnityEngine.Color c = grade.ToColor();
+        return new UnityEngine.Color(c.r * 0.45f, c.g * 0.45f, c.b * 0.45f, 1f);
+    }
 }
