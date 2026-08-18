@@ -11,6 +11,9 @@ using UnityEngine.UI;
 /// - 매 프레임 PlayerRobotController의 CurrentHp/MaxHp, RunState의 웨이브/골드/AI 코어
 ///   경험치를 읽어 실시간으로 갱신한다.
 /// - 게임 시작 시 Game Over/Victory 오브젝트를 항상 비활성화한다(씬에 켜진 채로 저장돼 있어도 무시).
+/// - 2026-08-18 HUD 정리: 항목명 글자("HP"/"골드"/"부품 상자"/"레벨")를 전부 없애고 아이콘으로
+///   대신한다. 체력·경험치는 게이지와 숫자를 한 줄로 합쳐 좌상단에 세로로 쌓고, 웨이브/남은 시간은
+///   상단 중앙, 구르기 쿨다운은 우하단에 둔다. 배치는 씬(Ground01)이 갖고 있고 여기서는 문구만 만든다.
 /// - 체력이 0 이하가 되면(GameOverManager.OnGameOver) Game Over 오브젝트를,
 ///   마지막 웨이브 보스를 처치하면(GameWinManager.OnGameWon) Victory 오브젝트를 활성화한다.
 ///   플레이어 이동/발사 정지는 각 매니저가 이미 처리하므로 여기서는 UI 표시만 담당한다.
@@ -42,15 +45,18 @@ public class GameHUD : MonoBehaviour
     [Tooltip("남은 시간을 조회할 웨이브 매니저")]
     [SerializeField] private WaveManager waveManager;
 
-    [Tooltip("보유한 부품 상자를 '부품 상자 5/20' 형식으로 표시할 텍스트 (비워두면 표시 생략).\n" +
+    [Tooltip("보유한 부품 상자를 '03 / 20' 형식으로 표시할 텍스트 (비워두면 표시 생략).\n" +
+             "항목명은 옆에 붙은 상자 아이콘이 대신하므로 글자로 쓰지 않는다.\n" +
              "분모는 머리(로봇)의 적재량이며, 이 개수에 도달하면 몬스터가 상자를 더 드랍하지 않는다")]
     [SerializeField] private TextMeshProUGUI partBoxText;
 
     [Header("AI 코어 경험치 바")]
     [Tooltip("AI 코어 레벨/경험치를 조회할 매니저 (다음 레벨 필요 경험치 계산에 사용)")]
     [SerializeField] private AiCoreManager aiCoreManager;
-    [Tooltip("'레벨 5  32/50' 형식으로 표시할 텍스트")]
+    [Tooltip("경험치 바 왼쪽(별 아이콘 옆)에 레벨 숫자만 표시할 텍스트")]
     [SerializeField] private TextMeshProUGUI expLevelText;
+    [Tooltip("경험치 바 가운데에 '16 / 30' 형식으로 표시할 텍스트 (최대 레벨이면 'MAX')")]
+    [SerializeField] private TextMeshProUGUI expValueText;
     [Tooltip("경험치 비율을 표시할 슬라이더")]
     [SerializeField] private Slider expSlider;
 
@@ -102,8 +108,9 @@ public class GameHUD : MonoBehaviour
             hpValueText.text = $"{current} / {max}";
         }
 
-        if (waveText != null) waveText.text = $"웨이브 {RunState.WaveNumber}";
-        if (goldText != null) goldText.text = $"골드 {RunState.Gold}";
+        // 항목명("웨이브"/"골드")은 상단 중앙 패널 위치와 골드 아이콘이 대신하므로 숫자만 쓴다
+        if (waveText != null) waveText.text = $"WAVE [{RunState.WaveNumber}]";
+        if (goldText != null) goldText.text = RunState.Gold.ToString();
 
         UpdateWaveTime();
         UpdateExpBar();
@@ -163,7 +170,7 @@ public class GameHUD : MonoBehaviour
         ModdingManager modding = ModdingManager.Instance;
         int capacity = modding != null ? modding.PartBoxCapacity : 0;
 
-        partBoxText.text = $"부품 상자 {RunState.UnopenedPartBoxCount}/{capacity}";
+        partBoxText.text = $"{RunState.UnopenedPartBoxCount:00} / {capacity}";
     }
 
     // 웨이브 남은 초. 일반 웨이브는 제한시간이 끝나는 즉시 종료되지만, 보스 웨이브만은
@@ -180,10 +187,11 @@ public class GameHUD : MonoBehaviour
         }
 
         int seconds = Mathf.CeilToInt(waveManager.RemainingSeconds);
-        waveTimeText.text = $"{seconds / 60}:{seconds % 60:00}";
+        waveTimeText.text = $"{seconds / 60:00}:{seconds % 60:00}"; // 폭이 흔들리지 않게 분도 2자리 고정
     }
 
-    // 기획서 p.10 표시 예시(레벨 5(+2) 80/100)를 따라 "레벨 N  현재/필요" 형식으로 보여준다.
+    // 경험치 바 하나에 전부 겹쳐 표시한다(2026-08-18 HUD 정리) - 별 아이콘 옆에 레벨 숫자,
+    // 바 가운데에 "현재 / 필요". "레벨"이라는 글자는 별 아이콘이 대신하므로 쓰지 않는다.
     // 최대 레벨(GetRequiredExpForNextLevel()이 -1)이면 바를 꽉 채우고 "MAX"로 표시한다.
     private void UpdateExpBar()
     {
@@ -194,9 +202,12 @@ public class GameHUD : MonoBehaviour
 
         if (expLevelText != null)
         {
-            expLevelText.text = isMaxLevel
-                ? $"레벨 {RunState.CoreLevel} (MAX)"
-                : $"레벨 {RunState.CoreLevel}  {RunState.CoreExp}/{required}";
+            expLevelText.text = RunState.CoreLevel.ToString();
+        }
+
+        if (expValueText != null)
+        {
+            expValueText.text = isMaxLevel ? "MAX" : $"{RunState.CoreExp} / {required}";
         }
 
         if (expSlider != null)

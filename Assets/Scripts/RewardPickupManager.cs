@@ -11,8 +11,9 @@ public static class RewardPickupManager
     // 2026-08-12 사용자 지적 "아이템 획득 반경이 PC 크기보다 과하게 큼" - 플레이어 몸통 반폭이
     // 약 0.33유닛인데 반경 2유닛은 6배가 넘어 몸에서 한참 떨어진 보상도 저절로 빨려들어왔다. 1로 축소.
     private const float PickupRange = 1f;    // 이 거리 안으로 플레이어가 들어오면 자동 습득
-    // 2026-08-10 "인게임 모든 이미지 1/2" 지시로 0.7 → 0.35 (아이템 상자 0.6보다 조금 작게 표시)
-    private const float VisualWorldSize = 0.35f;
+    // 2026-08-10 "인게임 모든 이미지 1/2" 지시로 0.7 → 0.35까지 줄었다가, 2026-08-18 사용자가
+    // "드랍 아이템이 너무 작다"고 지적해 0.6으로 다시 키웠다(원래 의도했던 부품 상자 크기 수준).
+    private const float VisualWorldSize = 0.6f;
     private const int SortingOrder = 5;      // 바닥/캐릭터에 가려지지 않도록
 
     private const string GoldResourceName = "Gold";

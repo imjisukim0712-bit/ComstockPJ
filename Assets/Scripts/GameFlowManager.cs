@@ -76,9 +76,36 @@ public class GameFlowManager : MonoBehaviour
 
     private int lastEndedWaveNumber;
 
+    // 골드 리롤 / 레벨업 취소 버튼(2026-08-18). 씬에 깔지 않고 코드로 만들어 붙인다.
+    // ShowAiCoreUpgradeStep()이 카드 버튼마다 RemoveAllListeners()를 돌리므로, 이 두 버튼은
+    // 그 배열에 섞지 않고 여기서 한 번만 리스너를 단다(ShopPanelUI.Awake와 같은 관례).
+    private AiCoreExtraButtonsUI aiCoreExtraButtons;
+
     private void Awake()
     {
         if (aiCoreUpgradePanel != null) aiCoreUpgradePanel.SetActive(false);
+        EnsureAiCoreExtraButtons();
+    }
+
+    /// <summary>
+    /// 보조 버튼이 없으면 만들어 붙인다. Awake에서 한 번 부르지만 카드 화면을 열 때도 다시
+    /// 확인한다 - 에디터에서 플레이 도중 스크립트가 재컴파일되면 도메인 리로드로 이 참조
+    /// (직렬화되지 않는 private 필드)가 null로 돌아가기 때문이다. 이미 붙어 있으면 아무것도 안 한다.
+    /// </summary>
+    private void EnsureAiCoreExtraButtons()
+    {
+        if (aiCoreExtraButtons != null || aiCoreUpgradePanel == null) return;
+
+        var existing = aiCoreUpgradePanel.GetComponentInChildren<AiCoreExtraButtonsUI>(true);
+        if (existing != null)
+        {
+            aiCoreExtraButtons = existing;
+            return;
+        }
+
+        aiCoreExtraButtons = AiCoreExtraButtonsUI.Attach(
+            (RectTransform)aiCoreUpgradePanel.transform,
+            HandleAiCoreRerollClicked);
     }
 
     private void Start()
@@ -316,6 +343,21 @@ public class GameFlowManager : MonoBehaviour
         CloseAllIntermissionPanels();
         SetCombatHudVisible(false);
 
+        EnsureAiCoreExtraButtons();
+
+        // 카드 화면을 새로 열 때마다 리롤 누적 비용을 기본값으로 되돌린다(사용자 확정).
+        aiCoreManager.ResetRerollCount();
+        if (aiCoreExtraButtons != null) aiCoreExtraButtons.SetMessage(string.Empty);
+
+        DrawAndRenderAiCoreChoices();
+
+        if (aiCoreUpgradePanel != null) aiCoreUpgradePanel.SetActive(true);
+    }
+
+    // 카드 3장만 다시 뽑아 그린다. 리롤은 패널을 닫았다 여는 게 아니라 이 부분만 반복하므로
+    // ShowAiCoreUpgradeStep()에서 분리했다(CloseAllIntermissionPanels가 패널을 꺼버리기 때문).
+    private void DrawAndRenderAiCoreChoices()
+    {
         Button[] buttons = { option1Button, option2Button, option3Button };
         TextMeshProUGUI[] texts = { option1Text, option2Text, option3Text };
 
@@ -342,7 +384,30 @@ public class GameFlowManager : MonoBehaviour
             }
         }
 
-        if (aiCoreUpgradePanel != null) aiCoreUpgradePanel.SetActive(true);
+        RefreshAiCoreExtraButtons();
+    }
+
+    private void RefreshAiCoreExtraButtons()
+    {
+        if (aiCoreExtraButtons == null || aiCoreManager == null) return;
+
+        int cost = aiCoreManager.CurrentRerollCost;
+        aiCoreExtraButtons.Refresh(cost, RunState.Gold >= cost, RunState.Gold);
+    }
+
+    private void HandleAiCoreRerollClicked()
+    {
+        if (aiCoreManager == null) return;
+
+        if (!aiCoreManager.TryReroll())
+        {
+            if (aiCoreExtraButtons != null)
+                aiCoreExtraButtons.SetMessage($"골드가 부족합니다 (리롤 {aiCoreManager.CurrentRerollCost}골드)");
+            return;
+        }
+
+        if (aiCoreExtraButtons != null) aiCoreExtraButtons.SetMessage(string.Empty);
+        DrawAndRenderAiCoreChoices();
     }
 
     private void HandleUpgradeChosen(AiCoreManager.UpgradeChoice choice)

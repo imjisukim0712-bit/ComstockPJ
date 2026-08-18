@@ -55,6 +55,10 @@ public static class RunState
     // 다음 웨이브 상점을 열 때 0으로 되돌린다.
     public static int ShopRefreshCount { get; set; } = 0;
 
+    // 지금 떠 있는 AI 코어 3택 카드에서 골드 리롤을 몇 번 했는지 (상점 새로고침과 같은 누적 방식).
+    // 카드 화면을 새로 열 때마다 0으로 되돌린다(레벨업이 연달아도 매번 기본 비용부터 시작).
+    public static int CoreRerollCount { get; set; } = 0;
+
     // 팔/다리 등 모딩 대상 파츠 ID (PartSlot.ToString() -> 장착된 파츠 ID). 머리는 PlayerSession.SelectedRobotId로 고정 관리
     // PartSlot.ArmWeaponSocket은 더 이상 이 딕셔너리에 저장되지 않는다 - 아래
     // EquippedWeaponSocketPartIds가 소켓 인덱스별로 독립 관리한다(2026-08-12 "무기 소켓 개별화" 플랜).
@@ -105,6 +109,7 @@ public static class RunState
         DiscStackProgress.Clear();
         DiscUsesRemaining.Clear();
         ShopRefreshCount = 0;
+        CoreRerollCount = 0;
         EquippedPartIds.Clear();
         EquippedWeaponSocketPartIds.Clear();
         PartStatBonuses.Clear();

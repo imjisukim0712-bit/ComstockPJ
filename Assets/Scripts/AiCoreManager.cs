@@ -29,6 +29,13 @@ public class AiCoreManager : MonoBehaviour
     [SerializeField] private int expBase = 4;
     [SerializeField] private int expPerLevel = 2;
 
+    [Header("골드 리롤 (2026-08-18) - 공식은 상점 새로고침과 동일")]
+    [Tooltip("카드 화면을 열었을 때 첫 리롤에 드는 골드")]
+    [SerializeField] private int rerollBaseCost = 10;
+
+    [Tooltip("같은 카드 화면에서 리롤을 반복할 때마다 추가로 붙는 골드")]
+    [SerializeField] private int rerollCostIncrement = 5;
+
     private void OnEnable() => RunState.OnChanged += HandleRunStateChanged;
     private void OnDisable() => RunState.OnChanged -= HandleRunStateChanged;
 
@@ -115,5 +122,32 @@ public class AiCoreManager : MonoBehaviour
 
         RunState.PendingCoreUpgradeChoices = Mathf.Max(0, RunState.PendingCoreUpgradeChoices - 1);
         RunState.NotifyChanged();
+    }
+
+    // ── 골드 리롤 (2026-08-18) ──────────────────────────────────────────
+    // 상점 새로고침(ShopCatalog.GetRefreshCost + ShopManager.TryRefresh)과 같은 공식/구조다.
+    // 누적치는 카드 화면을 열 때마다 ResetRerollCount()로 되돌리므로, 레벨업이 연달아 밀려
+    // 카드가 여러 번 떠도 매번 기본 비용부터 시작한다(사용자 확정).
+
+    /// <summary>지금 떠 있는 카드 화면에서 다음 리롤에 필요한 골드.</summary>
+    public int CurrentRerollCost =>
+        Mathf.Max(0, rerollBaseCost + rerollCostIncrement * Mathf.Max(0, RunState.CoreRerollCount));
+
+    /// <summary>카드 화면을 새로 열 때 호출. 리롤 누적 비용을 기본값으로 되돌린다.</summary>
+    public void ResetRerollCount() => RunState.CoreRerollCount = 0;
+
+    /// <summary>
+    /// 골드를 내고 3택을 다시 뽑을 수 있으면 차감하고 true. 골드가 모자라면 아무것도 하지 않고 false.
+    /// 실제로 카드를 다시 그리는 것은 호출부(GameFlowManager)가 <see cref="DrawChoices"/>로 한다.
+    /// </summary>
+    public bool TryReroll()
+    {
+        int cost = CurrentRerollCost;
+        if (RunState.Gold < cost) return false;
+
+        RunState.Gold -= cost;
+        RunState.CoreRerollCount++;
+        RunState.NotifyChanged();
+        return true;
     }
 }
