@@ -34,6 +34,15 @@ public class EnemySpawner : MonoBehaviour
         public int unlockWave;
     }
 
+    [Header("스폰 비중 (2026-08-19 사용자 지정: 상위 몬스터를 줄이고 일반 좀비를 늘린다)")]
+    [Tooltip("spawnMonsterIds(기본 좀비)의 추첨 비중. 예전에는 모든 몬스터가 똑같이 1이라 " +
+             "상위 몬스터가 전부 해금되면 일반 좀비가 1/6(16.7%)까지 밀려났다")]
+    [SerializeField] private float basicMonsterSpawnWeight = 2f;
+
+    [Tooltip("unlockSchedule로 해금되는 상위 몬스터(차저·부머 등)의 추첨 비중. " +
+             "1이 예전 동작이며 0.5면 절반으로 줄어든다")]
+    [SerializeField] private float advancedMonsterSpawnWeight = 0.5f;
+
     [Header("상위 몬스터 해금 (좀비 기획서 Ver04 - 6종 단계적 등장)")]
     [Tooltip("웨이브별로 스폰 후보에 합류하는 몬스터ID들. spawnMonsterIds(기본 항상 스폰)에는 없는 상위 몬스터를 여기 등록한다")]
     [SerializeField]
@@ -47,13 +56,16 @@ public class EnemySpawner : MonoBehaviour
     };
 
     [Header("웨이브별 체력·공격력 상승 (2026-08-13 사용자 지정)")]
-    [Tooltip("웨이브가 하나 지날 때마다 몬스터 체력과 공격력에 곱해지는 증가율(0.05 = 5%). " +
+    [Tooltip("웨이브가 하나 지날 때마다 몬스터 체력과 공격력에 곱해지는 증가율(0.025 = 2.5%). " +
              "웨이브 N의 값 = 데이터 값 x (1 + 이 값)^(N-1). 보스는 WaveManager가 직접 " +
-             "스탯을 만들어 스폰하므로 이 배율을 받지 않는다(사용자 지정: 보스 제외)")]
-    [SerializeField] private float statIncreasePerWave = 0.05f;
+             "스탯을 만들어 스폰하므로 이 배율을 받지 않는다(사용자 지정: 보스 제외). " +
+             "2026-08-19 사용자 지정으로 5% -> 2.5%(기존의 50%)로 완화했다")]
+    [SerializeField] private float statIncreasePerWave = 0.025f;
 
     private int currentWave = 1;
     private readonly List<int> spawn_pool_buffer = new List<int>();
+    // spawn_pool_buffer와 <b>같은 인덱스</b>로 짝지어지는 추첨 비중(가중 추첨용).
+    private readonly List<float> spawn_weight_buffer = new List<float>();
 
     /// <summary>WaveManager가 웨이브 시작 시 호출해 상위 몬스터 해금 여부를 갱신한다.</summary>
     public void SetCurrentWave(int wave) => currentWave = wave;
@@ -80,6 +92,14 @@ public class EnemySpawner : MonoBehaviour
 
     [Tooltip("동시에 살아있을 수 있는 최대 몬스터 수 (0이면 제한 없음)")]
     [SerializeField] private int maxAliveEnemies = 30;
+
+    [Header("최소 지속 스폰 (2026-08-19 사용자 지정)")]
+    [Tooltip("동시 생존 상한(maxAliveEnemies)에 도달해 정규 스폰이 막혀도 이 간격(초)마다 " +
+             "기본 좀비를 1마리씩 계속 스폰한다. 상한에 걸리면 적이 죽을 때까지 스폰이 완전히 " +
+             "멈춰 '전투가 끊기는' 구간이 생기던 것을 막는다.\n" +
+             "0 이하면 비활성(예전 동작). 이 스폰만 상한을 무시하지만, 웨이브 길이가 유한하므로 " +
+             "무한정 쌓이지는 않는다(60초 웨이브 기준 최대 20마리)")]
+    [SerializeField] private float trickleSpawnInterval = 3f;
 
     [Header("리더 무리 (좀비 기획서 Ver04 p.20/p.22)")]
     [Tooltip("리더와 함께 스폰할 팔로워 몬스터ID(기본: 일반 좀비). 어떤 몬스터ID가 '리더'인지는 " +
@@ -156,6 +176,9 @@ public class EnemySpawner : MonoBehaviour
     private void BeginSpawning()
     {
         StartCoroutine(SpawnLoop());
+        // 정규 스폰 루프와 <b>별도 코루틴</b>으로 돌린다 - SpawnLoop 안에 넣으면 주기가
+        // spawnInterval(웨이브마다 WaveManager가 바꾼다)에 끌려가서 "3초에 1마리"가 지켜지지 않는다.
+        StartCoroutine(TrickleSpawnLoop());
     }
 
     private IEnumerator SpawnLoop()
@@ -169,11 +192,22 @@ public class EnemySpawner : MonoBehaviour
 
             alive_enemies.RemoveAll(e => e == null); // 죽어서 파괴된 개체는 목록에서 정리
 
+            // 2026-08-19: 예전에는 후보를 그냥 나열하고 균등 추첨했다. 그러면 상위 몬스터가 전부
+            // 해금된 뒤 일반 좀비가 1/6(16.7%)까지 밀려나, 화면이 차저·부머로 가득 찼다.
+            // 이제 후보마다 비중을 함께 담아 가중 추첨한다(기본 좀비 2 / 상위 0.5 = 4배 차이).
             spawn_pool_buffer.Clear();
-            spawn_pool_buffer.AddRange(spawnMonsterIds);
+            spawn_weight_buffer.Clear();
+
+            foreach (int basicId in spawnMonsterIds)
+            {
+                spawn_pool_buffer.Add(basicId);
+                spawn_weight_buffer.Add(Mathf.Max(0f, basicMonsterSpawnWeight));
+            }
             foreach (MonsterUnlockEntry entry in unlockSchedule)
             {
-                if (currentWave >= entry.unlockWave) spawn_pool_buffer.Add(entry.monsterId);
+                if (currentWave < entry.unlockWave) continue;
+                spawn_pool_buffer.Add(entry.monsterId);
+                spawn_weight_buffer.Add(Mathf.Max(0f, advancedMonsterSpawnWeight));
             }
             if (spawn_pool_buffer.Count == 0) continue;
 
@@ -181,7 +215,7 @@ public class EnemySpawner : MonoBehaviour
             {
                 if (maxAliveEnemies > 0 && alive_enemies.Count >= maxAliveEnemies) break;
 
-                int monsterId = spawn_pool_buffer[UnityEngine.Random.Range(0, spawn_pool_buffer.Count)];
+                int monsterId = PickWeightedMonsterId();
                 Vector3 position = GetRandomSpawnPosition();
 
                 EnemyUnit unit = SpawnMonster(monsterId, position);
@@ -191,6 +225,63 @@ public class EnemySpawner : MonoBehaviour
                 if (unit is LeaderUnit leader) SpawnLeaderPack(leader, position);
             }
         }
+    }
+
+    /// <summary>
+    /// 동시 생존 상한에 막혀 정규 스폰이 멈춘 동안에도 <b>trickleSpawnInterval초마다 1마리</b>는
+    /// 계속 내보내 전투가 끊기지 않게 한다(2026-08-19 사용자 지정).
+    ///
+    /// <b>상한을 무시하는 유일한 정규 경로</b>다(리더의 팔로워 스폰과 같은 예외). 그래서 여기서는
+    /// 가중 추첨을 쓰지 않고 <see cref="spawnMonsterIds"/>(기본 좀비)에서만 고른다 - 상위 몬스터가
+    /// 뽑히면 차저·부머가 상한 위로 쌓이고, 특히 리더가 뽑히면 팔로워 3마리까지 함께 상한을
+    /// 우회해 한 번에 4마리가 추가되기 때문이다.
+    /// </summary>
+    private IEnumerator TrickleSpawnLoop()
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(Mathf.Max(0.1f, trickleSpawnInterval > 0f ? trickleSpawnInterval : 3f));
+
+            if (trickleSpawnInterval <= 0f) continue;                                   // 비활성(예전 동작)
+            if (GameOverManager.IsGameOver || GameWinManager.IsGameWon) continue;
+            if (!IsSpawningEnabled) continue;                                            // 정비/상점 중에는 멈춘다
+            if (spawnMonsterIds.Count == 0) continue;
+
+            alive_enemies.RemoveAll(e => e == null);
+
+            // 상한에 걸리지 않았다면 정규 스폰이 이미 돌고 있으므로 굳이 더 뿌리지 않는다.
+            if (maxAliveEnemies > 0 && alive_enemies.Count < maxAliveEnemies) continue;
+
+            int monsterId = spawnMonsterIds[UnityEngine.Random.Range(0, spawnMonsterIds.Count)];
+            EnemyUnit unit = SpawnMonster(monsterId, GetRandomSpawnPosition());
+            if (unit != null) alive_enemies.Add(unit);
+        }
+    }
+
+    /// <summary>
+    /// spawn_pool_buffer / spawn_weight_buffer(같은 인덱스로 짝지어진 후보와 비중)에서
+    /// 가중 추첨으로 몬스터ID 하나를 고른다. 모든 비중이 0이면 균등 추첨으로 폴백한다
+    /// (인스펙터에서 실수로 전부 0을 넣어도 스폰이 멈추지 않도록).
+    /// </summary>
+    private int PickWeightedMonsterId()
+    {
+        float total = 0f;
+        for (int i = 0; i < spawn_weight_buffer.Count; i++) total += spawn_weight_buffer[i];
+
+        if (total <= 0f)
+        {
+            return spawn_pool_buffer[UnityEngine.Random.Range(0, spawn_pool_buffer.Count)];
+        }
+
+        float roll = UnityEngine.Random.value * total;
+        for (int i = 0; i < spawn_pool_buffer.Count; i++)
+        {
+            roll -= spawn_weight_buffer[i];
+            if (roll <= 0f) return spawn_pool_buffer[i];
+        }
+
+        // 부동소수점 오차로 끝까지 떨어지지 않은 경우의 안전망
+        return spawn_pool_buffer[spawn_pool_buffer.Count - 1];
     }
 
     /// <summary>

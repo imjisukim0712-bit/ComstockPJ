@@ -12,6 +12,35 @@ public static class RunState
     public static int WaveNumber { get; set; } = 0;
     public static int Gold { get; set; } = 0;
 
+    // 골드 획득의 <b>소수점 나머지</b>를 다음 획득으로 이월하는 누적기(2026-08-19 버그 수정).
+    //
+    // 골드는 int인데 획득량에는 배율이 곱해진다(금화의 잔향 디스크 +10%, 미니 픽시 머리 -50%).
+    // 예전에는 곱한 결과를 곧바로 Mathf.RoundToInt로 잘라서 <b>작은 획득량에서 배율이 통째로
+    // 사라졌다</b> - 실측 검증 결과:
+    //   - 미니 픽시(-50%) + 골드 1짜리 픽업 → RoundToInt(0.5) = 0 (은행가 반올림이라 0으로 내려감).
+    //     1~5웨이브는 기본 좀비(골드 1)만 나오므로 <b>골드가 전혀 오르지 않았다.</b>
+    //   - 금화의 잔향(+10%) + 골드 1~3짜리 픽업 → 1.1/2.2/3.3이 전부 원래 값으로 반올림되어
+    //     <b>증가분이 완전히 소멸했다</b>(리더의 골드 10에서만 +1이 붙었다).
+    // 나머지를 이월하면 기대값이 정확히 보존된다(예: -50%는 픽업 2번마다 정확히 1골드,
+    // +10%는 픽업 10번마다 정확히 +1골드). 경험치 쪽은 이미 Max(1,...) 가드가 있었지만
+    // 골드에만 그 가드가 없던 비대칭이 이 버그의 직접 원인이었다.
+    private static float goldFraction;
+
+    /// <summary>
+    /// 배율이 곱해진 <b>실수</b> 골드 획득량을 더한다. 정수부만 즉시 반영하고 소수점 나머지는
+    /// 다음 획득으로 이월하므로, 작은 획득량에도 배율이 정확히(평균적으로) 적용된다.
+    /// 상점 구매처럼 이미 정수인 지출/수입은 그냥 <see cref="Gold"/>를 직접 쓰면 된다.
+    /// </summary>
+    public static void AddGoldWithFraction(float exactAmount)
+    {
+        goldFraction += exactAmount;
+
+        // 내림으로 정수부만 떼어낸다(반올림이 아니라 내림이어야 나머지 이월이 정확해진다).
+        int whole = UnityEngine.Mathf.FloorToInt(goldFraction);
+        goldFraction -= whole;
+        Gold += whole;
+    }
+
     public static int CoreExp { get; set; } = 0;
     public static int CoreLevel { get; set; } = 1;
 
@@ -99,6 +128,7 @@ public static class RunState
     {
         WaveNumber = 0;
         Gold = 0;
+        goldFraction = 0f;
         CoreExp = 0;
         CoreLevel = 1;
         CoreStatBonuses.Clear();

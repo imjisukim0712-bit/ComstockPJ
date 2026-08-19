@@ -167,7 +167,17 @@ public class DiscEffectRuntime : MonoBehaviour
 
             if (disc.effectType == DiscEffectType.PeriodicHeal)
             {
-                if (!periodic_next_time.TryGetValue(discId, out float next)) next = Time.time + disc.interval;
+                // 버그: "다음 발동 시각"을 딕셔너리에 저장하지 않고 지역 변수로만 계산했다.
+                // 그러면 다음 프레임에도 키가 여전히 없어 매 프레임 "지금 + interval"로 다시
+                // 계산되고, Time.time은 항상 그 값보다 작으므로(자기 자신+양수) 조건이 영원히
+                // 참이 될 수 없어 회복이 한 번도 발동하지 않았다(이끼 낀 디스크 리포트의 원인).
+                // 최초 계산 시 바로 저장해서 다음 프레임부터는 그 고정된 시각과 비교하도록 고쳤다.
+                if (!periodic_next_time.TryGetValue(discId, out float next))
+                {
+                    next = Time.time + disc.interval;
+                    periodic_next_time[discId] = next;
+                }
+
                 if (Time.time >= next)
                 {
                     player.Heal(Mathf.RoundToInt(disc.flatValue * copies));

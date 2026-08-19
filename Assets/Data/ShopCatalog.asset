@@ -325,7 +325,7 @@ MonoBehaviour:
     radius: 0
     maxUses: 0
   - discId: 400008
-    discName: "\uB098\uBB34 \uBB50\uC2DC\uAE30 \uB514\uC2A4\uD06C"
+    discName: "\uC232\uC758 \uC18C\uB9AC \uB514\uC2A4\uD06C"
     grade: 0
     price: 20
     iconName: "Discs/\uB514\uC2A4\uD06C08"

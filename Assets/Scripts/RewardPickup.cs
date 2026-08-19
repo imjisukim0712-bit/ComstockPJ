@@ -73,8 +73,15 @@ public class RewardPickup : MonoBehaviour
                 // "금화의 잔향 디스크" - 골드 획득량에 %가 곱해진다(StatType.GoldGain, RobotStats와
                 // 무관한 별도 값이라 RunState.DiscStatBonuses에서 직접 읽는다).
                 // 머리 효과(미니 픽시 -50%)는 그 위에 곱한다.
+                //
+                // 2026-08-19 버그 수정: 예전에는 곱한 결과를 여기서 곧바로 Mathf.RoundToInt로
+                // 잘라서, 골드 1~3짜리 픽업(사실상 대부분의 몬스터)에서 배율이 통째로 사라졌다
+                // - 미니 픽시(-50%)는 골드 1짜리가 RoundToInt(0.5)=0이 되어 아예 안 올랐고,
+                // 금화의 잔향(+10%)은 1.1/2.2/3.3이 전부 원래 값으로 반올림돼 증가분이 없었다.
+                // 이제 소수점 나머지를 이월하는 누적기로 넘겨 기대값을 정확히 보존한다
+                // (RunState.AddGoldWithFraction 주석 참고).
                 float gold_gain_percent = RunState.DiscStatBonuses.TryGetValue(StatType.GoldGain, out float g) ? g : 0f;
-                RunState.Gold += Mathf.RoundToInt(Amount * (1f + gold_gain_percent / 100f) * HeadEffects.GoldGainMultiplier);
+                RunState.AddGoldWithFraction(Amount * (1f + gold_gain_percent / 100f) * HeadEffects.GoldGainMultiplier);
                 break;
 
             // 부품 상자는 머리(로봇)의 적재량 상한이 있으므로 정비 매니저를 거쳐 지급한다.

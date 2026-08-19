@@ -10,7 +10,7 @@ using UnityEngine;
 ///
 /// <b>아이콘 매칭 근거</b>: `Assets/Resources/Discs/디스크01~21.png`에는 파일명에 효과 정보가
 /// 없어(단순 번호), 각 PNG를 실제로 열어 그림(색상/문양)과 기획서 아이콘 설명을 대조해
-/// 매칭했다. 대부분(번개=노랑+번개무늬, 위장=카모, 은하수=성운, 나무뭐시기=나무결, 금속음=
+/// 매칭했다. 대부분(번개=노랑+번개무늬, 위장=카모, 은하수=성운, 숲의 소리(구 나무뭐시기)=나무결, 금속음=
 /// 브러시드 메탈 등)은 명확했으나, 파랑 계열 3종(물 빠지는 소리/교향곡:파도/결정의 마찰음
 /// 후보였던 서킷보드 무늬)은 확실한 단서가 부족해 색 계열로 근사 배정했다 - 나중에 기획자
 /// 확인이 필요하면 아래 Defs의 iconName만 바꾸면 된다.
@@ -108,7 +108,7 @@ public static class DiscTableGenerator
             statA = StatType.Def, amountA = 0.1f, cap = 5f
         },
         new DiscDef {
-            num = 8, name = "나무 뭐시기 디스크", grade = ItemGrade.Normal,
+            num = 8, name = "숲의 소리 디스크", grade = ItemGrade.Normal,
             effectType = DiscEffectType.StatModifier,
             description = "이동속도 5% 감소, 체력 30 증가.",
             statA = StatType.MaxHp, amountA = 30f,

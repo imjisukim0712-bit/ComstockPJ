@@ -3337,6 +3337,8 @@ MonoBehaviour:
   - monsterId: 200006
     prefab: {fileID: 7192514787622259345, guid: c8363e0af5ed2974686683cb136b1a28, type: 3}
   spawnMonsterIds: 410d0300
+  basicMonsterSpawnWeight: 2
+  advancedMonsterSpawnWeight: 0.5
   unlockSchedule:
   - monsterId: 200003
     unlockWave: 6
@@ -3348,7 +3350,7 @@ MonoBehaviour:
     unlockWave: 10
   - monsterId: 200006
     unlockWave: 12
-  statIncreasePerWave: 0.05
+  statIncreasePerWave: 0.025
   spawnBatchSize: 2
   spawnInterval: 1
   spawnCenter: {fileID: 0}
@@ -12410,7 +12412,7 @@ MonoBehaviour:
   - prefab_name: Energy
     prefab: {fileID: 1813554706274653350, guid: 406f6c9ae2fe1b54dba02c4a2022b5ae, type: 3}
   blast_visual_duration: 0.08
-  max_detect_range: 5.3
+  max_detect_range: 6.1
   beam_sprite_name: Energy
   roll_rig_local_position: {x: 0, y: 4.3, z: 0}
   roll_rig_lateral_spread: 0.5

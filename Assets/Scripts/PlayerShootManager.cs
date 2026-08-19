@@ -160,8 +160,11 @@ public class PlayerShootManager : MonoBehaviour
     [Tooltip("소켓 파츠 배율까지 곱한 뒤에도 이 거리(유닛)를 넘겨 적을 조준하지 않는다. " +
              "화면 밖의 보이지 않는 적과 교전하는 것을 막기 위한 값으로, 직교 카메라 세로 가시 반경에 맞춘다.\n" +
              "2026-08-10 카메라를 FHD 기준(orthographicSize=5.4, 1유닛=100px)으로 맞추면서 " +
-             "세로 가시 반경이 8.66 → 5.4가 되어 8.5 → 5.3으로 함께 낮췄다")]
-    [SerializeField] private float max_detect_range = 5.3f;
+             "세로 가시 반경이 8.66 → 5.4가 되어 8.5 → 5.3으로 함께 낮췄다.\n" +
+             "2026-08-19 무기 사거리 15% 상향과 함께 5.3 → 6.1로 올렸다 - 안 올리면 감지거리가 " +
+             "5.3을 넘는 무기(대물저격총 5.98 등)의 상향분이 여기서 조용히 잘려 나간다. " +
+             "가로 가시 반경은 9.6이라 대부분의 교전은 여전히 화면 안에서 일어난다")]
+    [SerializeField] private float max_detect_range = 6.1f;
 
     [Header("빔 연출용 스프라이트")]
     [Tooltip("빔 무기(weapon_firemode=Beam)가 늘려서 사용할 Resources 폴더의 스프라이트 이름")]
@@ -683,7 +686,12 @@ public class PlayerShootManager : MonoBehaviour
 
         if (target == null)
         {
-            float rest_angle = RotatePivotTowards(slot, weapon, pivot, slot.rest_rotation_degrees, slot_index);
+            // 근접무기는 조준 중과 마찬가지로 weapon_imgangle을 더해야 한다 - 안 더하면 대기
+            // 자세가 총기 전용 기준(rest_rotation_degrees, 그림이 오른쪽을 향한다고 가정)으로만
+            // 돌아가서, 칼끝이 실제로 그려진 방향(~140도, 좌상단)이 그대로 드러나 반대로 향해
+            // 보인다(2026-08-19 "칼끝이 팔 방향과 반대로 가있다" 리포트로 발견).
+            float rest_target_angle = slot.rest_rotation_degrees + (is_melee ? weapon.weapon_imgangle : 0f);
+            float rest_angle = RotatePivotTowards(slot, weapon, pivot, rest_target_angle, slot_index);
             if (!is_melee) ApplyAngleFlip(slot, rest_angle, false);
             return;
         }

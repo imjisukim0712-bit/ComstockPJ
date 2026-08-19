@@ -48,7 +48,7 @@ MonoBehaviour:
   - displayName: "\uC0AC\uAC70\uB9AC \uC99D\uD3ED"
     description: 
     statType: 10
-    amount: 0.5
+    amount: 1.5
   gradeSettings:
   - grade: 0
     amountMultiplier: 1

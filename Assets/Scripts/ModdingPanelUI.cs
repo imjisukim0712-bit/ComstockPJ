@@ -70,6 +70,23 @@ public class ModdingPanelUI : MonoBehaviour
     // 현재 선택된 인벤토리 칸(-1이면 선택 없음). 이 값이 있을 때만 슬롯이 노란색으로 열린다.
     private int selectedInventoryIndex = -1;
 
+    // <b>장착 파츠 조회 모드</b>(2026-08-19 사용자 리포트: "이미 장착된 로봇 파츠의 설명을
+    // 클릭해도 볼 수 없다"). 예전에는 슬롯 클릭이 오직 "교체"만 담당해서, 인벤토리에서 뭔가를
+    // 고르지 않은 상태로 슬롯을 누르면 "먼저 인벤토리에서 파츠를 선택하세요" 안내만 나오고
+    // 이미 끼워둔 파츠의 능력치는 확인할 방법이 아예 없었다.
+    // 이제 인벤토리 선택이 없을 때 슬롯을 누르면 그 슬롯의 장착 파츠 설명을 설명 칸에 띄운다.
+    // (인벤토리 선택이 있을 때는 기존대로 교체가 우선 - 교체 흐름을 방해하지 않는다.)
+    private bool inspectingEquipped;
+    private PartSlot inspectedSlot;
+    private int inspectedWeaponSocket = -1; // >=0이면 무기 소켓을 조회 중(inspectedSlot은 무시)
+
+    /// <summary>장착 파츠 조회 상태를 해제한다(인벤토리 선택·교체·화면 열기 시).</summary>
+    private void ClearEquippedInspection()
+    {
+        inspectingEquipped = false;
+        inspectedWeaponSocket = -1;
+    }
+
     private readonly List<Image> inventoryCellImages = new List<Image>();
 
     private PlayerRobotController player;
@@ -130,6 +147,7 @@ public class ModdingPanelUI : MonoBehaviour
         gameObject.SetActive(true);
 
         selectedInventoryIndex = -1;
+        ClearEquippedInspection();
 
         // 사용자 확정 사항: 플레이어가 상자를 하나씩 여는 게 아니라 들어오자마자 전부 자동 개봉된다.
         int opened = moddingManager != null ? moddingManager.OpenAllBoxesIntoInventory() : 0;
@@ -153,6 +171,7 @@ public class ModdingPanelUI : MonoBehaviour
         if (moddingManager != null) moddingManager.ClearInventory();
 
         selectedInventoryIndex = -1;
+        ClearEquippedInspection();
         SetCombatHudVisible(true);
         gameObject.SetActive(false);
     }
@@ -171,6 +190,7 @@ public class ModdingPanelUI : MonoBehaviour
         if (moddingManager != null) moddingManager.ClearInventory();
 
         selectedInventoryIndex = -1;
+        ClearEquippedInspection();
         Close();
         OnProceedRequested?.Invoke();
     }
@@ -181,6 +201,9 @@ public class ModdingPanelUI : MonoBehaviour
 
     private void HandleInventoryCellClicked(int index)
     {
+        // 인벤토리를 고르면 장착 파츠 조회 모드는 끝난다(설명 칸의 주인이 바뀐다).
+        ClearEquippedInspection();
+
         // 같은 칸을 다시 누르면 선택이 풀린다.
         selectedInventoryIndex = selectedInventoryIndex == index ? -1 : index;
 
@@ -202,9 +225,26 @@ public class ModdingPanelUI : MonoBehaviour
     {
         if (moddingManager == null) return;
 
+        // 인벤토리 선택이 없으면 "교체"가 아니라 "조회"다 - 이미 장착된 파츠의 설명을 띄운다
+        // (2026-08-19 사용자 리포트. 예전에는 여기서 안내 문구만 내보내고 끝나서 장착 파츠의
+        //  능력치를 확인할 방법이 없었다).
         if (selectedInventoryIndex < 0)
         {
-            SetHint("먼저 인벤토리에서 장착할 파츠를 선택하세요.");
+            // 같은 슬롯을 다시 누르면 조회가 풀린다(인벤토리 칸과 같은 토글 규칙).
+            bool sameSlot = inspectingEquipped && inspectedWeaponSocket < 0 && inspectedSlot == slot;
+            if (sameSlot) ClearEquippedInspection();
+            else
+            {
+                inspectingEquipped = true;
+                inspectedSlot = slot;
+                inspectedWeaponSocket = -1;
+            }
+
+            SetHint(moddingManager.TryGetEquippedPart(slot, out PartData _)
+                ? $"{slot.ToKorean()} 장착 파츠의 설명입니다. 교체하려면 인벤토리에서 파츠를 선택하세요."
+                : $"{slot.ToKorean()} 슬롯이 비어 있습니다. 인벤토리에서 파츠를 선택하면 장착할 수 있습니다.");
+
+            Refresh();
             return;
         }
 
@@ -227,6 +267,7 @@ public class ModdingPanelUI : MonoBehaviour
         }
 
         selectedInventoryIndex = -1;
+        ClearEquippedInspection();
         SetHint($"{slot.ToKorean()} 교체 완료: {previousName} → {incomingName}");
 
         // TrySwapInventoryWithSlot이 RunState.NotifyChanged()를 부르므로 Refresh는 이미 돌았지만,
@@ -242,9 +283,22 @@ public class ModdingPanelUI : MonoBehaviour
     {
         if (moddingManager == null) return;
 
+        // HandleSlotClicked와 같은 규칙 - 인벤토리 선택이 없으면 해당 소켓의 장착 파츠를 조회한다.
         if (selectedInventoryIndex < 0)
         {
-            SetHint("먼저 인벤토리에서 장착할 파츠를 선택하세요.");
+            bool sameSocket = inspectingEquipped && inspectedWeaponSocket == socketIndex;
+            if (sameSocket) ClearEquippedInspection();
+            else
+            {
+                inspectingEquipped = true;
+                inspectedWeaponSocket = socketIndex;
+            }
+
+            SetHint(moddingManager.TryGetEquippedWeaponSocketPart(socketIndex, out PartData _)
+                ? $"무기 소켓 {socketIndex + 1} 장착 파츠의 설명입니다. 교체하려면 인벤토리에서 파츠를 선택하세요."
+                : $"무기 소켓 {socketIndex + 1}이(가) 비어 있습니다. 인벤토리에서 파츠를 선택하면 장착할 수 있습니다.");
+
+            Refresh();
             return;
         }
 
@@ -265,6 +319,7 @@ public class ModdingPanelUI : MonoBehaviour
         }
 
         selectedInventoryIndex = -1;
+        ClearEquippedInspection();
         SetHint($"무기 소켓 {socketIndex + 1} 교체 완료: {previousName} → {incomingName}");
 
         Refresh();
@@ -587,10 +642,17 @@ public class ModdingPanelUI : MonoBehaviour
         List<PartData> parts = moddingManager != null ? moddingManager.GetInventoryParts() : new List<PartData>();
         bool hasSelection = selectedInventoryIndex >= 0 && selectedInventoryIndex < parts.Count;
 
+        // 인벤토리 선택이 없어도 "장착 파츠 조회 모드"면 그 파츠의 설명을 대신 띄운다(2026-08-19).
+        if (!hasSelection && inspectingEquipped)
+        {
+            RefreshEquippedInspectionDetail();
+            return;
+        }
+
         if (!hasSelection)
         {
             detailSelectedIcon.enabled = false;
-            detailSelectedText.text = "<color=#9AA3AB>인벤토리에서 파츠를 누르면\n여기에 설명이 나옵니다.</color>";
+            detailSelectedText.text = "<color=#9AA3AB>인벤토리에서 파츠를 누르면\n여기에 설명이 나옵니다.\n장착된 슬롯을 눌러도\n설명을 볼 수 있습니다.</color>";
             detailTargetTitle.gameObject.SetActive(false);
             detailTargetIcon.enabled = false;
             detailTargetText.text = string.Empty;
@@ -635,6 +697,41 @@ public class ModdingPanelUI : MonoBehaviour
             detailTargetIcon.color = new Color(1f, 1f, 1f, 0.28f);
             detailTargetText.text = $"<color=#7B858E>{selected.slot.ToKorean()} 슬롯이 비어 있습니다.</color>";
         }
+    }
+
+    /// <summary>
+    /// "장착 파츠 조회 모드"(인벤토리 선택 없이 슬롯을 눌렀을 때)의 설명 칸을 채운다.
+    /// 위쪽(선택 칸)에 장착 파츠의 설명을 그대로 보여주고, 아래쪽(교체 대상 칸)은
+    /// 이 모드에서는 비교 대상이 없으므로 접는다.
+    /// </summary>
+    private void RefreshEquippedInspectionDetail()
+    {
+        bool isWeaponSocket = inspectedWeaponSocket >= 0;
+        PartSlot slot = isWeaponSocket ? PartSlot.ArmWeaponSocket : inspectedSlot;
+
+        PartData equipped = default;
+        bool has = moddingManager != null && (isWeaponSocket
+            ? moddingManager.TryGetEquippedWeaponSocketPart(inspectedWeaponSocket, out equipped)
+            : moddingManager.TryGetEquippedPart(inspectedSlot, out equipped));
+
+        // 이 모드에서는 "교체 대상" 칸을 쓰지 않는다(비교할 인벤토리 파츠가 없다).
+        detailTargetTitle.gameObject.SetActive(false);
+        detailTargetIcon.enabled = false;
+        detailTargetText.text = string.Empty;
+
+        string header = isWeaponSocket ? $"무기 소켓 {inspectedWeaponSocket + 1}" : slot.ToKorean();
+
+        if (!has)
+        {
+            detailSelectedIcon.enabled = false;
+            detailSelectedText.text = $"<color=#9AA3AB>{header} 슬롯이 비어 있습니다.</color>";
+            return;
+        }
+
+        detailSelectedIcon.enabled = true;
+        detailSelectedIcon.sprite = PartIconLibrary.Get(slot);
+        detailSelectedIcon.color = Color.white;
+        detailSelectedText.text = $"<size=85%><color=#F2BF26>[장착 중] {header}</color></size>\n" + BuildPartDetail(equipped);
     }
 
     private static string BuildPartDetail(PartData part)

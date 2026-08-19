@@ -268,8 +268,8 @@ MonoBehaviour:
     weapon_grade: 0
     weapon_atk: 9
     weapon_atsp: 10
-    weapon_range: 4.55
-    weapon_detect: 3.9
+    weapon_range: 5.2325
+    weapon_detect: 4.485
     weapon_speed: 11
     weapon_rotspeed: 480
     weapon_atsize: 0.125
@@ -293,8 +293,8 @@ MonoBehaviour:
     weapon_grade: 1
     weapon_atk: 10.35
     weapon_atsp: 10
-    weapon_range: 4.55
-    weapon_detect: 3.9
+    weapon_range: 5.2325
+    weapon_detect: 4.485
     weapon_speed: 11
     weapon_rotspeed: 480
     weapon_atsize: 0.125
@@ -318,8 +318,8 @@ MonoBehaviour:
     weapon_grade: 2
     weapon_atk: 11.9
     weapon_atsp: 10
-    weapon_range: 4.55
-    weapon_detect: 3.9
+    weapon_range: 5.2325
+    weapon_detect: 4.485
     weapon_speed: 11
     weapon_rotspeed: 480
     weapon_atsize: 0.125
@@ -343,8 +343,8 @@ MonoBehaviour:
     weapon_grade: 3
     weapon_atk: 13.69
     weapon_atsp: 10
-    weapon_range: 4.55
-    weapon_detect: 3.9
+    weapon_range: 5.2325
+    weapon_detect: 4.485
     weapon_speed: 11
     weapon_rotspeed: 480
     weapon_atsize: 0.125
@@ -368,8 +368,8 @@ MonoBehaviour:
     weapon_grade: 4
     weapon_atk: 15.74
     weapon_atsp: 10
-    weapon_range: 4.55
-    weapon_detect: 3.9
+    weapon_range: 5.2325
+    weapon_detect: 4.485
     weapon_speed: 11
     weapon_rotspeed: 480
     weapon_atsize: 0.125
@@ -393,8 +393,8 @@ MonoBehaviour:
     weapon_grade: 0
     weapon_atk: 14
     weapon_atsp: 0.8
-    weapon_range: 3
-    weapon_detect: 1.95
+    weapon_range: 2.99
+    weapon_detect: 2.2425
     weapon_speed: 9
     weapon_rotspeed: 780
     weapon_atsize: 0.1
@@ -418,8 +418,8 @@ MonoBehaviour:
     weapon_grade: 1
     weapon_atk: 16.1
     weapon_atsp: 0.8
-    weapon_range: 3
-    weapon_detect: 1.95
+    weapon_range: 2.99
+    weapon_detect: 2.2425
     weapon_speed: 9
     weapon_rotspeed: 780
     weapon_atsize: 0.1
@@ -443,8 +443,8 @@ MonoBehaviour:
     weapon_grade: 2
     weapon_atk: 18.52
     weapon_atsp: 0.8
-    weapon_range: 3
-    weapon_detect: 1.95
+    weapon_range: 2.99
+    weapon_detect: 2.2425
     weapon_speed: 9
     weapon_rotspeed: 780
     weapon_atsize: 0.1
@@ -468,8 +468,8 @@ MonoBehaviour:
     weapon_grade: 3
     weapon_atk: 21.29
     weapon_atsp: 0.8
-    weapon_range: 3
-    weapon_detect: 1.95
+    weapon_range: 2.99
+    weapon_detect: 2.2425
     weapon_speed: 9
     weapon_rotspeed: 780
     weapon_atsize: 0.1
@@ -493,8 +493,8 @@ MonoBehaviour:
     weapon_grade: 4
     weapon_atk: 24.49
     weapon_atsp: 0.8
-    weapon_range: 3
-    weapon_detect: 1.95
+    weapon_range: 2.99
+    weapon_detect: 2.2425
     weapon_speed: 9
     weapon_rotspeed: 780
     weapon_atsize: 0.1
@@ -518,8 +518,8 @@ MonoBehaviour:
     weapon_grade: 0
     weapon_atk: 120
     weapon_atsp: 0.25
-    weapon_range: 9.75
-    weapon_detect: 5.2
+    weapon_range: 11.2125
+    weapon_detect: 5.98
     weapon_speed: 20
     weapon_rotspeed: 360
     weapon_atsize: 0.15
@@ -543,8 +543,8 @@ MonoBehaviour:
     weapon_grade: 1
     weapon_atk: 138
     weapon_atsp: 0.25
-    weapon_range: 9.75
-    weapon_detect: 5.2
+    weapon_range: 11.2125
+    weapon_detect: 5.98
     weapon_speed: 20
     weapon_rotspeed: 360
     weapon_atsize: 0.15
@@ -568,8 +568,8 @@ MonoBehaviour:
     weapon_grade: 2
     weapon_atk: 158.7
     weapon_atsp: 0.25
-    weapon_range: 9.75
-    weapon_detect: 5.2
+    weapon_range: 11.2125
+    weapon_detect: 5.98
     weapon_speed: 20
     weapon_rotspeed: 360
     weapon_atsize: 0.15
@@ -593,8 +593,8 @@ MonoBehaviour:
     weapon_grade: 3
     weapon_atk: 182.5
     weapon_atsp: 0.25
-    weapon_range: 9.75
-    weapon_detect: 5.2
+    weapon_range: 11.2125
+    weapon_detect: 5.98
     weapon_speed: 20
     weapon_rotspeed: 360
     weapon_atsize: 0.15
@@ -618,8 +618,8 @@ MonoBehaviour:
     weapon_grade: 4
     weapon_atk: 209.88
     weapon_atsp: 0.25
-    weapon_range: 9.75
-    weapon_detect: 5.2
+    weapon_range: 11.2125
+    weapon_detect: 5.98
     weapon_speed: 20
     weapon_rotspeed: 360
     weapon_atsize: 0.15
@@ -643,8 +643,8 @@ MonoBehaviour:
     weapon_grade: 0
     weapon_atk: 150
     weapon_atsp: 0.5
-    weapon_range: 5.2
-    weapon_detect: 4.55
+    weapon_range: 5.98
+    weapon_detect: 5.2325
     weapon_speed: 0
     weapon_rotspeed: 270
     weapon_atsize: 0.25
@@ -668,8 +668,8 @@ MonoBehaviour:
     weapon_grade: 1
     weapon_atk: 172.5
     weapon_atsp: 0.5
-    weapon_range: 5.2
-    weapon_detect: 4.55
+    weapon_range: 5.98
+    weapon_detect: 5.2325
     weapon_speed: 0
     weapon_rotspeed: 270
     weapon_atsize: 0.25
@@ -693,8 +693,8 @@ MonoBehaviour:
     weapon_grade: 2
     weapon_atk: 198.38
     weapon_atsp: 0.5
-    weapon_range: 5.2
-    weapon_detect: 4.55
+    weapon_range: 5.98
+    weapon_detect: 5.2325
     weapon_speed: 0
     weapon_rotspeed: 270
     weapon_atsize: 0.25
@@ -718,8 +718,8 @@ MonoBehaviour:
     weapon_grade: 3
     weapon_atk: 228.13
     weapon_atsp: 0.5
-    weapon_range: 5.2
-    weapon_detect: 4.55
+    weapon_range: 5.98
+    weapon_detect: 5.2325
     weapon_speed: 0
     weapon_rotspeed: 270
     weapon_atsize: 0.25
@@ -743,8 +743,8 @@ MonoBehaviour:
     weapon_grade: 4
     weapon_atk: 262.35
     weapon_atsp: 0.5
-    weapon_range: 5.2
-    weapon_detect: 4.55
+    weapon_range: 5.98
+    weapon_detect: 5.2325
     weapon_speed: 0
     weapon_rotspeed: 270
     weapon_atsize: 0.25
@@ -768,8 +768,8 @@ MonoBehaviour:
     weapon_grade: 0
     weapon_atk: 75
     weapon_atsp: 0.4
-    weapon_range: 4.55
-    weapon_detect: 3.12
+    weapon_range: 5.2325
+    weapon_detect: 3.588
     weapon_speed: 7
     weapon_rotspeed: 600
     weapon_atsize: 0.15
@@ -793,8 +793,8 @@ MonoBehaviour:
     weapon_grade: 1
     weapon_atk: 86.25
     weapon_atsp: 0.4
-    weapon_range: 4.55
-    weapon_detect: 3.12
+    weapon_range: 5.2325
+    weapon_detect: 3.588
     weapon_speed: 7
     weapon_rotspeed: 600
     weapon_atsize: 0.15
@@ -818,8 +818,8 @@ MonoBehaviour:
     weapon_grade: 2
     weapon_atk: 99.19
     weapon_atsp: 0.4
-    weapon_range: 4.55
-    weapon_detect: 3.12
+    weapon_range: 5.2325
+    weapon_detect: 3.588
     weapon_speed: 7
     weapon_rotspeed: 600
     weapon_atsize: 0.15
@@ -843,8 +843,8 @@ MonoBehaviour:
     weapon_grade: 3
     weapon_atk: 114.07
     weapon_atsp: 0.4
-    weapon_range: 4.55
-    weapon_detect: 3.12
+    weapon_range: 5.2325
+    weapon_detect: 3.588
     weapon_speed: 7
     weapon_rotspeed: 600
     weapon_atsize: 0.15
@@ -868,8 +868,8 @@ MonoBehaviour:
     weapon_grade: 4
     weapon_atk: 131.18
     weapon_atsp: 0.4
-    weapon_range: 4.55
-    weapon_detect: 3.12
+    weapon_range: 5.2325
+    weapon_detect: 3.588
     weapon_speed: 7
     weapon_rotspeed: 600
     weapon_atsize: 0.15
@@ -893,8 +893,8 @@ MonoBehaviour:
     weapon_grade: 0
     weapon_atk: 8
     weapon_atsp: 1.2
-    weapon_range: 2.5
-    weapon_detect: 1.69
+    weapon_range: 2.691
+    weapon_detect: 1.9435
     weapon_speed: 9
     weapon_rotspeed: 1080
     weapon_atsize: 0.1
@@ -918,8 +918,8 @@ MonoBehaviour:
     weapon_grade: 1
     weapon_atk: 9.2
     weapon_atsp: 1.2
-    weapon_range: 2.5
-    weapon_detect: 1.69
+    weapon_range: 2.691
+    weapon_detect: 1.9435
     weapon_speed: 9
     weapon_rotspeed: 1080
     weapon_atsize: 0.1
@@ -943,8 +943,8 @@ MonoBehaviour:
     weapon_grade: 2
     weapon_atk: 10.58
     weapon_atsp: 1.2
-    weapon_range: 2.5
-    weapon_detect: 1.69
+    weapon_range: 2.691
+    weapon_detect: 1.9435
     weapon_speed: 9
     weapon_rotspeed: 1080
     weapon_atsize: 0.1
@@ -968,8 +968,8 @@ MonoBehaviour:
     weapon_grade: 3
     weapon_atk: 12.17
     weapon_atsp: 1.2
-    weapon_range: 2.5
-    weapon_detect: 1.69
+    weapon_range: 2.691
+    weapon_detect: 1.9435
     weapon_speed: 9
     weapon_rotspeed: 1080
     weapon_atsize: 0.1
@@ -993,8 +993,8 @@ MonoBehaviour:
     weapon_grade: 4
     weapon_atk: 13.99
     weapon_atsp: 1.2
-    weapon_range: 2.5
-    weapon_detect: 1.69
+    weapon_range: 2.691
+    weapon_detect: 1.9435
     weapon_speed: 9
     weapon_rotspeed: 1080
     weapon_atsize: 0.1
@@ -1018,8 +1018,8 @@ MonoBehaviour:
     weapon_grade: 0
     weapon_atk: 30
     weapon_atsp: 2
-    weapon_range: 3.9
-    weapon_detect: 3.25
+    weapon_range: 4.485
+    weapon_detect: 3.7375
     weapon_speed: 15
     weapon_rotspeed: 1080
     weapon_atsize: 0.1
@@ -1043,8 +1043,8 @@ MonoBehaviour:
     weapon_grade: 1
     weapon_atk: 34.5
     weapon_atsp: 2
-    weapon_range: 3.9
-    weapon_detect: 3.25
+    weapon_range: 4.485
+    weapon_detect: 3.7375
     weapon_speed: 15
     weapon_rotspeed: 1080
     weapon_atsize: 0.1
@@ -1068,8 +1068,8 @@ MonoBehaviour:
     weapon_grade: 2
     weapon_atk: 39.68
     weapon_atsp: 2
-    weapon_range: 3.9
-    weapon_detect: 3.25
+    weapon_range: 4.485
+    weapon_detect: 3.7375
     weapon_speed: 15
     weapon_rotspeed: 1080
     weapon_atsize: 0.1
@@ -1093,8 +1093,8 @@ MonoBehaviour:
     weapon_grade: 3
     weapon_atk: 45.63
     weapon_atsp: 2
-    weapon_range: 3.9
-    weapon_detect: 3.25
+    weapon_range: 4.485
+    weapon_detect: 3.7375
     weapon_speed: 15
     weapon_rotspeed: 1080
     weapon_atsize: 0.1
@@ -1118,8 +1118,8 @@ MonoBehaviour:
     weapon_grade: 4
     weapon_atk: 52.47
     weapon_atsp: 2
-    weapon_range: 3.9
-    weapon_detect: 3.25
+    weapon_range: 4.485
+    weapon_detect: 3.7375
     weapon_speed: 15
     weapon_rotspeed: 1080
     weapon_atsize: 0.1
@@ -1143,8 +1143,8 @@ MonoBehaviour:
     weapon_grade: 0
     weapon_atk: 55
     weapon_atsp: 0.55
-    weapon_range: 6.5
-    weapon_detect: 4.55
+    weapon_range: 7.475
+    weapon_detect: 5.2325
     weapon_speed: 16
     weapon_rotspeed: 480
     weapon_atsize: 0.125
@@ -1168,8 +1168,8 @@ MonoBehaviour:
     weapon_grade: 1
     weapon_atk: 63.25
     weapon_atsp: 0.55
-    weapon_range: 6.5
-    weapon_detect: 4.55
+    weapon_range: 7.475
+    weapon_detect: 5.2325
     weapon_speed: 16
     weapon_rotspeed: 480
     weapon_atsize: 0.125
@@ -1193,8 +1193,8 @@ MonoBehaviour:
     weapon_grade: 2
     weapon_atk: 72.74
     weapon_atsp: 0.55
-    weapon_range: 6.5
-    weapon_detect: 4.55
+    weapon_range: 7.475
+    weapon_detect: 5.2325
     weapon_speed: 16
     weapon_rotspeed: 480
     weapon_atsize: 0.125
@@ -1218,8 +1218,8 @@ MonoBehaviour:
     weapon_grade: 3
     weapon_atk: 83.65
     weapon_atsp: 0.55
-    weapon_range: 6.5
-    weapon_detect: 4.55
+    weapon_range: 7.475
+    weapon_detect: 5.2325
     weapon_speed: 16
     weapon_rotspeed: 480
     weapon_atsize: 0.125
@@ -1243,8 +1243,8 @@ MonoBehaviour:
     weapon_grade: 4
     weapon_atk: 96.2
     weapon_atsp: 0.55
-    weapon_range: 6.5
-    weapon_detect: 4.55
+    weapon_range: 7.475
+    weapon_detect: 5.2325
     weapon_speed: 16
     weapon_rotspeed: 480
     weapon_atsize: 0.125
@@ -1268,8 +1268,8 @@ MonoBehaviour:
     weapon_grade: 0
     weapon_atk: 10
     weapon_atsp: 2
-    weapon_range: 4.16
-    weapon_detect: 3.64
+    weapon_range: 4.784
+    weapon_detect: 4.186
     weapon_speed: 11
     weapon_rotspeed: 780
     weapon_atsize: 0.11
@@ -1293,8 +1293,8 @@ MonoBehaviour:
     weapon_grade: 1
     weapon_atk: 11.5
     weapon_atsp: 2
-    weapon_range: 4.16
-    weapon_detect: 3.64
+    weapon_range: 4.784
+    weapon_detect: 4.186
     weapon_speed: 11
     weapon_rotspeed: 780
     weapon_atsize: 0.11
@@ -1318,8 +1318,8 @@ MonoBehaviour:
     weapon_grade: 2
     weapon_atk: 13.22
     weapon_atsp: 2
-    weapon_range: 4.16
-    weapon_detect: 3.64
+    weapon_range: 4.784
+    weapon_detect: 4.186
     weapon_speed: 11
     weapon_rotspeed: 780
     weapon_atsize: 0.11
@@ -1343,8 +1343,8 @@ MonoBehaviour:
     weapon_grade: 3
     weapon_atk: 15.21
     weapon_atsp: 2
-    weapon_range: 4.16
-    weapon_detect: 3.64
+    weapon_range: 4.784
+    weapon_detect: 4.186
     weapon_speed: 11
     weapon_rotspeed: 780
     weapon_atsize: 0.11
@@ -1368,8 +1368,8 @@ MonoBehaviour:
     weapon_grade: 4
     weapon_atk: 17.49
     weapon_atsp: 2
-    weapon_range: 4.16
-    weapon_detect: 3.64
+    weapon_range: 4.784
+    weapon_detect: 4.186
     weapon_speed: 11
     weapon_rotspeed: 780
     weapon_atsize: 0.11
@@ -1393,8 +1393,8 @@ MonoBehaviour:
     weapon_grade: 0
     weapon_atk: 40
     weapon_atsp: 0.5
-    weapon_range: 3.25
-    weapon_detect: 2.6
+    weapon_range: 3.7375
+    weapon_detect: 2.99
     weapon_speed: 6
     weapon_rotspeed: 780
     weapon_atsize: 0.15
@@ -1418,8 +1418,8 @@ MonoBehaviour:
     weapon_grade: 1
     weapon_atk: 46
     weapon_atsp: 0.5
-    weapon_range: 3.25
-    weapon_detect: 2.6
+    weapon_range: 3.7375
+    weapon_detect: 2.99
     weapon_speed: 6
     weapon_rotspeed: 780
     weapon_atsize: 0.15
@@ -1443,8 +1443,8 @@ MonoBehaviour:
     weapon_grade: 2
     weapon_atk: 52.9
     weapon_atsp: 0.5
-    weapon_range: 3.25
-    weapon_detect: 2.6
+    weapon_range: 3.7375
+    weapon_detect: 2.99
     weapon_speed: 6
     weapon_rotspeed: 780
     weapon_atsize: 0.15
@@ -1468,8 +1468,8 @@ MonoBehaviour:
     weapon_grade: 3
     weapon_atk: 60.83
     weapon_atsp: 0.5
-    weapon_range: 3.25
-    weapon_detect: 2.6
+    weapon_range: 3.7375
+    weapon_detect: 2.99
     weapon_speed: 6
     weapon_rotspeed: 780
     weapon_atsize: 0.15
@@ -1493,8 +1493,8 @@ MonoBehaviour:
     weapon_grade: 4
     weapon_atk: 69.96
     weapon_atsp: 0.5
-    weapon_range: 3.25
-    weapon_detect: 2.6
+    weapon_range: 3.7375
+    weapon_detect: 2.99
     weapon_speed: 6
     weapon_rotspeed: 780
     weapon_atsize: 0.15

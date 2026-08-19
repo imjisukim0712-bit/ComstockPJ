@@ -1928,8 +1928,7 @@ MonoBehaviour:
     discSlotCount: 6
     partBoxCapacity: 20
     spriteName: ComstockMk01
-    defaultWeaponIds:
-    - 300901
+    defaultWeaponIds: 65970400
     effect: 1
     selectableInHeadSelect: 1
     spriteFrameCount: 0
@@ -1939,7 +1938,7 @@ MonoBehaviour:
     discSlotCount: 6
     partBoxCapacity: 24
     spriteName: 
-    defaultWeaponIds: []
+    defaultWeaponIds: 
     effect: 0
     selectableInHeadSelect: 0
     spriteFrameCount: 0
@@ -1949,8 +1948,7 @@ MonoBehaviour:
     discSlotCount: 6
     partBoxCapacity: 20
     spriteName: Guardman
-    defaultWeaponIds:
-    - 300201
+    defaultWeaponIds: a9940400
     effect: 2
     selectableInHeadSelect: 1
     spriteFrameCount: 0
@@ -1960,8 +1958,7 @@ MonoBehaviour:
     discSlotCount: 6
     partBoxCapacity: 20
     spriteName: Meteus
-    defaultWeaponIds:
-    - 300501
+    defaultWeaponIds: d5950400
     effect: 3
     selectableInHeadSelect: 1
     spriteFrameCount: 0
@@ -1971,8 +1968,7 @@ MonoBehaviour:
     discSlotCount: 6
     partBoxCapacity: 20
     spriteName: Berserker
-    defaultWeaponIds:
-    - 300501
+    defaultWeaponIds: d5950400
     effect: 4
     selectableInHeadSelect: 1
     spriteFrameCount: 0
@@ -1982,8 +1978,7 @@ MonoBehaviour:
     discSlotCount: 6
     partBoxCapacity: 20
     spriteName: HappyPixel
-    defaultWeaponIds:
-    - 300701
+    defaultWeaponIds: 9d960400
     effect: 5
     selectableInHeadSelect: 1
     spriteFrameCount: 0
@@ -1993,8 +1988,7 @@ MonoBehaviour:
     discSlotCount: 6
     partBoxCapacity: 20
     spriteName: NeonEye
-    defaultWeaponIds:
-    - 300901
+    defaultWeaponIds: 65970400
     effect: 6
     selectableInHeadSelect: 1
     spriteFrameCount: 8
@@ -2004,8 +1998,7 @@ MonoBehaviour:
     discSlotCount: 6
     partBoxCapacity: 20
     spriteName: HotPot
-    defaultWeaponIds:
-    - 300401
+    defaultWeaponIds: 71950400
     effect: 7
     selectableInHeadSelect: 1
     spriteFrameCount: 0
@@ -2015,8 +2008,7 @@ MonoBehaviour:
     discSlotCount: 6
     partBoxCapacity: 20
     spriteName: Pixie
-    defaultWeaponIds:
-    - 301201
+    defaultWeaponIds: 91980400
     effect: 8
     selectableInHeadSelect: 1
     spriteFrameCount: 0
@@ -2026,8 +2018,7 @@ MonoBehaviour:
     discSlotCount: 6
     partBoxCapacity: 20
     spriteName: FanBot
-    defaultWeaponIds:
-    - 300601
+    defaultWeaponIds: 39960400
     effect: 9
     selectableInHeadSelect: 1
     spriteFrameCount: 0
@@ -2037,8 +2028,7 @@ MonoBehaviour:
     discSlotCount: 6
     partBoxCapacity: 20
     spriteName: SodaCan
-    defaultWeaponIds:
-    - 300501
+    defaultWeaponIds: d5950400
     effect: 10
     selectableInHeadSelect: 1
     spriteFrameCount: 0
@@ -2048,8 +2038,7 @@ MonoBehaviour:
     discSlotCount: 6
     partBoxCapacity: 20
     spriteName: PrivateComstock
-    defaultWeaponIds:
-    - 300801
+    defaultWeaponIds: 01970400
     effect: 11
     selectableInHeadSelect: 1
     spriteFrameCount: 0
@@ -2059,9 +2048,7 @@ MonoBehaviour:
     discSlotCount: 6
     partBoxCapacity: 20
     spriteName: MiniPixie
-    defaultWeaponIds:
-    - 300901
-    - 300701
+    defaultWeaponIds: 659704009d960400
     effect: 12
     selectableInHeadSelect: 1
     spriteFrameCount: 0
