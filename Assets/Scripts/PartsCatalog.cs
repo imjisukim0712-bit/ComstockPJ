@@ -228,11 +228,12 @@ public class PartsCatalog : ScriptableObject
     /// <summary>Phase 3 ShopCatalog와 동일한 가중치 추첨 방식으로 부품 상자 등급을 뽑는다.</summary>
     public ItemGrade RollBoxGrade(int waveNumber)
     {
+        // 상점과 같은 행운 보정을 쓴다(LuckBonus 참고, 2026-08-19 신설).
         float totalWeight = 0f;
         foreach (BoxGradeSetting setting in boxGradeSettings)
         {
             if (waveNumber < setting.minWave) continue;
-            totalWeight += Mathf.Max(0f, setting.weight);
+            totalWeight += Mathf.Max(0f, setting.weight) * LuckBonus.WeightMultiplier(setting.grade);
         }
 
         if (totalWeight <= 0f) return ItemGrade.Normal;
@@ -242,7 +243,7 @@ public class PartsCatalog : ScriptableObject
         {
             if (waveNumber < setting.minWave) continue;
 
-            roll -= Mathf.Max(0f, setting.weight);
+            roll -= Mathf.Max(0f, setting.weight) * LuckBonus.WeightMultiplier(setting.grade);
             if (roll <= 0f) return setting.grade;
         }
 

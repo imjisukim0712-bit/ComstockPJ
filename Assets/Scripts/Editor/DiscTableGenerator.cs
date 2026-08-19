@@ -104,8 +104,8 @@ public static class DiscTableGenerator
         new DiscDef {
             num = 7, name = "교향곡: 암석 디스크", grade = ItemGrade.Rare,
             effectType = DiscEffectType.OnKillStackStat,
-            description = "적을 처치하면 방어력이 0.1 증가합니다 (최대 5).",
-            statA = StatType.Def, amountA = 0.1f, cap = 5f
+            description = "적을 처치하면 방어력이 0.05 증가합니다 (최대 10).",
+            statA = StatType.Def, amountA = 0.05f, cap = 10f // 200마리에 상한 도달
         },
         new DiscDef {
             num = 8, name = "숲의 소리 디스크", grade = ItemGrade.Normal,
@@ -123,8 +123,8 @@ public static class DiscTableGenerator
         new DiscDef {
             num = 10, name = "교향곡: 화염 디스크", grade = ItemGrade.Epic,
             effectType = DiscEffectType.OnKillStackStat,
-            description = "적을 처치하면 공격력이 0.1 증가합니다 (최대 5).",
-            statA = StatType.Atk, amountA = 0.1f, cap = 5f
+            description = "적을 처치하면 공격력이 0.05 증가합니다 (최대 10).",
+            statA = StatType.Atk, amountA = 0.05f, cap = 10f // 200마리에 상한 도달
         },
         new DiscDef {
             num = 11, name = "금화의 잔향 디스크", grade = ItemGrade.Epic,
@@ -135,8 +135,8 @@ public static class DiscTableGenerator
         new DiscDef {
             num = 12, name = "바람 소리 디스크", grade = ItemGrade.Normal,
             effectType = DiscEffectType.OnKillStackStat,
-            description = "적을 처치하면 이동속도가 0.1% 증가합니다 (최대 5%).",
-            statA = StatType.MoveSpeed, amountA = 0.0025f, cap = 0.125f // 로봇 기준 이동속도 2.5의 0.1%/5%
+            description = "적을 처치하면 이동속도가 0.1% 증가합니다 (최대 20%).",
+            statA = StatType.MoveSpeed, amountA = 0.003f, cap = 0.6f // 로봇 기준 이동속도 3.0의 0.1%/20%, 200마리에 상한 도달
         },
         new DiscDef {
             num = 13, name = "결정의 마찰음 디스크", grade = ItemGrade.Unique,
@@ -155,8 +155,8 @@ public static class DiscTableGenerator
         new DiscDef {
             num = 15, name = "금속음 디스크", grade = ItemGrade.Rare,
             effectType = DiscEffectType.OnKillStackStat,
-            description = "적을 처치하면 최대 체력이 1 증가합니다 (최대 10).",
-            statA = StatType.MaxHp, amountA = 1f, cap = 10f
+            description = "적을 처치하면 최대 체력이 0.2 증가합니다 (최대 40).",
+            statA = StatType.MaxHp, amountA = 0.2f, cap = 40f // 200마리에 상한 도달
         },
         new DiscDef {
             num = 16, name = "은하수 디스크", grade = ItemGrade.Rare,

@@ -110,8 +110,42 @@ public struct DiscData
     public float radius;
     public int maxUses;
 
-    /// <summary>상점 카드/장착 목록에 보여줄 한 줄 설명.</summary>
-    public string BuildDescription() => effectDescription;
+    /// <summary>
+    /// 상점 카드/장착 목록에 보여줄 한 줄 설명.
+    ///
+    /// <b>누적형(OnKillStackStat)만 매번 만들어 쓴다(2026-08-19).</b> 고정 문구는 "처치당 증가량"만
+    /// 알려줘서, 상한에 도달한 뒤에는 "효과가 적용되지 않는 것"과 화면상 구분이 되지 않았다
+    /// (사용자가 "암석 디스크 누적이 초기화된다"고 리포트한 것의 정체가 이것이다 - 실제로는
+    /// 상한에 이미 도달해 있었다). 현재 누적치를 함께 보여줘 진행 상황이 드러나게 한다.
+    /// 데이터에 고정 문구를 두면 실제 값과 어긋난다는 것은 AI 코어 3택 카드(2026-08-13)와
+    /// 머리 효과 설명(2026-08-19)에서 이미 겪은 함정이다.
+    /// </summary>
+    public string BuildDescription()
+    {
+        if (effectType != DiscEffectType.OnKillStackStat) return effectDescription;
+
+        int copies = Mathf.Max(1, CountEquippedCopies());
+        float total_cap = cap * copies;               // 장 수만큼 상한도 함께 늘어난다(ApplyKillStack과 같은 규칙)
+        RunState.DiscStackProgress.TryGetValue(discId, out float progress);
+
+        string stat = StatTypeNames.ToKorean(statA);
+
+        // "{stat}이(가)" 같은 조사 분기를 피하려고 기호 표기를 쓴다(체력/방어력/이동속도가 섞인다).
+        return $"적을 처치할 때마다 {stat} +{amountA:0.###} " +
+               $"(현재 +{progress:0.##} / 최대 +{total_cap:0.##})";
+    }
+
+    /// <summary>지금 장착 중인 이 디스크의 장 수(상점 카드처럼 아직 장착 전이면 0).</summary>
+    private int CountEquippedCopies()
+    {
+        int count = 0;
+        foreach (int id in RunState.EquippedDiscIds)
+        {
+            if (id == discId) count++;
+        }
+
+        return count;
+    }
 
     /// <summary>iconName 경로로 Resources에서 스프라이트를 불러온다. 비어있거나 못 찾으면 null.</summary>
     public Sprite LoadIcon() => string.IsNullOrEmpty(iconName) ? null : Resources.Load<Sprite>(iconName);

@@ -214,6 +214,15 @@ public class ShopPanelUI : MonoBehaviour
             return;
         }
 
+        if (offer.IsAccessory)
+        {
+            // 악세사리는 소켓 선택도, 구매 완료 잠금도 없다 - 즉시 사고 즉시 다시 살 수 있다
+            // (ShopManager.TryPurchaseAccessory 참고).
+            if (shopManager.TryPurchaseAccessory(index)) SetMessage($"{offer.DisplayName} 구매 완료 (점수 +{offer.Accessory.score})");
+            Refresh();
+            return;
+        }
+
         if (offer.IsDisc)
         {
             if (shopManager.TryPurchaseDisc(index)) SetMessage($"{offer.DisplayName} 구매 완료");
@@ -419,9 +428,12 @@ public class ShopPanelUI : MonoBehaviour
         {
             WaveManager waveManager = FindFirstObjectByType<WaveManager>();
             int finalWave = waveManager != null ? waveManager.FinalWaveNumber : 0;
-            waveText.text = finalWave > 0
-                ? $"WAVE {RunState.WaveNumber:00} / {finalWave}"
-                : $"WAVE {RunState.WaveNumber:00}";
+            // 엔드리스 모드(2026-08-19)에서는 20이 더 이상 진짜 끝이 아니므로 분모를 숨긴다.
+            waveText.text = RunState.IsEndless
+                ? $"WAVE {RunState.WaveNumber:00} / 무한"
+                : finalWave > 0
+                    ? $"WAVE {RunState.WaveNumber:00} / {finalWave}"
+                    : $"WAVE {RunState.WaveNumber:00}";
         }
 
         if (goldText != null) goldText.text = RunState.Gold.ToString();
@@ -731,6 +743,7 @@ public class ShopPanelUI : MonoBehaviour
     /// </summary>
     private Sprite ResolveOfferIcon(ShopManager.Offer offer)
     {
+        if (offer.IsAccessory) return offer.Accessory.LoadIcon();
         return offer.IsDisc ? offer.Disc.LoadIcon() : ResolveWeaponIcon(offer.Weapon);
     }
 

@@ -116,6 +116,7 @@ public class GameHUD : MonoBehaviour
         UpdateExpBar();
         UpdatePartBoxCount();
         UpdateDashCooldown();
+        EnsureScoreHud();
     }
 
     // ── 체력 바 색 ───────────────────────────────────────────────────
@@ -187,6 +188,22 @@ public class GameHUD : MonoBehaviour
     {
         // 게이지 자체가 매 프레임 스스로 위치·채움을 갱신하므로 여기서는 존재만 보장한다.
         EnsureDashGauge();
+    }
+
+    // ── 점수 HUD(2026-08-19 Phase B) ────────────────────────────────
+    // ScoreHudUI 자체가 매 프레임 점수·표시 여부를 스스로 갱신하므로 DashGaugeUI와 마찬가지로
+    // 여기서는 존재만 보장한다(에디터 도메인 리로드로 참조가 날아가도 다시 붙인다).
+    private ScoreHudUI score_hud;
+
+    private void EnsureScoreHud()
+    {
+        if (score_hud != null) return;
+
+        var canvas = GetComponentInParent<Canvas>();
+        if (canvas == null) canvas = FindFirstObjectByType<Canvas>();
+        if (canvas == null) return;
+
+        score_hud = ScoreHudUI.EnsureAttached(canvas.transform as RectTransform);
     }
 
     // 부품 상자는 머리(로봇)의 적재량만큼만 보유할 수 있고 상한에 도달하면 더 드랍되지 않으므로,

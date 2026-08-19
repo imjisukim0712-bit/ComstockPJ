@@ -179,6 +179,12 @@ public class PauseMenuUI : MonoBehaviour
 
     private void HandleQuitClicked()
     {
+        // 엔드리스 모드 도중 나가기를 누르면(사용자 확정 사항, 2026-08-19 Phase C) 그 시점의
+        // 점수를 랭킹에 남긴다 - 정산 팝업의 "타이틀로"와 같은 제출 경로(RunScore.SubmitToLeaderboard)
+        // 를 그대로 쓴다. 별도 확인 화면 없이 바로 제출 후 나간다(이미 "나가기"를 눌러 의사를
+        // 밝힌 상태라 한 번 더 물어보지 않는다).
+        if (RunState.IsEndless) RunScore.SubmitToLeaderboard();
+
         // 게임오버 요약 화면의 "타이틀로"와 같은 처리 - timeScale을 반드시 되돌려 놓고 이동한다
         // (되돌리지 않으면 타이틀 화면 자체가 멈춘 채로 시작된다).
         Time.timeScale = 1f;

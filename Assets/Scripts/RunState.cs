@@ -12,6 +12,17 @@ public static class RunState
     public static int WaveNumber { get; set; } = 0;
     public static int Gold { get; set; } = 0;
 
+    // 2026-08-19 엔드리스 모드(Phase C). 마지막(보스) 웨이브를 처음 클리어했을 때 뜨는
+    // 점수 정산 팝업에서 "계속 진행"을 선택하면 true가 된다. WaveManager는 이 값을 보고
+    // 보스 웨이브가 끝나도 GameFlowManager.HandleGameWon(정산 팝업)으로 다시 빠지지 않고
+    // 곧바로 다음 웨이브로 이어간다(WaveManager.WaveTimer 참고).
+    public static bool IsEndless { get; set; } = false;
+
+    // 구매한 악세사리를 순서대로 담는다(2026-08-19 Phase D). 같은 종류를 여러 번 사도 매번
+    // 추가되며(스택형 시각 효과가 "구매 순서대로 쌓이는" 것을 그대로 반영), 목록 자체가
+    // AccessoryVisual의 유일한 데이터 원본이라 별도 개수 집계 딕셔너리를 두지 않는다.
+    public static List<int> AccessoryPurchaseOrder { get; private set; } = new List<int>();
+
     // 골드 획득의 <b>소수점 나머지</b>를 다음 획득으로 이월하는 누적기(2026-08-19 버그 수정).
     //
     // 골드는 int인데 획득량에는 배율이 곱해진다(금화의 잔향 디스크 +10%, 미니 픽시 머리 -50%).
@@ -128,6 +139,7 @@ public static class RunState
     {
         WaveNumber = 0;
         Gold = 0;
+        IsEndless = false;
         goldFraction = 0f;
         CoreExp = 0;
         CoreLevel = 1;
@@ -145,5 +157,6 @@ public static class RunState
         PartStatBonuses.Clear();
         UnopenedPartBoxCount = 0;
         ModdingInventory.Clear();
+        AccessoryPurchaseOrder.Clear();
     }
 }

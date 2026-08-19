@@ -137,7 +137,7 @@ public class WaveManager : MonoBehaviour
 
         boss_spawned_this_wave = false;
         boss_defeated_this_wave = false;
-        if (wave == finalWaveNumber) SpawnBoss();
+        if (IsBossWave(wave)) SpawnBoss();
 
         float duration = firstWaveDuration + waveDurationIncreasePerWave * (wave - 1);
 
@@ -184,7 +184,14 @@ public class WaveManager : MonoBehaviour
         int hardWaves = Mathf.Max(0, wave - 1 - easyWaves);
 
         float increase = maxAliveIncreasePerWave * (easyWaves * easyWaveMaxAliveScale + hardWaves);
-        return enemySpawner.BaseMaxAliveEnemies + Mathf.RoundToInt(increase);
+        int computed = enemySpawner.BaseMaxAliveEnemies + Mathf.RoundToInt(increase);
+
+        // 엔드리스 모드(2026-08-19)는 wave가 무한정 커질 수 있어 이 값도 무한정 커진다.
+        // 기획상 상한은 없지만(오히려 "적 스탯 상승" 곡선의 일부), 동시 생존 개체 수만큼은
+        // 성능 안전장치로 상한을 둔다 - 여기서 막지 않으면 아주 늦은 웨이브에서 스폰 자체가
+        // 프레임을 잡아먹어 "어려워서 죽는" 게 아니라 "버벅여서 죽는" 상태가 될 수 있다.
+        const int enduranceSafetyCap = 150;
+        return Mathf.Min(computed, enduranceSafetyCap);
     }
 
     /// <summary>
@@ -196,6 +203,20 @@ public class WaveManager : MonoBehaviour
         if (wavesPerSpawnBatchIncrease <= 0) return enemySpawner.BaseSpawnBatchSize;
 
         return enemySpawner.BaseSpawnBatchSize + (wave - 1) / wavesPerSpawnBatchIncrease;
+    }
+
+    /// <summary>
+    /// 이 웨이브가 보스 웨이브인지. 첫 보스는 <see cref="finalWaveNumber"/>(20)에 등장하고,
+    /// 엔드리스 모드(2026-08-19 Phase C)에서는 그 뒤로 <c>finalWaveNumber - 1</c>웨이브
+    /// (19웨이브)마다 반복된다 - 웨이브 20 → 39 → 58 → ... (기획 확정값).
+    /// </summary>
+    private bool IsBossWave(int wave)
+    {
+        if (wave < finalWaveNumber) return false;
+        if (wave == finalWaveNumber) return true;
+
+        int period = Mathf.Max(1, finalWaveNumber - 1);
+        return (wave - finalWaveNumber) % period == 0;
     }
 
     private void SpawnBoss()
@@ -212,6 +233,16 @@ public class WaveManager : MonoBehaviour
         BossUnit boss = obj.GetComponent<BossUnit>();
         if (boss == null) boss = obj.AddComponent<BossUnit>();
 
+        // 첫 보스(웨이브 20)는 기존 밸런스(bossMaxHp 등 인스펙터 값)를 그대로 쓴다 - 이미
+        // "웨이브 20 도달 플레이어" 기준으로 실측해 잡아둔 값이라 추가 배율을 곱하면 검증 안 된
+        // 난이도가 된다. <b>엔드리스 사이클(39, 58, ...)의 재등장 보스만</b> 일반 몬스터와 같은
+        // 웨이브 스탯 배율(EnemySpawner.CurrentStatMultiplier)을 곱해 갈수록 강해지게 한다
+        // (2026-08-19 Phase C) - 안 그러면 플레이어는 계속 강해지는데 보스만 제자리라
+        // 엔드리스가 무의미해진다.
+        float multiplier = RunState.WaveNumber == finalWaveNumber || enemySpawner == null
+            ? 1f
+            : enemySpawner.CurrentStatMultiplier;
+
         // 보스 스탯은 GameDataAsset(시트 연동) 밖에 둔다 - 몬스터 시트를 다시 가져오기(재임포트)
         // 할 때 이 값이 조용히 지워지는 것을 막기 위함(에디터 임포터가 매번 목록을 통째로 비우고
         // 다시 채우는 구조라, 시트에 없는 보스 행을 여기 넣어두면 재임포트 시 사라진다).
@@ -219,8 +250,8 @@ public class WaveManager : MonoBehaviour
         {
             monster_id = -1,
             monster_name = "보스",
-            monster_hp = bossMaxHp,
-            monster_atk = bossAtk,
+            monster_hp = Mathf.RoundToInt(bossMaxHp * multiplier),
+            monster_atk = Mathf.RoundToInt(bossAtk * multiplier),
             monster_def = bossDef,
             monster_speed = bossMoveSpeed,
             monster_range = bossAttackRange,
@@ -231,7 +262,7 @@ public class WaveManager : MonoBehaviour
         boss.OnDefeated += HandleBossDefeated;
 
         boss_spawned_this_wave = true;
-        Debug.Log($"보스 등장 (HP {bossMaxHp})");
+        Debug.Log($"보스 등장 (웨이브 {RunState.WaveNumber}, HP {bossData.monster_hp}, 배율 x{multiplier:0.##})");
     }
 
     private Vector3 ComputeBossSpawnPosition()
@@ -265,7 +296,7 @@ public class WaveManager : MonoBehaviour
 
         if (enemySpawner != null) enemySpawner.SetSpawningEnabled(false);
 
-        if (RunState.WaveNumber == finalWaveNumber)
+        if (IsBossWave(RunState.WaveNumber))
         {
             // 보스 웨이브만 예외다. 시간은 다 됐지만 보스가 아직 살아있으면 처치할 때까지 계속
             // 기다린다(사용자 확정 사항: 처치와 시간 종료 둘 다 필요).
@@ -280,8 +311,19 @@ public class WaveManager : MonoBehaviour
 
             if (GameOverManager.IsGameOver) yield break; // 보스전 도중 플레이어가 죽었으면 승리로도 정비로도 진행하지 않음
 
-            WinGame();
-            yield break; // 정비/상점으로 넘어가는 일반 EndWave() 흐름을 타지 않는다
+            // <b>2026-08-19 Phase C(엔드리스)</b>: 처음 finalWaveNumber(20)에 도달했을 때만
+            // WinGame()으로 빠져 점수 정산 팝업(GameFlowManager.HandleGameWon)을 띄운다.
+            // 이미 "계속 진행"을 선택해 엔드리스 중이라면(RunState.IsEndless) 재등장 보스
+            // (39, 58, ...)는 그냥 일반 웨이브처럼 EndWave() → 정비/상점으로 이어간다.
+            if (RunState.WaveNumber == finalWaveNumber && !RunState.IsEndless)
+            {
+                WinGame(); // 정비/상점으로 넘어가는 일반 EndWave() 흐름을 타지 않는다
+            }
+            else
+            {
+                EndWave();
+            }
+            yield break;
         }
 
         if (GameOverManager.IsGameOver) yield break;

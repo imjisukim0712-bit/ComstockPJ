@@ -308,10 +308,10 @@ MonoBehaviour:
     price: 25
     iconName: "Discs/\uB514\uC2A4\uD06C07"
     effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 \uBC29\uC5B4\uB825\uC774
-      0.1 \uC99D\uAC00\uD569\uB2C8\uB2E4 (\uCD5C\uB300 5)."
+      0.05 \uC99D\uAC00\uD569\uB2C8\uB2E4 (\uCD5C\uB300 10)."
     effectType: 5
     statA: 2
-    amountA: 0.1
+    amountA: 0.05
     statB: 0
     amountB: 0
     statC: 0
@@ -319,7 +319,7 @@ MonoBehaviour:
     flatValue: 0
     chance01: 0
     multiplier: 0
-    cap: 5
+    cap: 10
     interval: 0
     duration: 0
     radius: 0
@@ -373,10 +373,10 @@ MonoBehaviour:
     price: 31
     iconName: "Discs/\uB514\uC2A4\uD06C10"
     effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 \uACF5\uACA9\uB825\uC774
-      0.1 \uC99D\uAC00\uD569\uB2C8\uB2E4 (\uCD5C\uB300 5)."
+      0.05 \uC99D\uAC00\uD569\uB2C8\uB2E4 (\uCD5C\uB300 10)."
     effectType: 5
     statA: 1
-    amountA: 0.1
+    amountA: 0.05
     statB: 0
     amountB: 0
     statC: 0
@@ -384,7 +384,7 @@ MonoBehaviour:
     flatValue: 0
     chance01: 0
     multiplier: 0
-    cap: 5
+    cap: 10
     interval: 0
     duration: 0
     radius: 0
@@ -416,10 +416,10 @@ MonoBehaviour:
     price: 20
     iconName: "Discs/\uB514\uC2A4\uD06C12"
     effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 \uC774\uB3D9\uC18D\uB3C4\uAC00
-      0.1% \uC99D\uAC00\uD569\uB2C8\uB2E4 (\uCD5C\uB300 5%)."
+      0.1% \uC99D\uAC00\uD569\uB2C8\uB2E4 (\uCD5C\uB300 20%)."
     effectType: 5
     statA: 3
-    amountA: 0.0025
+    amountA: 0.003
     statB: 0
     amountB: 0
     statC: 0
@@ -427,7 +427,7 @@ MonoBehaviour:
     flatValue: 0
     chance01: 0
     multiplier: 0
-    cap: 0.125
+    cap: 0.6
     interval: 0
     duration: 0
     radius: 0
@@ -483,10 +483,10 @@ MonoBehaviour:
     price: 25
     iconName: "Discs/\uB514\uC2A4\uD06C15"
     effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 \uCD5C\uB300 \uCCB4\uB825\uC774
-      1 \uC99D\uAC00\uD569\uB2C8\uB2E4 (\uCD5C\uB300 10)."
+      0.2 \uC99D\uAC00\uD569\uB2C8\uB2E4 (\uCD5C\uB300 40)."
     effectType: 5
     statA: 0
-    amountA: 1
+    amountA: 0.2
     statB: 0
     amountB: 0
     statC: 0
@@ -494,7 +494,7 @@ MonoBehaviour:
     flatValue: 0
     chance01: 0
     multiplier: 0
-    cap: 10
+    cap: 40
     interval: 0
     duration: 0
     radius: 0

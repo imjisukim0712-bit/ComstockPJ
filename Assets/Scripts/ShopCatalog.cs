@@ -120,11 +120,12 @@ public class ShopCatalog : ScriptableObject
     /// </summary>
     public ItemGrade RollGrade(int waveNumber)
     {
+        // 행운은 등급 가중치에 아주 약한 배율로만 관여한다(LuckBonus 참고, 2026-08-19 신설).
         float totalWeight = 0f;
         foreach (GradeSetting setting in gradeSettings)
         {
             if (waveNumber < setting.minWave) continue;
-            totalWeight += Mathf.Max(0f, setting.weight);
+            totalWeight += Mathf.Max(0f, setting.weight) * LuckBonus.WeightMultiplier(setting.grade);
         }
 
         if (totalWeight <= 0f) return ItemGrade.Normal;
@@ -134,7 +135,7 @@ public class ShopCatalog : ScriptableObject
         {
             if (waveNumber < setting.minWave) continue;
 
-            roll -= Mathf.Max(0f, setting.weight);
+            roll -= Mathf.Max(0f, setting.weight) * LuckBonus.WeightMultiplier(setting.grade);
             if (roll <= 0f) return setting.grade;
         }
 

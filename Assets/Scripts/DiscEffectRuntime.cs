@@ -143,7 +143,12 @@ public class DiscEffectRuntime : MonoBehaviour
     private void ApplyKillStack(int discId, DiscData disc, int copies)
     {
         RunState.DiscStackProgress.TryGetValue(discId, out float progress);
-        float next = Mathf.Min(disc.cap, progress + disc.amountA * copies);
+
+        // 상한도 장 수만큼 늘어난다(2026-08-19). RunState.DiscStackProgress 주석은 원래부터
+        // "같은 디스크를 두 장 끼면 각자 독립적으로 cap까지 쌓인다"는 의도였는데, 공유 총합을
+        // disc.cap 하나로 막고 있어서 2장을 사면 도달 속도만 2배가 되고 최종치는 1장과 같았다.
+        float total_cap = disc.cap * copies;
+        float next = Mathf.Min(total_cap, progress + disc.amountA * copies);
         float delta = next - progress;
         if (delta <= 0f) return;
 

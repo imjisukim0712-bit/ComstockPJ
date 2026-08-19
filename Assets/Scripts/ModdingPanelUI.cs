@@ -353,9 +353,12 @@ public class ModdingPanelUI : MonoBehaviour
         {
             WaveManager waveManager = FindFirstObjectByType<WaveManager>();
             int finalWave = waveManager != null ? waveManager.FinalWaveNumber : 0;
-            waveText.text = finalWave > 0
-                ? $"WAVE {RunState.WaveNumber:00} / {finalWave}"
-                : $"WAVE {RunState.WaveNumber:00}";
+            // 엔드리스 모드(2026-08-19)에서는 20이 더 이상 진짜 끝이 아니므로 분모를 숨긴다.
+            waveText.text = RunState.IsEndless
+                ? $"WAVE {RunState.WaveNumber:00} / 무한"
+                : finalWave > 0
+                    ? $"WAVE {RunState.WaveNumber:00} / {finalWave}"
+                    : $"WAVE {RunState.WaveNumber:00}";
         }
 
         if (goldText != null) goldText.text = RunState.Gold.ToString();

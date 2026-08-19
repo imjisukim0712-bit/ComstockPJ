@@ -27,6 +27,9 @@ public class GameOverSummaryUI : MonoBehaviour
     [SerializeField] private Button titleButton;
     [SerializeField] private string titleSceneName = "Title";
 
+    // 이 화면이 여러 번 켜져도(이론상) 랭킹에 중복 제출되지 않도록 막는 가드(2026-08-19 Phase C).
+    private bool scoreSubmitted;
+
     private void Awake()
     {
         if (titleButton != null) titleButton.onClick.AddListener(GoToTitle);
@@ -35,6 +38,17 @@ public class GameOverSummaryUI : MonoBehaviour
     private void OnEnable()
     {
         RefreshSummary();
+
+        // 죽음도 엔드리스 런의 정식 종료 조건이다(사용자 확정 - "플레이어 사망도 점수 정산 화면
+        // 으로 간다"). 정산 팝업의 "타이틀로"와 달리 사용자 선택이 필요 없으니(이미 죽어서 더 할
+        // 수 있는 게 없다) 화면을 띄우는 시점에 바로 제출한다. 엔드리스에 진입하지 않은 일반
+        // 사망(1~19웨이브)도 점수 자체는 유효하므로 함께 제출한다 - 낮은 점수는 랭킹에서
+        // 자연스럽게 아래로 밀린다.
+        if (!scoreSubmitted)
+        {
+            scoreSubmitted = true;
+            RunScore.SubmitToLeaderboard();
+        }
     }
 
     private void GoToTitle()
@@ -53,7 +67,10 @@ public class GameOverSummaryUI : MonoBehaviour
 
         if (summaryHeaderText != null)
         {
-            summaryHeaderText.text = $"도달 웨이브 {RunState.WaveNumber}     보유 골드 {RunState.Gold}";
+            // 2026-08-19 Phase C(점수 시스템) - 새 텍스트 필드를 씬에 늘리는 대신 기존 헤더에
+            // 한 줄 붙인다(씬 수정 없이 반영 가능한 가장 간단한 자리).
+            summaryHeaderText.text = $"도달 웨이브 {RunState.WaveNumber}     보유 골드 {RunState.Gold}\n" +
+                                      $"총점 {RunScore.ComputeTotal():N0}";
         }
 
         RefreshModdingStatus(modding, shoot, player);

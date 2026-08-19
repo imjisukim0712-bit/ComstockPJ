@@ -167,6 +167,16 @@ public class ProceduralCharacterRig : MonoBehaviour
     private SpriteRenderer bodyRenderer;
     private readonly Leg[] legs = new Leg[2];
 
+    /// <summary>몸통(=머리) 스프라이트가 붙은 Transform. 악세사리(2026-08-19 Phase D)처럼
+    /// 몸을 따라 움직이고 flipX와 함께 뒤집혀야 하는 장식을 붙일 자리가 필요한 외부 스크립트가
+    /// 쓴다 - 다리 파츠와 달리 flipX 하나로 좌우가 뒤집히므로 별도 미러 보정 없이 자식으로
+    /// 붙이기만 하면 된다.</summary>
+    public Transform BodyVisual => bodyVisual;
+
+    /// <summary>몸통 스프라이트 렌더러. 정렬 순서(sortingOrder)를 참고하거나 로컬 bounds로
+    /// "머리 꼭대기" 위치를 계산할 때 쓴다.</summary>
+    public SpriteRenderer BodyRenderer => bodyRenderer;
+
     private float thighLength;
     private float shinLength;
     private float ankleToSole;        // 발목에서 밑창까지의 거리

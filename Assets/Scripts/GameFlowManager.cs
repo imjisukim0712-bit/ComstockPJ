@@ -100,6 +100,9 @@ public class GameFlowManager : MonoBehaviour
     // 우상단 설정(톱니바퀴) 아이콘(2026-08-19). 같은 Canvas에 코드로 붙인다.
     private SettingsIconUI settingsIcon;
 
+    // 엔드리스 모드 점수 정산 팝업(2026-08-19 Phase C). 같은 Canvas에 코드로 붙인다.
+    private ScoreSummaryPopup scoreSummaryPopup;
+
     private void Awake()
     {
         if (aiCoreUpgradePanel != null) aiCoreUpgradePanel.SetActive(false);
@@ -111,7 +114,7 @@ public class GameFlowManager : MonoBehaviour
     /// 같은 이유로 Awake에서 한 번, 필요하면 그 이후에도 다시 확인할 수 있게 열어 둔다.</summary>
     private void EnsurePauseMenu()
     {
-        if (pauseMenu != null && settingsIcon != null) return;
+        if (pauseMenu != null && settingsIcon != null && scoreSummaryPopup != null) return;
 
         Canvas canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null) return;
@@ -122,6 +125,7 @@ public class GameFlowManager : MonoBehaviour
         // 설정 아이콘은 일시정지 메뉴보다 뒤에 붙여야 한다 - 형제 순서가 곧 그리기 순서라
         // 먼저 붙이면 딤 배경에 가려진다(아이콘 쪽에서 메뉴가 열리면 스스로 숨기기도 한다).
         if (settingsIcon == null) settingsIcon = SettingsIconUI.EnsureAttached(canvasRect);
+        if (scoreSummaryPopup == null) scoreSummaryPopup = ScoreSummaryPopup.EnsureAttached(canvasRect);
     }
 
     /// <summary>
@@ -150,6 +154,7 @@ public class GameFlowManager : MonoBehaviour
         if (waveManager != null) waveManager.OnWaveEnded += HandleWaveEnded;
         if (moddingPanel != null) moddingPanel.OnProceedRequested += HandleModdingProceedRequested;
         if (shopPanel != null) shopPanel.OnNextWaveRequested += HandleNextWaveRequested;
+        GameWinManager.OnGameWon += HandleGameWon;
     }
 
     private void OnDestroy()
@@ -157,6 +162,7 @@ public class GameFlowManager : MonoBehaviour
         if (waveManager != null) waveManager.OnWaveEnded -= HandleWaveEnded;
         if (moddingPanel != null) moddingPanel.OnProceedRequested -= HandleModdingProceedRequested;
         if (shopPanel != null) shopPanel.OnNextWaveRequested -= HandleNextWaveRequested;
+        GameWinManager.OnGameWon -= HandleGameWon;
     }
 
     private void HandleWaveEnded(int waveNumber)
@@ -165,13 +171,24 @@ public class GameFlowManager : MonoBehaviour
         // 흐른다) 정비/상점 화면으로 넘어가지 않는다 - GameOverManager의 게임오버 화면이 이미 떠 있다.
         if (GameOverManager.IsGameOver) return;
 
+        EnterPostWaveIntermission(waveNumber);
+    }
+
+    /// <summary>
+    /// 웨이브 하나(정규 종료 또는 엔드리스 "계속 진행" 선택 직후)를 마치고 정비 화면으로
+    /// 들어가기 전의 공통 처리 - 체력 전부 회복, 필드 투사체 정리, (설정에 따라) 자석 연출.
+    ///
+    /// 2026-08-19 Phase C(엔드리스)에서 <see cref="HandleWaveEnded"/>와
+    /// <see cref="HandleEndlessContinueChosen"/> 두 곳이 똑같은 절차를 필요로 해서 분리했다 -
+    /// 원래는 <c>HandleWaveEnded</c> 안에 있던 내용을 그대로 옮긴 것뿐이다(동작 변경 없음).
+    /// </summary>
+    private void EnterPostWaveIntermission(int waveNumber)
+    {
         CurrentState = State.Intermission;
         IsIntermission = true;
         lastEndedWaveNumber = waveNumber;
 
         // 웨이브를 무사히 넘겼으니 체력을 전부 회복한다(사용자 확정 사항, 2026-08-12).
-        // 마지막(보스) 웨이브는 EndWave()가 아니라 WinGame()으로 끝나 이 이벤트 자체가 발생하지
-        // 않으므로 여기서는 자동으로 제외된다.
         PlayerRobotController player = FindFirstObjectByType<PlayerRobotController>();
         if (player != null) player.Heal(player.MaxHp);
 
@@ -188,6 +205,55 @@ public class GameFlowManager : MonoBehaviour
         // 하므로(코루틴) 정지 화면 진입 자체를 코루틴 완료 이후로 미룬다.
         if (resetFieldOnIntermission) StartCoroutine(ResetFieldForIntermissionRoutine());
         else EnterIntermissionScreens();
+    }
+
+    // ── 엔드리스 모드 - 20웨이브 첫 클리어 시 점수 정산 팝업(2026-08-19 Phase C) ──────────
+
+    /// <summary>WaveManager.WinGame()이 GameWinManager.TriggerWin()을 부르면(마지막 웨이브를
+    /// <b>처음</b> 클리어했을 때만 - RunState.IsEndless가 이미 true면 그 뒤로는 EndWave()로
+    /// 빠져 이 이벤트 자체가 발생하지 않는다) 호출된다.</summary>
+    private void HandleGameWon()
+    {
+        EnsurePauseMenu(); // scoreSummaryPopup이 아직 없으면 여기서 만든다(EnsureAiCoreExtraButtons와 같은 방어)
+
+        if (freezeTimeDuringIntermission) Time.timeScale = 0f;
+        CloseAllIntermissionPanels();
+        SetCombatHudVisible(false);
+
+        int clearedWave = waveManager != null ? waveManager.FinalWaveNumber : RunState.WaveNumber;
+        if (scoreSummaryPopup != null)
+        {
+            scoreSummaryPopup.ShowClearChoice(clearedWave, HandleEndlessContinueChosen, HandleEndlessDeclineChosen);
+        }
+        else
+        {
+            Debug.LogWarning("ScoreSummaryPopup을 만들지 못해 정산 화면을 띄우지 못했습니다 - Canvas를 찾을 수 없습니다.");
+        }
+    }
+
+    private void HandleEndlessContinueChosen()
+    {
+        RunState.IsEndless = true;
+
+        // WinGame()이 걸어 둔 "게임 종료" 플래그를 풀어야 플레이어·적·스포너 Update 가드들이
+        // 다시 움직인다(PlayerRobotController/PlayerShootManager/EnemyUnit 등 - GameWinManager.cs
+        // 상단 주석 참고). GameWinManager.Reset()은 원래 씬 재시작용이지만 하는 일이 "IsGameWon을
+        // false로"뿐이라 여기서 그대로 재사용해도 안전하다.
+        GameWinManager.Reset();
+
+        // 정규 웨이브 종료(HandleWaveEnded)와 완전히 같은 절차(회복 + 필드 정리 + 정비 화면)를
+        // 밟아야 웨이브 21이 정상적으로 이어진다 - WinGame()은 이 절차를 건너뛰고 곧장 팝업으로
+        // 왔기 때문에 여기서 대신 밟아준다.
+        EnterPostWaveIntermission(RunState.WaveNumber);
+    }
+
+    private void HandleEndlessDeclineChosen()
+    {
+        RunScore.SubmitToLeaderboard();
+
+        Time.timeScale = 1f;
+        GameFlowManager.SetPaused(false);
+        UnityEngine.SceneManagement.SceneManager.LoadScene("Title");
     }
 
     private void EnterIntermissionScreens()

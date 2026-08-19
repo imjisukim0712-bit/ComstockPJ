@@ -131,6 +131,7 @@ public class PlayerRobotController : MonoBehaviour
         GameOverManager.Reset();
         GameWinManager.Reset();
         RunState.Reset();
+        RunScore.Reset();
         EnemyUnit.Alive.Clear();
         EnemyUnit.ResetStaticCaches();
         RewardPickup.ResetStaticCaches();
@@ -189,6 +190,13 @@ public class PlayerRobotController : MonoBehaviour
         // (씬 재시작 시 RunState.Reset()을 여기서 부르는 것과 같은 이유).
         HeadEffects.ResetRuntimeRefs();
         HeadEffects.RegisterPlayer(this);
+
+        // 행운 → 등급 확률 보정도 같은 이유로 여기서 등록한다(2026-08-19).
+        LuckBonus.Clear();
+        LuckBonus.RegisterPlayer(this);
+
+        // 점수 시스템의 누적 처치 수 집계도 여기서 (재)구독한다(2026-08-19 Phase B).
+        RunScore.EnsureKillTrackingSubscribed();
     }
 
     private void Start()

@@ -736,22 +736,33 @@ public class PlayerShootManager : MonoBehaviour
             slot.hand_sprite_renderer.transform.localRotation = Quaternion.identity;
         }
 
+        // <b>근접무기는 적을 향해 회전하지 않는다(2026-08-19 사용자 확정)</b>.
+        // 칼은 항상 소켓의 좌/우 방향(왼쪽 소켓 = 화면 왼쪽 위 165도, 오른쪽 소켓 = 오른쪽 위 15도)을
+        // 보고 있다가 <b>찌르는 순간에만</b> 적 쪽을 향하고(StartMeleeThrustVisual이 각도를 잡는다),
+        // 동작이 끝나면 다음 공격 직전까지 즉시 이 자세로 돌아온다.
+        //
+        // 예전에는 총기와 같은 조준 경로를 타서, 감지거리 안에 적이 있는 동안에는 좌/우와 무관하게
+        // 적을 향해 돌아가 있었다. 사용자가 "왼쪽 칼이 왼쪽을 향하게 고쳤는데도 공격 후에는 여전히
+        // 적용이 안 된다"고 두 번 리포트한 것의 정체가 이것이다 - 대기 자세(target == null) 경로는
+        // 이미 정확했고(실측 165도/15도), 사용자가 보던 시점이 조준 경로였다.
+        //
+        // 회전 속도를 태우지 않고 곧바로 각도를 박는다("즉시 복귀"). weapon_imgangle을 더하는 이유는
+        // 세 근접 원본 그림의 칼끝이 우측이 아니라 좌상단(~140도)을 향해 그려져 있어서다.
+        if (is_melee)
+        {
+            pivot.rotation = Quaternion.Euler(0f, 0f, MeleeRestFacingDegrees(slot_index) + weapon.weapon_imgangle);
+
+            // 조준 회전이 없으므로 발사 각도 허용치(fire_angle_tolerance_degrees) 게이트도 타지 않는다.
+            if (target == null) return;
+
+            TryFireSlot(slot_index, slot, weapon, target);
+            return;
+        }
+
         if (target == null)
         {
-            // 근접무기는 조준 중과 마찬가지로 weapon_imgangle을 더해야 한다 - 안 더하면 대기
-            // 자세가 총기 전용 기준(rest_rotation_degrees, 그림이 오른쪽을 향한다고 가정)으로만
-            // 돌아가서, 칼끝이 실제로 그려진 방향(~140도, 좌상단)이 그대로 드러나 반대로 향해
-            // 보인다(2026-08-19 "칼끝이 팔 방향과 반대로 가있다" 리포트로 발견).
-            //
-            // <b>2026-08-19 추가 수정</b>: 근접무기는 기준 각도도 총기의 rest_rotation_degrees가
-            // 아니라 소켓의 좌/우에서 뽑는다(MeleeRestFacingDegrees). 조준식이 imgangle을 더해
-            // 상쇄시키는 구조라 <b>근접무기의 화면상 대기 각도는 여기 넣는 기준값 그 자체</b>가
-            // 되는데, 총기용 값은 좌우 소켓이 각각 8.112 / -3.233(둘 다 오른쪽 근처)이라
-            // 왼팔 칼도 오른쪽을 향했다(사용자 리포트).
-            float rest_base_angle = is_melee ? MeleeRestFacingDegrees(slot_index) : slot.rest_rotation_degrees;
-            float rest_target_angle = rest_base_angle + (is_melee ? weapon.weapon_imgangle : 0f);
-            float rest_angle = RotatePivotTowards(slot, weapon, pivot, rest_target_angle, slot_index);
-            if (!is_melee) ApplyAngleFlip(slot, rest_angle, false);
+            float rest_angle = RotatePivotTowards(slot, weapon, pivot, slot.rest_rotation_degrees, slot_index);
+            ApplyAngleFlip(slot, rest_angle, false);
             return;
         }
 
@@ -760,23 +771,14 @@ public class PlayerShootManager : MonoBehaviour
 
         if (direction.sqrMagnitude > 0.0001f)
         {
+            // 여기부터는 총기 전용 경로다(근접무기는 위에서 이미 반환했다).
             // weapon_imgangle: 무기 그림마다 총구가 그려진 각도가 달라서, 무기를 바꾸면
             // 슬롯 보정각(rotation_offset_degrees)만으로는 총구가 타겟을 향하지 않는다.
-            //
-            // 근접무기는 slot.rotation_offset_degrees를 더하지 않는다 - 그 값은 좌/우 소켓에
-            // 각각 다르게 박혀 있는(126.3도/37도) "총기 전용" 보정값이다(총은 손마다 별도로
-            // 그려진 미러링 이미지를 쓰지만, 근접무기 3종은 좌우 이미지가 완전히 같은 파일이라
-            // 소켓이 달라져도 그림의 실제 방향은 그대로다). 슬롯 값을 그대로 더하면 무기가
-            // 어느 손에 장착됐는지에 따라 칼끝 방향이 달라져버린다. 그래서 근접무기는
-            // weapon_imgangle 하나만으로 방향을 맞춘다(2026-08-12, "근접무기가 뒤집어져
-            // 있음" 리포트로 발견).
             float target_angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg
-                                 + (is_melee ? 0f : slot.rotation_offset_degrees) + weapon.weapon_imgangle;
+                                 + slot.rotation_offset_degrees + weapon.weapon_imgangle;
             float current_angle = RotatePivotTowards(slot, weapon, pivot, target_angle, slot_index);
 
-            // ApplyAngleFlip(상하 반전)의 각도 범위도 총기 전용 슬롯 값이라 근접무기에는 적용하지
-            // 않는다 - 근접무기는 칼이 어느 각도로 돌아가도(뒤집혀도) 자연스러워 굳이 필요 없다.
-            if (!is_melee) ApplyAngleFlip(slot, current_angle, true);
+            ApplyAngleFlip(slot, current_angle, true);
 
             // 아직 타겟 쪽으로 다 돌지 못했으면 발사를 미룬다 - 그래야 "무기가 돌아가는 시간"이
             // 눈속임이 아니라 실제 사격 타이밍에도 반영된다.
@@ -1058,6 +1060,16 @@ public class PlayerShootManager : MonoBehaviour
         state.melee_thrust_distance = weapon.ProjectileSize; // weapon_atsize를 찌르는 거리로 재활용
         state.melee_thrust_home_local = pivot.localPosition;
         state.melee_thrust_direction = direction;
+
+        // <b>칼이 적을 향하는 것은 이 순간뿐이다(2026-08-19)</b>. 평소에는 UpdateSlot이 매 프레임
+        // 소켓의 좌/우 대기 각도를 박아두고, 찌르기가 시작될 때만 여기서 진행 방향으로 돌린다.
+        // 찌르는 동안에는 UpdateSlot이 조기 반환하므로 이 각도가 그대로 유지되고, 동작이 끝나면
+        // 다음 프레임에 대기 각도로 즉시 돌아온다.
+        if (direction.sqrMagnitude > 0.0001f)
+        {
+            float thrust_angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg + weapon.weapon_imgangle;
+            pivot.rotation = Quaternion.Euler(0f, 0f, thrust_angle);
+        }
 
         state.melee_damage = damage;
         state.melee_def_ignore = weapon.weapon_defignore;
