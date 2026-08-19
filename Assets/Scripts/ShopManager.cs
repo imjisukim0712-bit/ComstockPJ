@@ -16,7 +16,7 @@ using UnityEngine;
 /// </summary>
 public class ShopManager : MonoBehaviour
 {
-    /// <summary>상점 칸 하나에 놓인 품목. 무기이거나 디스크다.</summary>
+    /// <summary>상점 칸 하나에 놓인 품목. 무기·디스크·악세사리 중 하나다.</summary>
     public class Offer
     {
         public bool IsDisc;
@@ -32,12 +32,26 @@ public class ShopManager : MonoBehaviour
         // 디스크일 때만 사용
         public DiscData Disc;
 
-        public string DisplayName => IsDisc ? Disc.discName : Weapon.weapon_name;
-        public string CategoryName => IsDisc ? "디스크" : "무기";
+        // 악세사리일 때만 사용(2026-08-19 Phase D - 엔드리스 전용, IsDisc와 별개 플래그).
+        public bool IsAccessory;
+        public AccessoryData Accessory;
+
+        public string DisplayName => IsAccessory ? Accessory.accessoryName : IsDisc ? Disc.discName : Weapon.weapon_name;
+        public string CategoryName => IsAccessory ? "악세사리" : IsDisc ? "디스크" : "무기";
 
         /// <summary>카드 본문에 보여줄 성능 요약.</summary>
         public string BuildDescription()
         {
+            // 효과는 없고 점수만 준다(기획 확정) - 능력치 문구 대신 그 사실과 지금까지 구매한
+            // 개수를 보여준다. 개수를 함께 보여줘야 "여러 개 겹쳐 살수록 위로 쌓인다"는 동작이
+            // 카드에서도 드러난다.
+            if (IsAccessory)
+            {
+                int owned = 0;
+                foreach (int id in RunState.AccessoryPurchaseOrder) if (id == Accessory.accessoryId) owned++;
+                return $"점수 +{Accessory.score} (효과 없음)\n보유 {owned}개";
+            }
+
             if (IsDisc) return Disc.BuildDescription();
 
             // 등급별 수치가 데이터 행에 이미 반영되어 있으므로 배율을 곱하지 않고 그대로 보여준다.
@@ -141,7 +155,10 @@ public class ShopManager : MonoBehaviour
         if (index < 0 || index >= offers.Count) { reason = "잘못된 칸입니다"; return false; }
 
         Offer offer = offers[index];
-        if (offer.Purchased) { reason = "이미 구매했습니다"; return false; }
+        // 악세사리는 이미 구매했어도 다시 사는 것이 정상 동작(스택형)이라 Purchased 검사에서
+        // 제외한다 - 대신 카드 자체를 "구매 완료" 스탬프로 막지 않고 계속 살 수 있게
+        // CreateAccessoryOffer()가 Purchased를 절대 true로 두지 않는다.
+        if (!offer.IsAccessory && offer.Purchased) { reason = "이미 구매했습니다"; return false; }
         if (RunState.Gold < offer.Price) { reason = "골드가 부족합니다"; return false; }
         if (offer.IsDisc && IsDiscSlotFull) { reason = "디스크 슬롯이 가득 찼습니다"; return false; }
 
@@ -169,6 +186,27 @@ public class ShopManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 악세사리를 구매한다(2026-08-19 Phase D). 무기·디스크와 달리 <b>장착 슬롯이 없고 중복
+    /// 구매도 막지 않는다</b> - 살 때마다 <see cref="RunState.AccessoryPurchaseOrder"/>에
+    /// 쌓이고(시각적으로 위로 쌓이는 순서와 같다) <see cref="RunScore.AddAccessoryScore"/>로
+    /// 점수만 늘어난다. 카드는 구매 후에도 "구매 완료"로 잠기지 않고 계속 다시 살 수 있다.
+    /// </summary>
+    public bool TryPurchaseAccessory(int index)
+    {
+        if (!CanPurchase(index, out _)) return false;
+
+        Offer offer = offers[index];
+        if (!offer.IsAccessory) return false;
+
+        RunState.Gold -= offer.Price;
+        RunState.AccessoryPurchaseOrder.Add(offer.Accessory.accessoryId);
+        RunScore.AddAccessoryScore(offer.Accessory.score);
+
+        RunState.NotifyChanged();
+        return true;
+    }
+
+    /// <summary>
     /// 이 칸의 무기를 이 소켓에 장착할 수 있는지 확인한다(골드 부족/이미 구매 여부만 검사).
     ///
     /// 2026-08-12 "무기 소켓 개별화" 플랜부터 타입 불일치/무게 초과는 더 이상 구매를 막지
@@ -181,7 +219,7 @@ public class ShopManager : MonoBehaviour
         if (!CanPurchase(index, out reason)) return false;
 
         Offer offer = offers[index];
-        if (offer.IsDisc) { reason = "무기 칸이 아닙니다"; return false; }
+        if (offer.IsDisc || offer.IsAccessory) { reason = "무기 칸이 아닙니다"; return false; }
 
         return true;
     }
@@ -195,7 +233,7 @@ public class ShopManager : MonoBehaviour
         if (index < 0 || index >= offers.Count || offers[index] == null) return string.Empty;
 
         Offer offer = offers[index];
-        if (offer.IsDisc) return string.Empty;
+        if (offer.IsDisc || offer.IsAccessory) return string.Empty;
 
         ModdingManager modding = Object.FindFirstObjectByType<ModdingManager>();
         if (modding == null) return string.Empty;
@@ -325,8 +363,19 @@ public class ShopManager : MonoBehaviour
         }
     }
 
+    /// <summary>엔드리스 모드 상점 칸이 악세사리로 대체될 확률(2026-08-19 Phase D, 사용자 지정
+    /// "칸마다 5% 확률"). 엔드리스가 아니면 절대 등장하지 않는다(기획 확정).</summary>
+    private const float AccessoryAppearChanceInEndless = 0.05f;
+
     private Offer CreateRandomOffer()
     {
+        // 악세사리는 무기/디스크 추첨보다 먼저 굴린다(계획서 표현 그대로) - 당첨되면 그 칸은
+        // 통째로 악세사리로 대체되고 아래 무기/디스크 로직은 타지 않는다.
+        if (RunState.IsEndless && Random.value < AccessoryAppearChanceInEndless)
+        {
+            return CreateAccessoryOffer();
+        }
+
         // 디스크는 자기 등급이 고정이라, 이번 웨이브에 등장 가능한 등급의 디스크만 후보가 된다
         // (무기의 RollGrade와 동일한 minWave 규칙을 디스크에도 적용 - 1웨이브에 전설이 뜨지 않도록).
         List<DiscData> availableDiscs = GetAvailableDiscs();
@@ -340,6 +389,24 @@ public class ShopManager : MonoBehaviour
 
         Debug.LogWarning("ShopCatalog에 이번 웨이브에 등장 가능한 무기도 디스크도 없어 상점 품목을 만들 수 없습니다.");
         return null;
+    }
+
+    /// <summary>
+    /// 악세사리 6종 중 하나를 무작위로 골라 칸에 놓는다. 등급 개념이 없어(효과가 아예 없으니
+    /// 등급을 매길 대상도 없다) 카드 헤더 색상용으로 <see cref="ItemGrade.Epic"/>을 고정으로
+    /// 쓴다 - 5% 확률로만 뜨는 만큼 "발견하면 반가운" 정도의 색상이 되도록 고른 임의값이다.
+    /// </summary>
+    private Offer CreateAccessoryOffer()
+    {
+        AccessoryData accessory = AccessoryCatalog.GetRandom();
+
+        return new Offer
+        {
+            IsAccessory = true,
+            Accessory = accessory,
+            Grade = ItemGrade.Epic,
+            Price = Mathf.Max(0, accessory.price)
+        };
     }
 
     // 이번 웨이브에 등장 가능한(등급 minWave를 만족하는) 디스크만 추린다.
@@ -356,9 +423,40 @@ public class ShopManager : MonoBehaviour
         return result;
     }
 
+    /// <summary>
+    /// 등급을 먼저 뽑고, <b>그 등급의 디스크 중에서</b> 하나를 고른다(무기와 동일한 규칙).
+    /// 예전에는 등장 가능한 디스크 전체에서 균등 추첨해서, 등급이 하나씩 열릴 때마다
+    /// 고등급 비중이 계단식으로 뛰었다(전설 의도 3% → 실제 9.5%). 등급별 보유 수가
+    /// 제각각(일반 4 / 레어 5 / 에픽 6 / 유니크 4 / 전설 2)이라 균등 추첨은 등급 확률을
+    /// 그대로 데이터 개수 비율로 만들어버린다.
+    /// </summary>
     private Offer CreateDiscOffer(List<DiscData> availableDiscs)
     {
-        DiscData disc = availableDiscs[Random.Range(0, availableDiscs.Count)];
+        ItemGrade rolled = catalog.RollGrade(Mathf.Max(1, RunState.WaveNumber));
+
+        // 뽑은 등급에 디스크가 하나도 없으면 한 등급씩 낮춰가며 찾는다
+        // (위로 올라가면 minWave 게이팅이 깨지므로 반드시 아래로만 내려간다).
+        // DiscData는 struct라 null로 "못 찾음"을 표현할 수 없어 플래그를 따로 쓴다.
+        DiscData disc = default;
+        bool found = false;
+
+        for (int g = (int)rolled; g >= 0 && !found; g--)
+        {
+            discGradeBuffer.Clear();
+            foreach (DiscData candidate in availableDiscs)
+            {
+                if ((int)candidate.grade == g) discGradeBuffer.Add(candidate);
+            }
+
+            if (discGradeBuffer.Count > 0)
+            {
+                disc = discGradeBuffer[Random.Range(0, discGradeBuffer.Count)];
+                found = true;
+            }
+        }
+
+        // 모든 하위 등급이 비어 있는 비정상 상황에서만 전체에서 뽑는다.
+        if (!found) disc = availableDiscs[Random.Range(0, availableDiscs.Count)];
 
         return new Offer
         {
@@ -368,6 +466,9 @@ public class ShopManager : MonoBehaviour
             Price = Mathf.Max(0, disc.price)
         };
     }
+
+    // 등급별 디스크 후보를 담는 재사용 버퍼(매 추첨마다 리스트를 새로 만들지 않으려고).
+    private readonly List<DiscData> discGradeBuffer = new List<DiscData>();
 
     /// <summary>
     /// 등급을 먼저 뽑고, <b>그 등급의 무기 행 중에서</b> 하나를 고른다.

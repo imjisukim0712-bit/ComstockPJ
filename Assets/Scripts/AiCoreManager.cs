@@ -28,6 +28,13 @@ public class AiCoreManager : MonoBehaviour
     [SerializeField] private int expBase = 4;
     [SerializeField] private int expPerLevel = 2;
 
+    [Tooltip("2026-08-19 - 이 레벨 이상부터 필요 경험치에 아래 배율이 곱해진다(오름차순). " +
+             "선형 공식만으로는 후반 레벨업이 너무 쉬워서 구간마다 요구량을 계단식으로 올린다")]
+    [SerializeField] private int[] expTierStartLevels = { 15, 30, 45 };
+
+    [Tooltip("expTierStartLevels와 같은 순서의 배율. 첫 구간(1~14레벨)은 항상 x1")]
+    [SerializeField] private float[] expTierMultipliers = { 2f, 4f, 8f };
+
     [Header("골드 리롤 (2026-08-18) - 공식은 상점 새로고침과 동일")]
     [Tooltip("카드 화면을 열었을 때 첫 리롤에 드는 골드")]
     [SerializeField] private int rerollBaseCost = 10;
@@ -53,7 +60,35 @@ public class AiCoreManager : MonoBehaviour
         }
     }
 
-    private int RequiredExpForNextLevel() => Mathf.Max(1, expBase + expPerLevel * RunState.CoreLevel);
+    private int RequiredExpForNextLevel()
+    {
+        int level = RunState.CoreLevel;
+        float required = (expBase + expPerLevel * level) * ExpTierMultiplier(level);
+
+        return Mathf.Max(1, Mathf.RoundToInt(required));
+    }
+
+    /// <summary>
+    /// 레벨 구간 배율. 선형 공식(4 + 2L)만으로는 45레벨까지 누적 2,156밖에 되지 않아
+    /// 20웨이브 안에 최대 레벨에 여유롭게 도달했다(2026-08-19 사용자 지적).
+    /// 15/30/45레벨을 경계로 x2 / x4 / x8을 곱해 후반 성장 속도를 늦춘다
+    /// (누적: 15레벨 266 / 30레벨 1,706 / 45레벨 6,386 / 50레벨 10,306).
+    /// </summary>
+    private float ExpTierMultiplier(int level)
+    {
+        if (expTierStartLevels == null || expTierMultipliers == null) return 1f;
+
+        float multiplier = 1f;
+        int count = Mathf.Min(expTierStartLevels.Length, expTierMultipliers.Length);
+
+        // 오름차순 전제. 조건을 만족하는 마지막 구간의 배율이 최종값이다.
+        for (int i = 0; i < count; i++)
+        {
+            if (level >= expTierStartLevels[i]) multiplier = expTierMultipliers[i];
+        }
+
+        return multiplier;
+    }
 
     /// <summary>HUD의 경험치 바 표시용. 최대 레벨이면 다음 레벨이 없다는 뜻으로 -1을 돌려준다.</summary>
     public int GetRequiredExpForNextLevel()
