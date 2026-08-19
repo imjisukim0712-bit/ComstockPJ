@@ -189,8 +189,10 @@ public class GameFlowManager : MonoBehaviour
         lastEndedWaveNumber = waveNumber;
 
         // 웨이브를 무사히 넘겼으니 체력을 전부 회복한다(사용자 확정 사항, 2026-08-12).
+        // fromWaveEnd=true - 에너지 베리어 디스크의 해금 조건("웨이브 종료 회복 외의 회복")에서
+        // 이 회복만 제외하기 위한 구분이다(2026-08-19 Phase E).
         PlayerRobotController player = FindFirstObjectByType<PlayerRobotController>();
-        if (player != null) player.Heal(player.MaxHp);
+        if (player != null) player.Heal(player.MaxHp, true);
 
         // 필드에 날아다니던 투사체는 여기서 <b>즉시</b> 전부 없앤다(2026-08-13 버그 수정).
         // 웨이브가 끝나면 남은 적은 소멸하는데(WaveManager.EndWave) 그 적들이 이미 쏴 둔 투사체는
@@ -234,6 +236,7 @@ public class GameFlowManager : MonoBehaviour
     private void HandleEndlessContinueChosen()
     {
         RunState.IsEndless = true;
+        UnlockTracker.ReportEndlessEntered(); // 교향곡: 암석 디스크
 
         // WinGame()이 걸어 둔 "게임 종료" 플래그를 풀어야 플레이어·적·스포너 Update 가드들이
         // 다시 움직인다(PlayerRobotController/PlayerShootManager/EnemyUnit 등 - GameWinManager.cs

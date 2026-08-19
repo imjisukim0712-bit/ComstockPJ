@@ -1157,6 +1157,7 @@ MonoBehaviour:
   quitButton: {fileID: 1831416354}
   volumeSliderParent: {fileID: 0}
   partsCatalog: {fileID: 11400000, guid: 3cafe6f8e5ab84d449ab787b7bce2316, type: 2}
+  shopCatalog: {fileID: 11400000, guid: bca2f07aeb50c1748ab81a4a69371680, type: 2}
 --- !u!4 &1749793932
 Transform:
   m_ObjectHideFlags: 0

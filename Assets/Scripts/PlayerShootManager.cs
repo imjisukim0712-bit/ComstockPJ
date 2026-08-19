@@ -132,6 +132,7 @@ public class PlayerShootManager : MonoBehaviour
 
         // 찌르는 동안 매 프레임 같은 값으로 판정하기 위해 발사 시점의 데미지 계산 결과를 들고 있는다.
         public int melee_damage;
+        public int melee_weapon_id;   // 해금 진행도용(어떤 무기로 죽였는지, 2026-08-19 Phase E)
         public float melee_def_ignore;
         public float melee_knockback;
 
@@ -1072,6 +1073,7 @@ public class PlayerShootManager : MonoBehaviour
         }
 
         state.melee_damage = damage;
+        state.melee_weapon_id = weapon.weapon_id;
         state.melee_def_ignore = weapon.weapon_defignore;
         state.melee_knockback = weapon.weapon_knockback;
         state.melee_hit_targets.Clear(); // 이번 찌르기의 중복 방지 집합을 새로 시작
@@ -1158,7 +1160,7 @@ public class PlayerShootManager : MonoBehaviour
 
         MeleeSwing.Execute(center, state.melee_thrust_direction, radius, state.melee_damage,
                            state.melee_def_ignore, state.melee_knockback,
-                           MeleeSwing.FullAngleDegrees, state.melee_hit_targets);
+                           MeleeSwing.FullAngleDegrees, state.melee_hit_targets, state.melee_weapon_id);
     }
 
     /// <summary>
@@ -1231,7 +1233,8 @@ public class PlayerShootManager : MonoBehaviour
         Sprite visual = ResolveWeaponSprite(beam_sprite_name, weapon);
 
         BeamProjectile.Fire(visual, origin, direction, GetTravelRange(weapon, slot_index), weapon.ProjectileSize,
-                            total_damage, weapon.weapon_duration, weapon.weapon_defignore, weapon.weapon_knockback);
+                            total_damage, weapon.weapon_duration, weapon.weapon_defignore, weapon.weapon_knockback,
+                            weapon.weapon_id);
     }
 
     /// <summary>
@@ -1339,7 +1342,8 @@ public class PlayerShootManager : MonoBehaviour
                 SplashRadius = splash_radius,
                 DefIgnore = weapon.weapon_defignore,
                 Knockback = weapon.weapon_knockback,
-                BlastVisualDuration = blast_visual_duration
+                BlastVisualDuration = blast_visual_duration,
+                SourceWeaponId = weapon.weapon_id
             });
         }
     }

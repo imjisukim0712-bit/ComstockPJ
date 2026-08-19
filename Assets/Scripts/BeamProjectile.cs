@@ -25,6 +25,7 @@ public class BeamProjectile : MonoBehaviour
     private float half_width;
     private int tick_damage;
     private float def_ignore;
+    private int source_weapon_id;
     private float knockback;
     private float remaining_time;
     private float next_tick_time;
@@ -40,19 +41,20 @@ public class BeamProjectile : MonoBehaviour
     /// <param name="duration">빔이 유지되는 시간(초). 0 이하면 1틱만 발생</param>
     public static BeamProjectile Fire(Sprite visual, Vector3 origin, Vector3 fire_direction, float beam_length,
                                       float beam_half_width, int total_damage, float duration,
-                                      float def_ignore_percent, float knockback_strength)
+                                      float def_ignore_percent, float knockback_strength, int source_weapon_id = 0)
     {
         GameObject obj = new GameObject("Beam");
         obj.transform.position = origin;
 
         BeamProjectile beam = obj.AddComponent<BeamProjectile>();
         beam.Init(visual, fire_direction, beam_length, beam_half_width, total_damage, duration,
-                  def_ignore_percent, knockback_strength);
+                  def_ignore_percent, knockback_strength, source_weapon_id);
         return beam;
     }
 
     private void Init(Sprite visual, Vector3 fire_direction, float beam_length, float beam_half_width,
-                      int total_damage, float duration, float def_ignore_percent, float knockback_strength)
+                      int total_damage, float duration, float def_ignore_percent, float knockback_strength,
+                      int weapon_id = 0)
     {
         direction = fire_direction.sqrMagnitude > 0.0001f ? fire_direction.normalized : Vector3.right;
         direction.z = 0f;
@@ -60,6 +62,7 @@ public class BeamProjectile : MonoBehaviour
         length = Mathf.Max(0.1f, beam_length);
         half_width = Mathf.Max(0.1f, beam_half_width);
         def_ignore = def_ignore_percent;
+        source_weapon_id = weapon_id;
         knockback = knockback_strength;
 
         remaining_time = Mathf.Max(TickInterval, duration);
@@ -132,7 +135,7 @@ public class BeamProjectile : MonoBehaviour
             // 틱마다 집합을 비우므로 같은 적이 다음 틱에는 다시 맞는다(계속 태우는 것이 빔의 동작)
             if (enemy == null || enemy.IsDead || !hit_this_tick.Add(enemy)) continue;
 
-            enemy.TakeDamage(tick_damage, def_ignore);
+            enemy.TakeDamage(tick_damage, def_ignore, source_weapon_id);
             if (knockback > 0f) enemy.ApplyKnockback(direction, knockback);
         }
     }

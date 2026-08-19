@@ -20,7 +20,7 @@ public class DisruptorUnit : EnemyUnit
 
     // "큰 피해"를 입으면 정상적인 체력 차감 대신 즉시 자폭한다 - 자폭 자체가 이 몬스터의
     // 죽음/처리 방식이라 base.TakeDamage()의 일반 사망 경로를 타지 않는다.
-    public override void TakeDamage(int amount, float def_ignore_percent = 0f)
+    public override void TakeDamage(int amount, float def_ignore_percent = 0f, int source_weapon_id = 0)
     {
         if (IsDead || detonated) return;
 
@@ -31,7 +31,7 @@ public class DisruptorUnit : EnemyUnit
             return;
         }
 
-        base.TakeDamage(amount, def_ignore_percent);
+        base.TakeDamage(amount, def_ignore_percent, source_weapon_id);
     }
 
     // 사거리 안(= "로봇 주변에 다다르면")에 들어와 공격 모션이 끝나면 자폭한다.

@@ -19,6 +19,11 @@ public static class GameWinManager
     {
         if (IsGameWon) return; // 중복 호출 방지
         IsGameWon = true;
+
+        // 보스 웨이브는 WaveManager.EndWave를 타지 않아(제한시간 종료로 끝나지 않는다) 해금
+        // 진행도가 저장될 기회가 없다 - 게임 오버와 같은 이유로 여기서 저장한다(2026-08-19 Phase E).
+        UnlockState.Flush();
+
         Debug.Log("=== 게임 클리어 ===");
         OnGameWon?.Invoke();
     }

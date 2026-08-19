@@ -56,6 +56,7 @@ public class AiCoreManager : MonoBehaviour
             RunState.CoreExp -= required;
             RunState.CoreLevel++;
             RunState.PendingCoreUpgradeChoices++;
+            UnlockTracker.ReportLevelUp(); // 미니 픽시(누적 레벨 150)
             required = RequiredExpForNextLevel();
         }
     }

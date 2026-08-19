@@ -27,6 +27,9 @@ public class HeadSelectPanelUI : MonoBehaviour
     private static readonly Color CellIdleColor = new Color(0.16f, 0.17f, 0.20f, 1f);
     private static readonly Color CellHoverColor = new Color(0.24f, 0.26f, 0.30f, 1f);
 
+    /// <summary>해금 전인 머리의 실루엣 색(2026-08-19 Phase E).</summary>
+    private static readonly Color LockedIconColor = new Color(0.10f, 0.10f, 0.12f, 1f);
+
     private sealed class HeadCell
     {
         public PartsCatalog.HeadModdingInfo info;
@@ -100,9 +103,14 @@ public class HeadSelectPanelUI : MonoBehaviour
         BuildDetail(rootRect);
         BuildButtons(rootRect);
 
-        // 기본 선택 = 첫 머리(컴스톡 MK-01). 아무것도 안 고른 상태로 출발할 수 없게 한다.
+        // 기본 선택 = 해금된 첫 머리(보통 컴스톡 MK-01). 아무것도 안 고른 상태로 출발할 수 없게 한다.
         List<PartsCatalog.HeadModdingInfo> heads = catalog.GetSelectableHeads();
-        if (heads.Count > 0) Select(heads[0].robotId);
+        foreach (PartsCatalog.HeadModdingInfo head in heads)
+        {
+            if (!UnlockState.IsUnlocked(head.robotId)) continue;
+            Select(head.robotId);
+            break;
+        }
     }
 
     private void BuildGrid(RectTransform rootRect)
@@ -166,14 +174,27 @@ public class HeadSelectPanelUI : MonoBehaviour
         border.raycastTarget = false;
         border.enabled = false;
 
-        Image icon = CreateImage(cellRect, "Icon", new Vector2(0.13f, 0.26f), new Vector2(0.87f, 0.95f), Color.white);
+        // 해금 전인 머리는 실루엣 + 자물쇠로만 보여주고 고를 수 없다(2026-08-19 Phase E).
+        bool unlocked = UnlockState.IsUnlocked(info.robotId);
+
+        Image icon = CreateImage(cellRect, "Icon", new Vector2(0.13f, 0.26f), new Vector2(0.87f, 0.95f),
+                                 unlocked ? Color.white : LockedIconColor);
         icon.sprite = HeadSpriteLibrary.GetIcon(info);
         icon.preserveAspect = true;
         icon.raycastTarget = false;
 
+        if (!unlocked)
+        {
+            Image padlock = CreateImage(cellRect, "Lock", new Vector2(0.33f, 0.45f), new Vector2(0.67f, 0.82f), Color.white);
+            padlock.sprite = UiIconLibrary.Lock();
+            padlock.preserveAspect = true;
+            padlock.raycastTarget = false;
+        }
+
         TextMeshProUGUI label = CreateText(cellRect, "Name", new Vector2(0.03f, 0.03f), new Vector2(0.97f, 0.24f),
                                            TextAlignmentOptions.Midline, 16f);
-        label.text = GetHeadName(info.robotId);
+        label.text = unlocked ? GetHeadName(info.robotId) : "???";
+        if (!unlocked) label.color = new Color(0.72f, 0.74f, 0.78f, 1f);
 
         var button = cellGo.AddComponent<Button>();
         button.targetGraphic = bg;
@@ -181,7 +202,9 @@ public class HeadSelectPanelUI : MonoBehaviour
         colors.normalColor = Color.white;
         colors.highlightedColor = new Color(1.35f, 1.35f, 1.35f, 1f);
         colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+        colors.disabledColor = new Color(0.55f, 0.55f, 0.6f, 1f);
         button.colors = colors;
+        button.interactable = unlocked;
 
         int robotId = info.robotId; // 람다 클로저 캡처용 로컬
         button.onClick.AddListener(() => Select(robotId));

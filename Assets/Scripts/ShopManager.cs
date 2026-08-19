@@ -181,6 +181,10 @@ public class ShopManager : MonoBehaviour
         offer.Purchased = true;
         offer.Locked = false;
 
+        // 핫팟(누적 디스크 구매 50) / 염동력(디스크 4개 이상 착용) / 엔드리스 구매 조건들
+        UnlockTracker.ReportDiscPurchased(RunState.EquippedDiscIds.Count);
+        UnlockTracker.ReportShopPurchase(offer.Grade);
+
         RunState.NotifyChanged();
         return true;
     }
@@ -201,6 +205,7 @@ public class ShopManager : MonoBehaviour
         RunState.Gold -= offer.Price;
         RunState.AccessoryPurchaseOrder.Add(offer.Accessory.accessoryId);
         RunScore.AddAccessoryScore(offer.Accessory.score);
+        UnlockTracker.ReportShopPurchase(offer.Grade);
 
         RunState.NotifyChanged();
         return true;
@@ -272,6 +277,10 @@ public class ShopManager : MonoBehaviour
         RunState.Gold -= offer.Price;
         offer.Purchased = true;
         offer.Locked = false;
+
+        // 유니콘 뿔(엔드리스에서 서로 다른 6종류 무기 착용) / 목걸이(전설 등급 구매) 등
+        UnlockTracker.ReportWeaponEquipped(offer.WeaponId);
+        UnlockTracker.ReportShopPurchase(offer.Grade);
 
         RunState.NotifyChanged();
         return true;
@@ -371,9 +380,13 @@ public class ShopManager : MonoBehaviour
     {
         // 악세사리는 무기/디스크 추첨보다 먼저 굴린다(계획서 표현 그대로) - 당첨되면 그 칸은
         // 통째로 악세사리로 대체되고 아래 무기/디스크 로직은 타지 않는다.
-        if (RunState.IsEndless && Random.value < AccessoryAppearChanceInEndless)
+        // 잠긴 악세사리는 등장하지 않는다(2026-08-19 Phase E) - 하나도 해금되지 않았으면
+        // 이 칸은 그냥 무기/디스크가 된다. 확률을 다시 굴리지는 않는다(당첨됐지만 후보가
+        // 없어 넘어가는 것으로 처리 - 해금이 늘어날수록 5%에 가까워진다).
+        if (RunState.IsEndless && Random.value < AccessoryAppearChanceInEndless &&
+            AccessoryCatalog.TryGetRandomUnlocked(out AccessoryData rolledAccessory))
         {
-            return CreateAccessoryOffer();
+            return CreateAccessoryOffer(rolledAccessory);
         }
 
         // 디스크는 자기 등급이 고정이라, 이번 웨이브에 등장 가능한 등급의 디스크만 후보가 된다
@@ -396,10 +409,8 @@ public class ShopManager : MonoBehaviour
     /// 등급을 매길 대상도 없다) 카드 헤더 색상용으로 <see cref="ItemGrade.Epic"/>을 고정으로
     /// 쓴다 - 5% 확률로만 뜨는 만큼 "발견하면 반가운" 정도의 색상이 되도록 고른 임의값이다.
     /// </summary>
-    private Offer CreateAccessoryOffer()
+    private Offer CreateAccessoryOffer(AccessoryData accessory)
     {
-        AccessoryData accessory = AccessoryCatalog.GetRandom();
-
         return new Offer
         {
             IsAccessory = true,
@@ -417,6 +428,11 @@ public class ShopManager : MonoBehaviour
 
         foreach (DiscData disc in catalog.Discs)
         {
+            // 해금되지 않은 디스크는 상점에 아예 뜨지 않는다(2026-08-19 Phase E).
+            // 초기 해금 7종의 등급 분포가 일반 3 / 에픽 3 / 유니크 1이라 레어·전설 등급을
+            // 뽑아도 후보가 비는데, CreateDiscOffer()가 등급을 아래로만 내려가며 찾으므로
+            // 빈 칸이 되지는 않는다(레어 -> 일반, 전설 -> 유니크).
+            if (!UnlockState.IsUnlocked(disc.discId)) continue;
             if (catalog.IsGradeAvailable(disc.grade, wave)) result.Add(disc);
         }
 

@@ -34,6 +34,10 @@ public class EnemyUnit : MonoBehaviour
     // 호출된다) Die()가 곧 "플레이어가 처치함"과 동일하다 - 별도의 "누가 죽였는지" 구분이 필요 없다.
     public static event System.Action<EnemyUnit> OnKilledByPlayer;
 
+    /// <summary>이 적을 마지막으로 때린 플레이어 무기의 ID(0 = 무기가 아닌 피해).
+    /// 해금 진행도(<see cref="UnlockTracker"/>)가 처치 시점에 무기 분류를 알아내는 데 쓴다.</summary>
+    public int LastDamageWeaponId { get; private set; }
+
     // "물 빠지는 소리 디스크" - DiscEffectRuntime이 플레이어 주변 반경 안의 적에게 매 프레임
     // 설정한다(반경 밖이면 다음 프레임에 1로 되돌아간다 - DiscEffectRuntime이 매 프레임 전체를
     // 1로 리셋한 뒤 반경 안의 적만 다시 낮춘다).
@@ -758,9 +762,14 @@ public class EnemyUnit : MonoBehaviour
     /// (플라즈마 캐논 0.5 = 방어력 절반 무시, 레이저 피스톨 0.25 등).
     /// 기본값이 0이라 방어무시가 없는 기존 호출부는 그대로 동작한다.
     /// </summary>
-    public virtual void TakeDamage(int amount, float def_ignore_percent = 0f)
+    public virtual void TakeDamage(int amount, float def_ignore_percent = 0f, int source_weapon_id = 0)
     {
         if (IsDead) return;
+
+        // 해금 조건 2건("근접 무기로 300마리" / "정밀화기로 200마리", 2026-08-19 Phase E)이
+        // 마지막 타격 무기를 알아야 해서 남겨 둔다. 무기가 아닌 피해(디스크의 연쇄 번개 등)는
+        // 0이 넘어오며, 그 경우 어느 무기 카운터도 오르지 않는다.
+        if (source_weapon_id > 0) LastDamageWeaponId = source_weapon_id;
 
         int effective_def = Mathf.RoundToInt(Def * (1f - Mathf.Clamp01(def_ignore_percent)));
         int dmg = Mathf.Max(1, amount - effective_def);

@@ -30,7 +30,14 @@ public class TitleSceneManager : MonoBehaviour
              "비어 있으면 머리 선택을 건너뛰고 바로 다음 씬으로 넘어간다")]
     [SerializeField] private PartsCatalog partsCatalog;
 
+    [Header("도감 (2026-08-19 Phase E)")]
+    [Tooltip("디스크 이름·아이콘을 도감에서 보여주기 위한 상점 카탈로그(Assets/Data/ShopCatalog.asset). " +
+             "비어 있으면 디스크 칸이 이름만 나오고 아이콘이 비어 보인다")]
+    [SerializeField] private ShopCatalog shopCatalog;
+
     private HeadSelectPanelUI headSelectPanel;
+    private CollectionPanelUI collectionPanel;
+    private Button collectionButton;
 
     private void Awake()
     {
@@ -42,6 +49,78 @@ public class TitleSceneManager : MonoBehaviour
         if (partsCatalog != null) HeadEffects.Bind(partsCatalog);
 
         AttachVolumeSlider();
+        AttachCollectionButton();
+    }
+
+    /// <summary>
+    /// 타이틀 우상단에 "도감" 버튼을 코드로 붙인다(2026-08-19 Phase E). 씬을 건드리지 않는
+    /// 기존 관례(볼륨 슬라이더·설정 아이콘과 동일)를 따랐고, 시작/종료 버튼(y 0.16~0.28)과
+    /// 겹치지 않는 빈 구석을 골랐다.
+    /// </summary>
+    private void AttachCollectionButton()
+    {
+        RectTransform parent = ResolveCanvasRect();
+        if (parent == null) return;
+
+        var go = new GameObject("CollectionButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+
+        var rect = (RectTransform)go.transform;
+        rect.anchorMin = new Vector2(0.80f, 0.895f);
+        rect.anchorMax = new Vector2(0.965f, 0.965f);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        var image = go.GetComponent<Image>();
+        image.color = Color.white;
+        Sprite art = Resources.Load<Sprite>("UI/Purple_ui02");
+        if (art != null)
+        {
+            image.sprite = art;
+            image.type = Image.Type.Sliced;
+        }
+        else
+        {
+            image.color = new Color(0.30f, 0.24f, 0.52f, 1f);
+        }
+
+        var labelGo = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TMPro.TextMeshProUGUI));
+        labelGo.transform.SetParent(rect, false);
+        var labelRect = (RectTransform)labelGo.transform;
+        labelRect.anchorMin = Vector2.zero;
+        labelRect.anchorMax = Vector2.one;
+        labelRect.offsetMin = Vector2.zero;
+        labelRect.offsetMax = Vector2.zero;
+
+        var label = labelGo.GetComponent<TMPro.TextMeshProUGUI>();
+        label.text = "도감";
+        label.alignment = TMPro.TextAlignmentOptions.Midline;
+        label.color = Color.white;
+        label.raycastTarget = false;
+        label.enableAutoSizing = true;
+        label.fontSizeMin = 8f;
+        label.fontSizeMax = 24f;
+
+        collectionButton = go.AddComponent<Button>();
+        collectionButton.onClick.AddListener(OnCollectionClicked);
+    }
+
+    /// <summary>"도감" - 해금 목록을 연다. 닫으면 타이틀 UI가 다시 보인다.</summary>
+    private void OnCollectionClicked()
+    {
+        RectTransform parent = ResolveCanvasRect();
+        if (parent == null) return;
+
+        if (collectionPanel != null) return; // 연타 방어(닫을 때 파괴된다)
+
+        SetTitleUiVisible(false);
+        collectionPanel = CollectionPanelUI.Attach(parent, partsCatalog, shopCatalog, OnCollectionClosed);
+    }
+
+    private void OnCollectionClosed()
+    {
+        collectionPanel = null;
+        SetTitleUiVisible(true);
     }
 
     /// <summary>
@@ -109,6 +188,7 @@ public class TitleSceneManager : MonoBehaviour
         if (quitButton != null) quitButton.gameObject.SetActive(visible);
 
         if (volumeSlider != null) volumeSlider.gameObject.SetActive(visible);
+        if (collectionButton != null) collectionButton.gameObject.SetActive(visible);
 
         // 제목 텍스트와 그 뒤 판때기는 인스펙터에 연결돼 있지 않아 이름으로 찾는다.
         // 못 찾아도(이름이 바뀌었어도) 조용히 넘어간다 - 암막이 있어 치명적이지 않다.

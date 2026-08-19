@@ -178,6 +178,13 @@ public class PlayerRobotController : MonoBehaviour
         hitFeedback = GetComponent<PlayerHitFeedback>();
         if (hitFeedback == null) hitFeedback = gameObject.AddComponent<PlayerHitFeedback>();
 
+        // 구매한 악세사리를 몸통(=머리) 위에 그려주는 컴포넌트(2026-08-19 Phase D).
+        // 위와 같은 자동 부착 관례(씬 수정 없음).
+        if (GetComponent<AccessoryVisual>() == null) gameObject.AddComponent<AccessoryVisual>();
+
+        // 조이스틱 악세사리 해금용 코나미 커맨드 감지(2026-08-19 Phase E).
+        if (GetComponent<KonamiCodeListener>() == null) gameObject.AddComponent<KonamiCodeListener>();
+
         rb.isKinematic = false; // 물리 충돌이 필요하므로 false로
         rb.useGravity = false;
         rb.freezeRotation = true;
@@ -197,6 +204,9 @@ public class PlayerRobotController : MonoBehaviour
 
         // 점수 시스템의 누적 처치 수 집계도 여기서 (재)구독한다(2026-08-19 Phase B).
         RunScore.EnsureKillTrackingSubscribed();
+
+        // 해금 진행도 집계(2026-08-19 Phase E)도 같은 자리에서 등록/재구독한다.
+        UnlockTracker.RegisterPlayer(this);
     }
 
     private void Start()
@@ -264,6 +274,10 @@ public class PlayerRobotController : MonoBehaviour
 
         // 로봇 질량(robot_mess)을 Rigidbody에 반영. 0/미설정이면 물리 계산이 깨지므로 기존 값 유지
         if (rb != null && Mess > 0f) rb.mass = Mess;
+
+        // 머리 해금 3건(가드맨=방어력 10 / 메테우스=공격력 20 / 해피 픽셀=행운 20)이 "달성한
+        // 최고치"를 조건으로 쓴다. 스탯이 다시 계산되는 이 자리가 유일한 갱신 지점이다.
+        UnlockTracker.ReportStats(Def, Atk, Luck);
     }
 
     /// <summary>
@@ -316,6 +330,7 @@ public class PlayerRobotController : MonoBehaviour
         }
 
         CurrentHp = Mathf.Max(0, new_hp);
+        UnlockTracker.ReportPlayerDamaged(CurrentHp); // 위장(피격 30회)/물 빠지는 소리(HP 20 이하)/바람 소리(무피격 클리어)
 
         if (hitFlash != null) hitFlash.Play(); // 피격 시 0.25초 흰색
         ApplyHitKnockback(attackerPosition);
@@ -340,11 +355,17 @@ public class PlayerRobotController : MonoBehaviour
         knockbackVelocity = diff.normalized * knockbackStrength;
     }
 
-    /// <summary>디스크(포근한 치유/이끼 낀 등)의 처치·주기 회복 효과가 호출한다. 최대 체력을 넘지 않는다.</summary>
-    public void Heal(int amount)
+    /// <summary>디스크(포근한 치유/이끼 낀 등)의 처치·주기 회복 효과가 호출한다. 최대 체력을 넘지 않는다.
+    /// <paramref name="fromWaveEnd"/>는 웨이브를 넘길 때의 전체 회복(GameFlowManager)만 true다 -
+    /// 에너지 베리어 디스크의 해금 조건이 "웨이브 종료 회복 <b>외</b>의 방법으로 회복"이라
+    /// 그 둘을 구분해야 한다(2026-08-19 Phase E).</summary>
+    public void Heal(int amount, bool fromWaveEnd = false)
     {
         if (IsDead || amount <= 0) return;
+
+        int before = CurrentHp;
         CurrentHp = Mathf.Min(MaxHp, CurrentHp + amount);
+        if (CurrentHp > before) UnlockTracker.ReportHealed(fromWaveEnd);
     }
 
     /// <summary>duration초 동안 stat에 amount를 더한다(같은 스탯에 여러 개가 겹치면 합산된다).
@@ -460,6 +481,7 @@ public class PlayerRobotController : MonoBehaviour
 
         dashDirection = moveInput.sqrMagnitude > 0.0001f ? moveInput : lastMoveDirection;
         IsDashing = true;
+        UnlockTracker.ReportSkillUsed(); // 팬봇(스킬 100회) / 은하수(기본 외 다리 + 스킬)
         dashTimeLeft = dashDuration;
 
         // 팬봇은 쿨다운 배율이 0이라 곧바로 다시 구를 수 있다("무제한 액티브 스킬").

@@ -144,6 +144,7 @@ public class WaveManager : MonoBehaviour
         if (wave_timer_routine != null) StopCoroutine(wave_timer_routine);
         wave_timer_routine = StartCoroutine(WaveTimer(duration));
 
+        UnlockTracker.ReportWaveStarted(); // 무피격 클리어(바람 소리) 판정을 이 웨이브부터 다시 잰다
         Debug.Log($"웨이브 {wave} 시작 (제한시간 {duration:F0}초)" + (wave == finalWaveNumber ? " - 보스 웨이브" : ""));
         OnWaveStarted?.Invoke(wave);
     }
@@ -357,6 +358,11 @@ public class WaveManager : MonoBehaviour
             enemySpawner.SetSpawningEnabled(false);
             enemySpawner.DespawnAllAliveEnemies();
         }
+
+        // 해금 진행도는 <b>체력 회복 전에</b> 기록해야 한다(2026-08-19 Phase E) - 조건 2건이
+        // "체력 30 이하로 클리어"/"최대 체력 200 이상으로 클리어"라 회복 후에 재면 의미가 없다.
+        // GameFlowManager의 회복은 아래 OnWaveEnded를 받은 뒤에 일어나므로 이 자리가 맞다.
+        UnlockTracker.ReportWaveCleared(wave);
 
         // 이미 필드에 떨어져 있던 보상·아이템은 이 이벤트를 받은 GameFlowManager가
         // ResetFieldForIntermission()에서 전부 자동 수령(자석 흡수) 처리한다.

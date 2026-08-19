@@ -26,8 +26,6 @@ public static class RunScore
 
     public static void AddAccessoryScore(int amount) => AccessoryScore += Mathf.Max(0, amount);
 
-    private static bool killTrackingSubscribed;
-
     /// <summary>
     /// <see cref="EnemyUnit.OnKilledByPlayer"/>는 static 이벤트라, 씬을 재시작해도(도메인 리로드가
     /// 없는 한) 이전 판의 구독이 그대로 남을 수 있다. DiscEffectRuntime처럼 MonoBehaviour의
@@ -39,7 +37,6 @@ public static class RunScore
     {
         EnemyUnit.OnKilledByPlayer -= HandleEnemyKilled;
         EnemyUnit.OnKilledByPlayer += HandleEnemyKilled;
-        killTrackingSubscribed = true;
     }
 
     private static void HandleEnemyKilled(EnemyUnit unit) => KillCount++;
@@ -48,8 +45,8 @@ public static class RunScore
     {
         KillCount = 0;
         AccessoryScore = 0;
-        // killTrackingSubscribed는 그대로 둔다 - 구독 자체는 씬이 살아있는 동안 계속 유지해야
-        // 하고(다음 판에도 필요), EnsureKillTrackingSubscribed()가 어차피 -=/+=로 중복을 막는다.
+        // 처치 이벤트 구독은 여기서 풀지 않는다 - 다음 판에도 그대로 필요하고,
+        // EnsureKillTrackingSubscribed()가 -=/+=로 중복 구독을 막는다.
     }
 
     /// <summary>점수 내역 한 줄씩 + 합계. 정산 팝업/게임오버 요약 화면이 함께 쓴다.</summary>

@@ -20,6 +20,12 @@ public static class GameOverManager
     {
         if (IsGameOver) return; // 중복 호출 방지
         IsGameOver = true;
+
+        // 이번 판에서 쌓인 해금 진행도를 여기서 디스크에 쓴다(2026-08-19 Phase E).
+        // UnlockState는 처치 1마리마다 저장하지 않고 더티 표시만 해 두므로, 웨이브 도중에
+        // 죽으면 그 웨이브의 진행도가 저장되지 않은 채로 남는다.
+        UnlockState.Flush();
+
         Debug.Log("=== 1회차 게임 오버 ===");
         OnGameOver?.Invoke();
     }

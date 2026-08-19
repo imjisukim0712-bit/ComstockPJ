@@ -50,6 +50,10 @@ public class Projectile : MonoBehaviour
 
         /// <summary>폭발 범위를 눈으로 보여주는 시간(초). 0이면 연출 없이 즉시 사라짐</summary>
         public float BlastVisualDuration;
+
+        /// <summary>이 탄을 쏜 무기의 ID. 해금 진행도가 "무슨 무기로 죽였나"를 알아야 해서
+        /// 싣고 다닌다(2026-08-19 Phase E). 게임 로직에는 쓰이지 않는다.</summary>
+        public int SourceWeaponId;
     }
 
     private const int UnlimitedPierce = -1;
@@ -191,7 +195,7 @@ public class Projectile : MonoBehaviour
     /// <summary>데미지 + 넉백을 한 번에 적용한다. 넉백 방향은 투사체 진행 방향이다.</summary>
     private void ApplyHit(EnemyUnit enemy)
     {
-        enemy.TakeDamage(spec.Damage, spec.DefIgnore);
+        enemy.TakeDamage(spec.Damage, spec.DefIgnore, spec.SourceWeaponId);
 
         if (spec.Knockback > 0f)
         {

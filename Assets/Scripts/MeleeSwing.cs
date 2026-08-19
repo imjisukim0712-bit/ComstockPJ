@@ -44,7 +44,8 @@ public static class MeleeSwing
     public static int Execute(Vector3 origin, Vector3 direction, float radius, int damage,
                               float def_ignore_percent, float knockback_strength,
                               float half_angle_degrees = DefaultHalfAngleDegrees,
-                              HashSet<EnemyUnit> already_hit = null)
+                              HashSet<EnemyUnit> already_hit = null,
+                              int source_weapon_id = 0)
     {
         if (radius <= 0f) return 0;
 
@@ -69,14 +70,14 @@ public static class MeleeSwing
             if (to_enemy.sqrMagnitude <= 0.0001f)
             {
                 // 완전히 겹쳐 있으면 방향을 잴 수 없으므로 무조건 맞은 것으로 본다
-                ApplyHit(enemy, direction, damage, def_ignore_percent, knockback_strength);
+                ApplyHit(enemy, direction, damage, def_ignore_percent, knockback_strength, source_weapon_id);
                 hit_count++;
                 continue;
             }
 
             if (Vector3.Angle(direction, to_enemy) > half_angle_degrees) continue; // 부채꼴 밖
 
-            ApplyHit(enemy, to_enemy, damage, def_ignore_percent, knockback_strength);
+            ApplyHit(enemy, to_enemy, damage, def_ignore_percent, knockback_strength, source_weapon_id);
             hit_count++;
         }
 
@@ -86,9 +87,9 @@ public static class MeleeSwing
     }
 
     private static void ApplyHit(EnemyUnit enemy, Vector3 push_direction, int damage,
-                                 float def_ignore_percent, float knockback_strength)
+                                 float def_ignore_percent, float knockback_strength, int source_weapon_id = 0)
     {
-        enemy.TakeDamage(damage, def_ignore_percent);
+        enemy.TakeDamage(damage, def_ignore_percent, source_weapon_id);
         if (knockback_strength > 0f) enemy.ApplyKnockback(push_direction, knockback_strength);
     }
 }
