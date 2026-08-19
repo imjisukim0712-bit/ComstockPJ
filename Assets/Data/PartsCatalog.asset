@@ -1924,13 +1924,148 @@ MonoBehaviour:
     weight: 2
   headModdingInfos:
   - robotId: 100001
-    weaponSocketCount: 4
+    weaponSocketCount: 2
     discSlotCount: 6
     partBoxCapacity: 20
+    spriteName: ComstockMk01
+    defaultWeaponIds:
+    - 300901
+    effect: 1
+    selectableInHeadSelect: 1
+    spriteFrameCount: 0
+    spriteFrameSeconds: 0
   - robotId: 100002
     weaponSocketCount: 4
     discSlotCount: 6
     partBoxCapacity: 24
+    spriteName: 
+    defaultWeaponIds: []
+    effect: 0
+    selectableInHeadSelect: 0
+    spriteFrameCount: 0
+    spriteFrameSeconds: 0
+  - robotId: 100003
+    weaponSocketCount: 2
+    discSlotCount: 6
+    partBoxCapacity: 20
+    spriteName: Guardman
+    defaultWeaponIds:
+    - 300201
+    effect: 2
+    selectableInHeadSelect: 1
+    spriteFrameCount: 0
+    spriteFrameSeconds: 0
+  - robotId: 100004
+    weaponSocketCount: 2
+    discSlotCount: 6
+    partBoxCapacity: 20
+    spriteName: Meteus
+    defaultWeaponIds:
+    - 300501
+    effect: 3
+    selectableInHeadSelect: 1
+    spriteFrameCount: 0
+    spriteFrameSeconds: 0
+  - robotId: 100005
+    weaponSocketCount: 2
+    discSlotCount: 6
+    partBoxCapacity: 20
+    spriteName: Berserker
+    defaultWeaponIds:
+    - 300501
+    effect: 4
+    selectableInHeadSelect: 1
+    spriteFrameCount: 0
+    spriteFrameSeconds: 0
+  - robotId: 100006
+    weaponSocketCount: 4
+    discSlotCount: 6
+    partBoxCapacity: 20
+    spriteName: HappyPixel
+    defaultWeaponIds:
+    - 300701
+    effect: 5
+    selectableInHeadSelect: 1
+    spriteFrameCount: 0
+    spriteFrameSeconds: 0
+  - robotId: 100007
+    weaponSocketCount: 6
+    discSlotCount: 6
+    partBoxCapacity: 20
+    spriteName: NeonEye
+    defaultWeaponIds:
+    - 300901
+    effect: 6
+    selectableInHeadSelect: 1
+    spriteFrameCount: 8
+    spriteFrameSeconds: 0.7
+  - robotId: 100008
+    weaponSocketCount: 4
+    discSlotCount: 6
+    partBoxCapacity: 20
+    spriteName: HotPot
+    defaultWeaponIds:
+    - 300401
+    effect: 7
+    selectableInHeadSelect: 1
+    spriteFrameCount: 0
+    spriteFrameSeconds: 0
+  - robotId: 100009
+    weaponSocketCount: 6
+    discSlotCount: 6
+    partBoxCapacity: 20
+    spriteName: Pixie
+    defaultWeaponIds:
+    - 301201
+    effect: 8
+    selectableInHeadSelect: 1
+    spriteFrameCount: 0
+    spriteFrameSeconds: 0
+  - robotId: 100010
+    weaponSocketCount: 4
+    discSlotCount: 6
+    partBoxCapacity: 20
+    spriteName: FanBot
+    defaultWeaponIds:
+    - 300601
+    effect: 9
+    selectableInHeadSelect: 1
+    spriteFrameCount: 0
+    spriteFrameSeconds: 0
+  - robotId: 100011
+    weaponSocketCount: 4
+    discSlotCount: 6
+    partBoxCapacity: 20
+    spriteName: SodaCan
+    defaultWeaponIds:
+    - 300501
+    effect: 10
+    selectableInHeadSelect: 1
+    spriteFrameCount: 0
+    spriteFrameSeconds: 0
+  - robotId: 100012
+    weaponSocketCount: 1
+    discSlotCount: 6
+    partBoxCapacity: 20
+    spriteName: PrivateComstock
+    defaultWeaponIds:
+    - 300801
+    effect: 11
+    selectableInHeadSelect: 1
+    spriteFrameCount: 0
+    spriteFrameSeconds: 0
+  - robotId: 100013
+    weaponSocketCount: 2
+    discSlotCount: 6
+    partBoxCapacity: 20
+    spriteName: MiniPixie
+    defaultWeaponIds:
+    - 300901
+    - 300701
+    effect: 12
+    selectableInHeadSelect: 1
+    spriteFrameCount: 0
+    spriteFrameSeconds: 0
   boxGradeSettings:
   - grade: 0
     weight: 50

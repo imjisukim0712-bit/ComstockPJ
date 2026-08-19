@@ -230,6 +230,14 @@ public class PlayerShootManager : MonoBehaviour
 
     private void Start()
     {
+        // 픽시 효과("모든 소켓이 근접이면 사거리 x2")가 소켓 장착 상태를 물어볼 수 있도록 등록한다.
+        // HeadEffects가 스스로 FindObjectOfType을 돌리지 않게 하려는 것(매 발사마다 씬을 뒤지지 않는다).
+        HeadEffects.RegisterShootManager(this);
+
+        // 머리(로봇)가 정한 기본 장착 무기를 씬 값 위에 덮어쓴다. RefreshAllWeaponData보다
+        // 먼저 와야 그 다음 줄이 새 weapon_id로 데이터를 읽어온다.
+        ApplyHeadDefaultWeapons();
+
         // GameDataManager는 로컬 에셋을 Awake에서 동기 로드하므로 보통 이 시점엔 이미 IsLoaded지만,
         // 실행 순서가 어긋나는 경우를 대비해 이벤트 폴백도 유지한다.
         if (GameDataManager.Instance.IsLoaded)
@@ -244,6 +252,39 @@ public class PlayerShootManager : MonoBehaviour
 
         SyncRunStateFromInspectorSlots();
         CacheRollHomePositions();
+    }
+
+    /// <summary>
+    /// 선택한 머리의 <see cref="PartsCatalog.HeadModdingInfo.defaultWeaponIds"/>를 소켓 0번부터
+    /// 순서대로 장착하고, 남는 소켓은 비운다.
+    ///
+    /// 2026-08-19 이전에는 시작 무기가 <b>씬에 박혀</b> 있었다(Ground01의 weapon_slots[0] =
+    /// 300901 기관단총). 머리마다 기본 무기가 다른 기획서를 반영하려면 데이터가 정해야 하므로
+    /// 여기서 덮어쓴다. 데이터가 없는 머리(디버그 로봇 등)는 씬 값을 그대로 쓴다.
+    ///
+    /// <b>활성 소켓 수를 넘는 자리는 비운다</b> - 프라이빗 컴스톡(1소켓)처럼 소켓이 적은 머리로
+    /// 시작할 때 씬에 남아 있던 무기가 그대로 발사되면 안 된다.
+    /// </summary>
+    private void ApplyHeadDefaultWeapons()
+    {
+        PartsCatalog catalog = ModdingManager.Instance != null ? ModdingManager.Instance.Catalog : null;
+        if (catalog == null) return;
+
+        int robotId = PlayerSession.SelectedRobotId;
+        PartsCatalog.HeadModdingInfo info = catalog.GetHeadModdingInfo(robotId);
+
+        int[] defaults = info.defaultWeaponIds;
+        if (defaults == null || defaults.Length == 0) return;
+
+        // 이 머리가 실제로 쓸 수 있는 소켓 수(씬 리깅 개수와 머리 값 중 작은 쪽).
+        int active = Mathf.Min(weapon_slots.Count, Mathf.Max(0, info.weaponSocketCount));
+
+        for (int i = 0; i < weapon_slots.Count; i++)
+        {
+            WeaponSlot slot = weapon_slots[i];
+            slot.weapon_id = i < Mathf.Min(active, defaults.Length) ? defaults[i] : 0;
+            weapon_slots[i] = slot;
+        }
     }
 
     // 구르는 동안 리그 포인트를 머리 위로 옮겼다가 되돌리려면 원래 위치를 기억해둬야 한다.
@@ -693,10 +734,20 @@ public class PlayerShootManager : MonoBehaviour
         return 1f + bonusPercent / 100f;
     }
 
-    /// <summary>탄이 실제로 날아가는 최대 거리 = 무기 사거리 x 이 소켓의 사거리 배율 x AI 코어 사거리 증폭.</summary>
+    /// <summary>
+    /// 탄이 실제로 날아가는 최대 거리 = 무기 사거리 x 이 소켓의 사거리 배율 x AI 코어 사거리 증폭
+    /// x 머리 효과 배율, 마지막으로 머리 효과의 사거리 상한으로 자른다.
+    ///
+    /// 머리 효과는 픽시 하나뿐이다 - 모든 소켓이 근접이면 배율 x2, 원거리가 하나라도 섞이면
+    /// 그 원거리 무기만 근접급 상한으로 잘린다.
+    /// </summary>
     private float GetTravelRange(WeaponData weapon, int slot_index)
     {
-        return weapon.TravelRange * GetSocketModifiers(slot_index).Range * GetWeaponRangeBonusMultiplier();
+        float range = weapon.TravelRange * GetSocketModifiers(slot_index).Range * GetWeaponRangeBonusMultiplier()
+                      * HeadEffects.RangeMultiplier(weapon);
+
+        if (HeadEffects.TryGetRangeCap(weapon, out float cap)) range = Mathf.Min(range, cap);
+        return range;
     }
 
     /// <summary>
@@ -707,7 +758,8 @@ public class PlayerShootManager : MonoBehaviour
     /// </summary>
     private float GetDetectRange(WeaponData weapon, int slot_index)
     {
-        float detect = weapon.DetectRange * GetSocketModifiers(slot_index).DetectRange * GetWeaponRangeBonusMultiplier();
+        float detect = weapon.DetectRange * GetSocketModifiers(slot_index).DetectRange * GetWeaponRangeBonusMultiplier()
+                       * HeadEffects.RangeMultiplier(weapon);
         detect = Mathf.Min(detect, GetTravelRange(weapon, slot_index));
 
         if (max_detect_range > 0f) detect = Mathf.Min(detect, max_detect_range);
@@ -852,10 +904,70 @@ public class PlayerShootManager : MonoBehaviour
                 break;
         }
 
+        // 가드맨의 "연속 2회 발사" - 짧은 간격을 두고 같은 발사를 한 번 더 예약한다
+        // (탄 수를 2배로 늘리는 방식이 아니라 실제로 두 번 쏘는 방식, 2026-08-19 사용자 확정).
+        // 빔·근접은 발사 동작 자체가 시간을 먹으므로 겹치지 않게 투사체 모드에만 적용한다.
+        int extra_bursts = HeadEffects.ExtraBursts(weapon);
+        if (extra_bursts > 0 && weapon.weapon_firemode == WeaponFireMode.Projectile)
+        {
+            StartCoroutine(FireExtraBursts(extra_bursts, slot, weapon, target, damage, aim_direction));
+        }
+
         // 대기시간은 <b>발사 동작이 끝난 뒤부터</b> 흐른다(사용자 확정 사항).
         // 덕분에 3초짜리 빔은 3초 + 대기시간이 한 주기가 되어 빔이 여러 개 겹치지 않는다.
-        float cooldown = weapon.weapon_atsp > 0f ? 1f / (weapon.weapon_atsp * CurrentAttackSpeedMultiplier()) : 1f;
+        // 머리 효과의 공격속도 배율(컴스톡 연사/메테우스 폭발/버서커/해피픽셀/네온아이/핫팟/
+        // 프라이빗 컴스톡)은 기존 임시 버프 배율과 <b>곱셈으로</b> 함께 걸린다.
+        float attack_speed = CurrentAttackSpeedMultiplier() * HeadEffects.AttackSpeedMultiplier(weapon);
+        float cooldown = weapon.weapon_atsp > 0f && attack_speed > 0f
+            ? 1f / (weapon.weapon_atsp * attack_speed)
+            : 1f;
         state.next_fire_time = Time.time + attack_duration + cooldown;
+    }
+
+    /// <summary>
+    /// 가드맨 전용 - 1회차 발사 뒤 <see cref="HeadEffects.GuardmanBurstInterval"/>마다 한 번 더 쏜다.
+    ///
+    /// 데미지는 1회차에서 계산한 값을 그대로 재사용한다(발사마다 치명타를 다시 굴리면 같은
+    /// 트리거인데 2회차만 크리가 터지는 일이 생겨 "연속 2회 발사" 한 동작으로 읽히지 않는다).
+    /// 타겟이 그사이 죽었으면 조준 방향만 마지막으로 알던 쪽으로 유지한 채 쏜다.
+    ///
+    /// <b>2026-08-19 버그 수정</b>: `last_direction`의 초기값이 실제 1회차 발사 방향이 아니라
+    /// 고정값 `Vector3.right`였다 - 1회차가 적을 즉사시키는 무기(산탄총 등)에서는 2회차 시점에
+    /// `target.IsDead`가 true가 되어 방향 갱신 블록을 건너뛰므로, 1회차 실제 발사 방향과 무관하게
+    /// 그대로 `Vector3.right`(0도)로 쏴버렸다 - 1회차가 0도가 아닌 방향이었다면 "같은 방향 2연발"이
+    /// 아니라 "쏘고 엉뚱한 각도로 튄" 것처럼 보였다(사용자 리포트: "한 번 쏘고 180도 돌고 두 번째
+    /// 발사"). 호출부(TryFireSlot)가 이미 계산해 둔 1회차 `aim_direction`을 받아 초기값으로 쓴다.
+    /// </summary>
+    private System.Collections.IEnumerator FireExtraBursts(int bursts, WeaponSlot slot, WeaponData weapon, EnemyUnit target, int damage, Vector3 initial_direction)
+    {
+        // 슬롯 인덱스를 다시 찾지 않도록 발사에 필요한 것만 들고 간다.
+        int slot_index = weapon_slots.IndexOf(slot);
+        Vector3 last_direction = initial_direction;
+
+        for (int i = 0; i < bursts; i++)
+        {
+            yield return new WaitForSeconds(HeadEffects.GuardmanBurstInterval);
+
+            // 웨이브가 끝났거나(정비 진입) 게임이 끝났으면 남은 발사를 버린다.
+            if (GameOverManager.IsGameOver || GameWinManager.IsGameWon) yield break;
+            if (slot.muzzle_point == null) yield break;
+
+            Vector3 origin = slot.muzzle_point.position;
+            float distance = 0f;
+
+            if (target != null && !target.IsDead)
+            {
+                Vector3 to_target = target.transform.position - origin;
+                to_target.z = 0f;
+                distance = to_target.magnitude;
+                if (to_target.sqrMagnitude > 0.0001f) last_direction = to_target.normalized;
+            }
+
+            GameObject prefab = ResolveProjectilePrefab(weapon, slot);
+            if (prefab == null) yield break;
+
+            FireProjectiles(prefab, slot, weapon, origin, last_direction, distance, damage, slot_index);
+        }
     }
 
     /// <summary>
@@ -1001,6 +1113,11 @@ public class PlayerShootManager : MonoBehaviour
             damage = player_stats.DiscEffects.ApplyOnAttackProcs(damage);
         }
 
+        // 2026-08-19 머리 효과(가드맨 산탄 +15% / 버서커 체력 50% 이하 x1.5 /
+        // 프라이빗 컴스톡 정밀 x2). 근접·빔·투사체가 전부 이 함수를 거치므로 여기 한 줄이면
+        // 세 발사 방식에 모두 적용된다.
+        damage *= HeadEffects.DamageMultiplier(weapon);
+
         return Mathf.Max(1, Mathf.RoundToInt(damage));
     }
 
@@ -1088,6 +1205,13 @@ public class PlayerShootManager : MonoBehaviour
             travel_range = target_distance;
         }
 
+        // 메테우스의 폭발 범위 +20%. 조기 폭발 판정(위)은 반경이 아니라 거리만 보므로 영향 없다.
+        float splash_radius = weapon.weapon_splash * HeadEffects.SplashRadiusMultiplier(weapon);
+
+        // 프라이빗 컴스톡의 관통 +2. 무제한 관통(-1)인 무기는 더할 것이 없으므로 건드리지 않는다
+        // (-1에 2를 더하면 1이 되어 오히려 관통이 <b>줄어든다</b>).
+        int bonus_pierce = HeadEffects.BonusPierce(weapon);
+
         float base_angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
 
         for (int i = 0; i < projectile_count; i++)
@@ -1112,6 +1236,9 @@ public class PlayerShootManager : MonoBehaviour
             Projectile projectile = obj.GetComponent<Projectile>();
             if (projectile == null) projectile = obj.AddComponent<Projectile>();
 
+            int pierce = weapon.RollPierceCount(); // 탄마다 따로 확률 관통 판정
+            if (pierce >= 0) pierce += bonus_pierce; // -1(무제한)은 그대로 둔다
+
             projectile.Launch(new Projectile.Spec
             {
                 Direction = shot_direction,
@@ -1119,8 +1246,8 @@ public class PlayerShootManager : MonoBehaviour
                 Damage = damage,
                 MaxRange = travel_range,
                 Size = weapon.ProjectileSize,
-                PierceCount = weapon.RollPierceCount(), // 탄마다 따로 확률 관통 판정
-                SplashRadius = weapon.weapon_splash,
+                PierceCount = pierce,
+                SplashRadius = splash_radius,
                 DefIgnore = weapon.weapon_defignore,
                 Knockback = weapon.weapon_knockback,
                 BlastVisualDuration = blast_visual_duration

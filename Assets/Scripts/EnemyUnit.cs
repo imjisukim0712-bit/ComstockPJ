@@ -17,7 +17,11 @@ using UnityEngine;
 public class EnemyUnit : MonoBehaviour
 {
     private const int BasicZombieMonsterId = 200001;
-    private const string BasicZombieSpriteName = "Enemy_zombie_S";
+    // 2026-08-19 좀비 전용 아트(Assets/Resources/Zombie.png)로 교체되며 스프라이트 이름이
+    // 기존 "Enemy_zombie_S"에서 "Zombie"로 바뀌었다. 이 상수가 옛 이름을 그대로 들고 있어
+    // CanPlayZombieAttackFrames()/CanPlayZombieMoveFrames()가 항상 false가 되고,
+    // 좀비 전용 걷기·공격 프레임이 재생되지 않는 회귀가 있었다.
+    private const string BasicZombieSpriteName = "Zombie";
 
     // 자동공격(PlayerShootManager)이 "사거리 내 최근접 적"을 찾을 때 순회하는 전역 생존 목록.
     // Physics.OverlapSphere를 무기 슬롯마다 매 프레임 돌리는 대신, 스폰/사망 시점에만 갱신되는

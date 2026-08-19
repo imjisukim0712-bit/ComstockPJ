@@ -385,8 +385,9 @@ public class ModdingPanelUI : MonoBehaviour
         ClearChildren(slotContent);
 
         // 머리는 곧 로봇 종류 자체라 런 중 교체할 수 없다(조회 전용). 시안처럼 칸은 보여준다.
-        // 머리는 파츠가 아니라 로봇 자체라 슬롯 아이콘이 없다 - 리그용 몸통 스프라이트를 쓴다.
-        CreateIconCell(headRow, "Slot_Head", Resources.Load<Sprite>("Parts/Body"),
+        // 아이콘은 <b>지금 선택된 머리</b>의 실제 아트다(2026-08-19 머리 12종 적용 이전에는
+        // 리그 기본 몸통 Parts/Body를 하드코딩하고 있어 어떤 머리를 골라도 원통 얼굴이 나왔다).
+        CreateIconCell(headRow, "Slot_Head", HeadSpriteLibrary.GetCurrentIcon(),
                        slotReadOnlyColor, "머리", true, null);
 
         // 슬롯 칸도 인벤토리와 같은 규칙으로 그린다 - 슬롯 이름(작게) + 아이콘 + 등급색.

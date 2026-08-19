@@ -147,18 +147,46 @@ public class GameHUD : MonoBehaviour
     }
 
     // ── 구르기(Space) 재사용 대기 표시 ────────────────────────────────
-    [Header("구르기 쿨다운 아이콘")]
-    [Tooltip("구르기가 도는 동안 위에서 아래로 차오르는 어두운 덮개(Image type=Filled). " +
-             "비워두면 아무 것도 하지 않는다")]
+    // 2026-08-19 사용자 요청으로 <b>우하단 버튼형 아이콘 → 캐릭터 발밑 게이지 바</b>로 교체했다.
+    // 우하단은 시선이 캐릭터에 있을 때 눈에 안 들어와 쿨다운을 사실상 못 봤다.
+    // 새 게이지는 DashGaugeUI가 코드로 만들어 캐릭터를 따라다닌다.
+    [Header("구르기 쿨다운")]
+    [Tooltip("(구버전) 우하단 아이콘의 어두운 덮개. 게이지 바로 교체했으므로 비워두면 된다. " +
+             "값이 남아 있으면 그 오브젝트를 자동으로 숨긴다")]
     [SerializeField] private Image dashCooldownOverlay;
+
+    private DashGaugeUI dash_gauge;
+
+    /// <summary>
+    /// 캐릭터 발밑 구르기 게이지를 붙인다(없으면 만든다).
+    ///
+    /// <b>Awake가 아니라 갱신 시점에도 확인하는 이유</b>: 에디터 도메인 리로드로 직렬화되지 않는
+    /// private 필드가 null로 돌아가면 게이지가 사라진다. 2026-08-18 AI 코어 리롤 버튼에서 똑같은
+    /// 함정을 밟아 <c>EnsureAiCoreExtraButtons()</c>를 넣었던 것과 같은 처리다.
+    /// </summary>
+    private void EnsureDashGauge()
+    {
+        if (dash_gauge != null) return;
+
+        // 구버전 우하단 아이콘은 지우지 않고 숨긴다(되돌리려면 이 오브젝트를 다시 켜고
+        // DashGaugeUI 생성만 막으면 된다 - 프로젝트 관례상 씬 오브젝트는 삭제하지 않는다).
+        if (dashCooldownOverlay != null && dashCooldownOverlay.transform.parent != null)
+        {
+            GameObject legacyIcon = dashCooldownOverlay.transform.parent.gameObject;
+            if (legacyIcon.activeSelf) legacyIcon.SetActive(false);
+        }
+
+        var canvas = GetComponentInParent<Canvas>();
+        if (canvas == null) canvas = FindFirstObjectByType<Canvas>();
+        if (canvas == null) return;
+
+        dash_gauge = DashGaugeUI.Attach(canvas.transform as RectTransform, player);
+    }
 
     private void UpdateDashCooldown()
     {
-        if (dashCooldownOverlay == null) return;
-
-        float ratio = player.DashCooldownRatio; // 0 = 사용 가능, 1 = 방금 사용
-        dashCooldownOverlay.fillAmount = ratio;
-        dashCooldownOverlay.enabled = ratio > 0.001f;
+        // 게이지 자체가 매 프레임 스스로 위치·채움을 갱신하므로 여기서는 존재만 보장한다.
+        EnsureDashGauge();
     }
 
     // 부품 상자는 머리(로봇)의 적재량만큼만 보유할 수 있고 상한에 도달하면 더 드랍되지 않으므로,

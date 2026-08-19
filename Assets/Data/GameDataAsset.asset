@@ -81,7 +81,7 @@ MonoBehaviour:
     monster_size: 2
   robots:
   - robot_id: 100001
-    robot_name: "\uCEF4\uC2A4\uD1A1 MK-1"
+    robot_name: "\uCEF4\uC2A4\uD1A1 MK-01"
     robot_hp: 100
     robot_atk: 3
     robot_def: 5
@@ -92,7 +92,7 @@ MonoBehaviour:
     robot_reload: 0
     robot_avoid: 5
     robot_luck: 0
-    robot_mess: 1
+    robot_mess: 10
     robot_special: 500001
   - robot_id: 100002
     robot_name: "\uBBF8\uB2C8 \uCEF4\uC2A4\uD1A1"
@@ -107,6 +107,160 @@ MonoBehaviour:
     robot_avoid: 5
     robot_luck: 10
     robot_mess: 3
+    robot_special: 500001
+  - robot_id: 100003
+    robot_name: "\uAC00\uB4DC\uB9E8"
+    robot_hp: 80
+    robot_atk: 3
+    robot_def: 5
+    robot_cc: 10
+    robot_cd: 0.5
+    robot_speed: 3
+    robot_capacity: 0.2
+    robot_reload: 0
+    robot_avoid: 5
+    robot_luck: 0
+    robot_mess: 7
+    robot_special: 500001
+  - robot_id: 100004
+    robot_name: "\uBA54\uD14C\uC6B0\uC2A4"
+    robot_hp: 120
+    robot_atk: 3
+    robot_def: 5
+    robot_cc: 10
+    robot_cd: 0.5
+    robot_speed: 3
+    robot_capacity: 0.2
+    robot_reload: 0
+    robot_avoid: 5
+    robot_luck: 0
+    robot_mess: 15
+    robot_special: 500001
+  - robot_id: 100005
+    robot_name: "\uBC84\uC11C\uCEE4"
+    robot_hp: 120
+    robot_atk: 3
+    robot_def: 5
+    robot_cc: 10
+    robot_cd: 0.5
+    robot_speed: 3
+    robot_capacity: 0.2
+    robot_reload: 0
+    robot_avoid: 5
+    robot_luck: 0
+    robot_mess: 20
+    robot_special: 500001
+  - robot_id: 100006
+    robot_name: "\uD574\uD53C \uD53D\uC140"
+    robot_hp: 100
+    robot_atk: 3
+    robot_def: 5
+    robot_cc: 10
+    robot_cd: 0.5
+    robot_speed: 3
+    robot_capacity: 0.2
+    robot_reload: 0
+    robot_avoid: 5
+    robot_luck: 0
+    robot_mess: 10
+    robot_special: 500001
+  - robot_id: 100007
+    robot_name: "\uB124\uC628\uC544\uC774"
+    robot_hp: 50
+    robot_atk: 3
+    robot_def: 5
+    robot_cc: 10
+    robot_cd: 0.5
+    robot_speed: 3
+    robot_capacity: 0.2
+    robot_reload: 0
+    robot_avoid: 5
+    robot_luck: 0
+    robot_mess: 10
+    robot_special: 500001
+  - robot_id: 100008
+    robot_name: "\uD56B\uD31F"
+    robot_hp: 100
+    robot_atk: 3
+    robot_def: 5
+    robot_cc: 10
+    robot_cd: 0.5
+    robot_speed: 3
+    robot_capacity: 0.2
+    robot_reload: 0
+    robot_avoid: 5
+    robot_luck: 0
+    robot_mess: 20
+    robot_special: 500001
+  - robot_id: 100009
+    robot_name: "\uD53D\uC2DC"
+    robot_hp: 100
+    robot_atk: 3
+    robot_def: 5
+    robot_cc: 10
+    robot_cd: 0.5
+    robot_speed: 3
+    robot_capacity: 0.2
+    robot_reload: 0
+    robot_avoid: 5
+    robot_luck: 0
+    robot_mess: 10
+    robot_special: 500001
+  - robot_id: 100010
+    robot_name: "\uD32C\uBD07"
+    robot_hp: 100
+    robot_atk: 3
+    robot_def: 5
+    robot_cc: 10
+    robot_cd: 0.5
+    robot_speed: 3
+    robot_capacity: 0.2
+    robot_reload: 0
+    robot_avoid: 5
+    robot_luck: 0
+    robot_mess: 10
+    robot_special: 500001
+  - robot_id: 100011
+    robot_name: "\uC18C\uB2E4\uCE94"
+    robot_hp: 100
+    robot_atk: 3
+    robot_def: 5
+    robot_cc: 10
+    robot_cd: 0.5
+    robot_speed: 3
+    robot_capacity: 0.2
+    robot_reload: 0
+    robot_avoid: 5
+    robot_luck: 0
+    robot_mess: 20
+    robot_special: 500001
+  - robot_id: 100012
+    robot_name: "\uD504\uB77C\uC774\uBE57 \uCEF4\uC2A4\uD1A1"
+    robot_hp: 140
+    robot_atk: 3
+    robot_def: 5
+    robot_cc: 10
+    robot_cd: 0.5
+    robot_speed: 3
+    robot_capacity: 0.2
+    robot_reload: 0
+    robot_avoid: 5
+    robot_luck: 0
+    robot_mess: 10
+    robot_special: 500001
+  - robot_id: 100013
+    robot_name: "\uBBF8\uB2C8 \uD53D\uC2DC"
+    robot_hp: 100
+    robot_atk: 3
+    robot_def: 5
+    robot_cc: 10
+    robot_cd: 0.5
+    robot_speed: 3
+    robot_capacity: 0.2
+    robot_reload: 0
+    robot_avoid: 5
+    robot_luck: 0
+    robot_mess: 10
     robot_special: 500001
   weapons:
   - weapon_id: 300101

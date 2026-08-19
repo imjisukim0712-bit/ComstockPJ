@@ -32,6 +32,11 @@ public class ModdingManager : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+
+        // 머리(로봇) 고유 효과가 무기 분류(WeaponType)와 머리 데이터를 조회할 수 있도록
+        // 카탈로그를 넘겨준다. HeadEffects는 static이라 씬을 다시 시작하면 이전 판의 참조가
+        // 남으므로 여기서 매번 다시 연결한다(2026-08-19).
+        HeadEffects.Bind(catalog);
     }
 
     private void OnDestroy()
@@ -326,6 +331,16 @@ public class ModdingManager : MonoBehaviour
 
         // 파츠는 자기 슬롯에만 들어간다.
         if (incoming.slot != slot) return false;
+
+        // 머리 효과의 장착 제한(현재는 팬봇의 "기본 다리만 착용 가능"만 있다). 무게 초과와 달리
+        // 이건 진짜로 장착을 막는 제한이라 여기서 걸러야 한다 - 팬봇은 무제한 구르기의 대가로
+        // 다리 강화를 포기하는 머리이므로 패널티로 완화하면 정체성이 사라진다.
+        string headBlockReason = HeadEffects.GetPartBlockReason(incoming);
+        if (headBlockReason != null)
+        {
+            reason = headBlockReason;
+            return false;
+        }
 
         string key = slot.ToString();
         bool hadPrevious = RunState.EquippedPartIds.TryGetValue(key, out int previousId);

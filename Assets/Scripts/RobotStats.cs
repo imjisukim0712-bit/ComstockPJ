@@ -53,6 +53,12 @@ public static class RobotStats
             ApplyBonus(ref result, bonus.Key, bonus.Value);
         }
 
+        // 2026-08-19 머리 기획서 Ver04 - 머리(로봇) 고유 효과의 스탯 증감.
+        // 위 세 보너스를 <b>다 더한 뒤</b>에 오는 것이 중요하다 - 해피 픽셀은 최종 행운을,
+        // 핫팟은 보유 디스크 수를 읽어야 하므로 다른 보너스로 늘어난 값까지 반영되어야 한다.
+        // 무게 패널티·하한 클램프보다는 앞이라 결과가 음수로 튀어도 아래에서 정리된다.
+        HeadEffects.ApplyStatBonuses(ref result);
+
         // 2026-08-12 "무기 소켓 개별화" 플랜 - 무게 지탱력(자기장 코어+다리) 초과는 더 이상
         // 장착 자체를 막지 않는 대신(ModdingManager의 하드 캡 제거), 초과분에 비례해 이동속도를
         // 깎는다. ModdingManager.Instance가 없으면(씬 배치 누락 등) 패널티 없이 통과시킨다.

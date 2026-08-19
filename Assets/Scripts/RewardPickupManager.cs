@@ -17,7 +17,7 @@ public static class RewardPickupManager
     private const int SortingOrder = 5;      // 바닥/캐릭터에 가려지지 않도록
 
     private const string GoldResourceName = "Gold";
-    private const string ExpResourceName = "Energy"; // 전용 EXP 아이콘이 아직 없어 임시로 사용 - 나중에 교체 권장
+    private const string ExpResourceName = "Exp"; // 2026-08-19 전용 EXP 아이콘 적용(Assets/Resources/Exp.png)
     private const string PartBoxResourceName = "ItemBox";
 
     private static Sprite gold_icon;

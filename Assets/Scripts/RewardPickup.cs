@@ -72,8 +72,9 @@ public class RewardPickup : MonoBehaviour
             case RewardType.Gold:
                 // "금화의 잔향 디스크" - 골드 획득량에 %가 곱해진다(StatType.GoldGain, RobotStats와
                 // 무관한 별도 값이라 RunState.DiscStatBonuses에서 직접 읽는다).
+                // 머리 효과(미니 픽시 -50%)는 그 위에 곱한다.
                 float gold_gain_percent = RunState.DiscStatBonuses.TryGetValue(StatType.GoldGain, out float g) ? g : 0f;
-                RunState.Gold += Mathf.RoundToInt(Amount * (1f + gold_gain_percent / 100f));
+                RunState.Gold += Mathf.RoundToInt(Amount * (1f + gold_gain_percent / 100f) * HeadEffects.GoldGainMultiplier);
                 break;
 
             // 부품 상자는 머리(로봇)의 적재량 상한이 있으므로 정비 매니저를 거쳐 지급한다.
@@ -85,7 +86,9 @@ public class RewardPickup : MonoBehaviour
                 break;
 
             default:
-                RunState.CoreExp += Amount;
+                // 머리 효과(미니 픽시 경험치 +50%). 반올림 후 최소 1은 보장한다 - 경험치 1짜리
+                // 픽업에 배율이 곱해져 0으로 사라지면 "먹었는데 아무 일도 없는" 픽업이 된다.
+                RunState.CoreExp += Mathf.Max(1, Mathf.RoundToInt(Amount * HeadEffects.ExpGainMultiplier));
                 break;
         }
 

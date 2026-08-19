@@ -183,6 +183,12 @@ public class PlayerRobotController : MonoBehaviour
         rb.constraints |= RigidbodyConstraints.FreezePositionZ;
         rb.linearDamping = 0f; // 관성(미끄러짐) 최소화 - 버전에 따라 rb.drag일 수 있음
         rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+
+        // 머리 효과가 체력 비율(버서커)·행운(해피 픽셀)을 물어볼 수 있도록 등록한다.
+        // HeadEffects는 static이라 이전 판의 파괴된 참조가 남지 않도록 먼저 비운다
+        // (씬 재시작 시 RunState.Reset()을 여기서 부르는 것과 같은 이유).
+        HeadEffects.ResetRuntimeRefs();
+        HeadEffects.RegisterPlayer(this);
     }
 
     private void Start()
@@ -263,7 +269,11 @@ public class PlayerRobotController : MonoBehaviour
     public void TakeDamage(int enemyAtk, Vector3? attackerPosition = null)
     {
         if (IsDead) return;
-        if (IsDashing) return; // 구르기 중에는 무적 - 회피 판정조차 하지 않는다
+
+        // 구르기 중에는 무적 - 회피 판정조차 하지 않는다.
+        // 단 팬봇은 "구르기 무적 효과 제거"가 머리 효과라 이 면제를 받지 못한다(2026-08-19).
+        if (IsDashing && HeadEffects.RollGrantsInvincibility) return;
+
         if (Time.time < lastStandInvulnUntil) return; // 마지막 발악 무적 구간
 
         float effective_avoid = Avoid + GetTempStatBonus(StatType.Avoid);
@@ -443,7 +453,9 @@ public class PlayerRobotController : MonoBehaviour
         dashDirection = moveInput.sqrMagnitude > 0.0001f ? moveInput : lastMoveDirection;
         IsDashing = true;
         dashTimeLeft = dashDuration;
-        dashCooldownLeft = dashCooldown;
+
+        // 팬봇은 쿨다운 배율이 0이라 곧바로 다시 구를 수 있다("무제한 액티브 스킬").
+        dashCooldownLeft = dashCooldown * HeadEffects.RollCooldownMultiplier;
     }
 
     /// <summary>

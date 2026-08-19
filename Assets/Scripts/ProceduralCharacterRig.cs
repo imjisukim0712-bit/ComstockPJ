@@ -433,7 +433,15 @@ public class ProceduralCharacterRig : MonoBehaviour
     /// </summary>
     private void LoadPartSprites()
     {
-        if (expectedBodySprite == null) expectedBodySprite = Resources.Load<Sprite>(ResourceFolder + "Body");
+        // 2026-08-19 머리 기획서 Ver04 - <b>몸통 스프라이트가 곧 "머리"</b>다(이 리그에 별도 head
+        // 오브젝트는 없다). 그래서 다리 세 파츠와 달리 몸통만은 Resources/Parts 고정이 아니라
+        // 선택된 머리(PlayerSession.SelectedRobotId)가 정한다. 머리 아트는 전부 기존
+        // Parts/Body.png와 같은 250x250 규격이라 다리 배율·콜라이더·무기 소켓을 건드릴 필요가 없다.
+        //
+        // 머리 데이터가 없는 경우(JointRigDemo 씬처럼 ModdingManager가 없는 씬)에는
+        // HeadSpriteLibrary가 기존 Parts/Body를 돌려주므로 예전 동작 그대로다.
+        expectedBodySprite = HeadSpriteLibrary.GetCurrentBodySprite(Time.unscaledTime);
+
         if (expectedThighSprite == null) expectedThighSprite = Resources.Load<Sprite>(ResourceFolder + "LegUpper");
         if (expectedShinSprite == null) expectedShinSprite = Resources.Load<Sprite>(ResourceFolder + "LegLower");
         if (expectedFootSprite == null) expectedFootSprite = Resources.Load<Sprite>(ResourceFolder + "Foot");
@@ -450,6 +458,21 @@ public class ProceduralCharacterRig : MonoBehaviour
     /// </summary>
     private void RestorePartSprites()
     {
+        // 네온아이처럼 눈 색이 순환하는 머리는 보여줄 프레임이 시간에 따라 바뀌므로 매 프레임
+        // 다시 물어봐야 한다. 단일 이미지 머리에서 매 프레임 조회하는 낭비를 피하려고
+        // 애니메이션이 있는 경우에만 갱신한다(HeadSpriteLibrary가 프레임 배열을 캐싱한다).
+        // Time.unscaledTime을 쓰는 이유: 정비·상점 화면은 timeScale이 0이라 deltaTime 기반이면
+        // 색 순환이 멈춘다.
+        if (HeadSpriteLibrary.CurrentHeadIsAnimated())
+        {
+            Sprite frame = HeadSpriteLibrary.GetCurrentBodySprite(Time.unscaledTime);
+            if (frame != null)
+            {
+                expectedBodySprite = frame;
+                bodySprite = frame;
+            }
+        }
+
         // 필드 자체가 다른 파츠를 가리키는 경우까지 복구한다(예: bodySprite에 Foot이 들어간 상태).
         if (bodySprite != expectedBodySprite || thighSprite != expectedThighSprite ||
             shinSprite != expectedShinSprite || footSprite != expectedFootSprite)

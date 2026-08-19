@@ -32,13 +32,22 @@ public class PartsCatalog : ScriptableObject
         public float weight;
     }
 
-    /// <summary>robot_id(머리 파츠) → 모딩 관련 고정값. RobotData(시트)에 해당 컬럼이 없어 여기서 보강한다.</summary>
+    /// <summary>
+    /// robot_id(머리 파츠) → 모딩 관련 고정값 + 머리 고유 정체성. RobotData(시트)에 해당 컬럼이
+    /// 없어 여기서 보강한다.
+    ///
+    /// 2026-08-19 `머리 기획서 Ver04` 반영으로 스프라이트/기본 무기/고유 효과가 추가됐다.
+    /// <b>체력·질량 같은 순수 스탯은 여기 넣지 않는다</b> — 그쪽은 계속 GameDataAsset의
+    /// robots(RobotData)가 유일한 출처이며, 한 값을 두 에셋에 적어두면 반드시 어긋난다.
+    /// 여기 있는 것은 "RobotData에 컬럼이 없어서 둘 곳이 없는" 값들뿐이다.
+    /// </summary>
     [Serializable]
     public struct HeadModdingInfo
     {
         public int robotId;
 
-        [Tooltip("무기 소켓 개수 (PlayerShootManager 인스펙터 설정과 일치해야 한다)")]
+        [Tooltip("무기 소켓 개수 (씬에 리깅된 소켓 개수와 이 값 중 작은 쪽이 실제로 쓰인다 - " +
+                 "ModdingManager.ActiveSocketCount)")]
         public int weaponSocketCount;
 
         [Tooltip("장착 가능한 최대 디스크 개수. DiscSlot 파츠를 장착하면 그 파츠 값이 이 기본값을 대체한다")]
@@ -47,6 +56,28 @@ public class PartsCatalog : ScriptableObject
         [Tooltip("적재량 - 한 번에 보유할 수 있는 최대 부품 상자 개수. 이 개수에 도달하면 " +
                  "몬스터가 더 이상 부품 상자를 드랍하지 않으며, 정비 화면의 임시 인벤토리 크기도 이 값이다")]
         public int partBoxCapacity;
+
+        [Tooltip("Assets/Resources/Heads/ 아래의 스프라이트 파일명(확장자 제외). " +
+                 "이 스프라이트가 인게임에서 로봇의 몸통(=머리)으로 그려지고 UI 아이콘으로도 쓰인다. " +
+                 "비어 있으면 기존 리그 기본값(Parts/Body)이 쓰인다")]
+        public string spriteName;
+
+        [Tooltip("이 머리로 시작할 때 소켓 0번부터 순서대로 장착되는 기본 무기 ID들. " +
+                 "비어 있으면 씬에 저장된 소켓 무기가 그대로 쓰인다")]
+        public int[] defaultWeaponIds;
+
+        [Tooltip("이 머리의 고유 효과. 실제 계산은 전부 HeadEffects에 있다")]
+        public HeadEffect effect;
+
+        [Tooltip("머리 선택 화면에 노출할지. 디버그용 로봇(미니 컴스톡 등)은 꺼둔다")]
+        public bool selectableInHeadSelect;
+
+        [Tooltip("네온아이처럼 스프라이트가 여러 장인 머리의 프레임 수. 0/1이면 단일 이미지. " +
+                 "2 이상이면 spriteName 뒤에 _0.._N-1이 붙은 파일을 순환 재생한다")]
+        public int spriteFrameCount;
+
+        [Tooltip("스프라이트 프레임 1장이 화면에 머무는 시간(초). spriteFrameCount가 2 이상일 때만 쓰인다")]
+        public float spriteFrameSeconds;
     }
 
     /// <summary>부품 상자 개봉 시 등급 추첨에 쓰는 가중치. ShopCatalog.GradeSetting과 같은 패턴.</summary>
@@ -164,8 +195,34 @@ public class PartsCatalog : ScriptableObject
             robotId = robotId,
             weaponSocketCount = 4,
             discSlotCount = 6,
-            partBoxCapacity = DefaultPartBoxCapacity
+            partBoxCapacity = DefaultPartBoxCapacity,
+            spriteName = null,                  // null이면 리그가 기존 Parts/Body를 그대로 쓴다
+            defaultWeaponIds = null,            // null이면 씬에 저장된 소켓 무기를 그대로 쓴다
+            effect = HeadEffect.None,
+            selectableInHeadSelect = false,      // 데이터가 없는 로봇을 선택 화면에 띄우지 않는다
+            spriteFrameCount = 0,
+            spriteFrameSeconds = 0f
         };
+    }
+
+    /// <summary>
+    /// 머리 선택 화면에 띄울 머리 목록(<see cref="HeadModdingInfo.selectableInHeadSelect"/>가 켜진 것).
+    /// 등록 순서를 그대로 유지하므로 에셋에서의 순서가 곧 화면 배치 순서다.
+    /// </summary>
+    public List<HeadModdingInfo> GetSelectableHeads()
+    {
+        var result = new List<HeadModdingInfo>();
+
+        foreach (HeadModdingInfo entry in headModdingInfos)
+        {
+            if (!entry.selectableInHeadSelect) continue;
+
+            HeadModdingInfo info = entry;
+            if (info.partBoxCapacity <= 0) info.partBoxCapacity = DefaultPartBoxCapacity;
+            result.Add(info);
+        }
+
+        return result;
     }
 
     /// <summary>Phase 3 ShopCatalog와 동일한 가중치 추첨 방식으로 부품 상자 등급을 뽑는다.</summary>

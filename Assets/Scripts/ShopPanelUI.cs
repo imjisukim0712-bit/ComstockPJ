@@ -841,7 +841,8 @@ public class ShopPanelUI : MonoBehaviour
             moddingStatusText.text = $"[장착 파츠] <size=75%>AI 코어 Lv {RunState.CoreLevel} · 무게 {weightLine} {DetailHint}</size>";
         }
 
-        ItemCellUI.CreateIconCell(partsGrid, "Cell_Head", Resources.Load<Sprite>("Parts/Body"),
+        // 아이콘은 지금 선택된 머리의 실제 아트다(2026-08-19 - 이전에는 Parts/Body 하드코딩).
+        ItemCellUI.CreateIconCell(partsGrid, "Cell_Head", HeadSpriteLibrary.GetCurrentIcon(),
                                   new Color(0.16f, 0.17f, 0.19f, 1f), "머리", true, () => ShowDetail("head"));
 
         for (int i = 0; i < socketCount; i++)
