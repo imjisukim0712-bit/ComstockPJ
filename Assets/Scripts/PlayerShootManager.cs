@@ -1096,7 +1096,16 @@ public class PlayerShootManager : MonoBehaviour
         float robot_atk = 0f;
         if (player_stats != null) robot_atk = player_stats.Atk + player_stats.GetTempStatBonus(StatType.Atk);
 
-        float damage = weapon.weapon_atk + robot_atk / weapon.ProjectileCount;
+        // 2026-08-19 버그 수정: 프라이빗 컴스톡의 [정밀] 공격력 x2는 무기 자체의 위력
+        // (weapon_atk)에만 곱해야 한다. robot_atk는 슬롯 수만큼 균등 분배되는 "로봇 전체"의
+        // 공격력이라(위 함수 설명 참고), 여기까지 함께 배로 늘리면 정밀 무기 하나만 끼워도
+        // 다른 슬롯의 무기까지 덩달아 이득을 보게 된다 - "정밀화기 장착 시 정밀화기의 공격력만
+        // 2배가 되어야 한다"는 의도와 어긋난다. `HeadEffects.WeaponAttackMultiplier()`가 이
+        // 종류의(무기 자체 위력 전용) 배율만 돌려주며, 가드맨·버서커처럼 전체 데미지에 곱해야
+        // 하는 배율은 아래 `DamageMultiplier()`가 그대로 담당한다(둘은 서로 배타적이라
+        // 중복 적용되지 않는다).
+        float weapon_component = weapon.weapon_atk * HeadEffects.WeaponAttackMultiplier(weapon);
+        float damage = weapon_component + robot_atk / weapon.ProjectileCount;
 
         if (player_stats != null && player_stats.Cc > 0f)
         {
@@ -1113,9 +1122,10 @@ public class PlayerShootManager : MonoBehaviour
             damage = player_stats.DiscEffects.ApplyOnAttackProcs(damage);
         }
 
-        // 2026-08-19 머리 효과(가드맨 산탄 +15% / 버서커 체력 50% 이하 x1.5 /
-        // 프라이빗 컴스톡 정밀 x2). 근접·빔·투사체가 전부 이 함수를 거치므로 여기 한 줄이면
-        // 세 발사 방식에 모두 적용된다.
+        // 2026-08-19 머리 효과(가드맨 산탄 +15% / 버서커 체력 50% 이하 x1.5). 근접·빔·투사체가
+        // 전부 이 함수를 거치므로 여기 한 줄이면 세 발사 방식에 모두 적용된다. 프라이빗
+        // 컴스톡의 정밀 x2는 여기서 다시 곱해지지 않는다(`DamageMultiplier`가 PrivateComstock
+        // 에는 1을 돌려준다) - 이미 위에서 `WeaponAttackMultiplier`로 weapon_atk에만 적용했다.
         damage *= HeadEffects.DamageMultiplier(weapon);
 
         return Mathf.Max(1, Mathf.RoundToInt(damage));

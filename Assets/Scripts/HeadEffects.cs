@@ -102,11 +102,13 @@ public static class HeadEffects
     /// <summary>프라이빗 컴스톡 — [정밀] 피해량 배율.</summary>
     public const float PrivateComstockDamage = 2f;
 
-    /// <summary>프라이빗 컴스톡 — [정밀] 공격속도 배율(0.5 = 발사 간격 2배로 느려진다).</summary>
-    public const float PrivateComstockAttackSpeed = 0.5f;
+    // 2026-08-19 사용자 조정: 0.5(발사 간격 2배) → 0.75(발사 간격 1.33배)로 완화.
+    /// <summary>프라이빗 컴스톡 — [정밀] 공격속도 배율(1보다 작으면 그만큼 발사 간격이 늘어난다).</summary>
+    public const float PrivateComstockAttackSpeed = 0.75f;
 
+    // 2026-08-19 사용자 조정: +2 → +1로 완화.
     /// <summary>프라이빗 컴스톡 — [정밀] 추가 관통 횟수.</summary>
-    public const int PrivateComstockPierce = 2;
+    public const int PrivateComstockPierce = 1;
 
     /// <summary>미니 픽시 — 경험치 획득량 증가분(+0.5 = +50%).</summary>
     public const float MiniPixieExpBonus = 0.5f;
@@ -206,8 +208,13 @@ public static class HeadEffects
     // ── 피해량 ────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// <see cref="PlayerShootManager.ComputeDamage"/>의 마지막에 곱해지는 배율.
-    /// 근접·빔·투사체가 전부 그 함수를 거치므로 여기 한 곳이면 세 발사 방식에 모두 적용된다.
+    /// <see cref="PlayerShootManager.ComputeDamage"/>의 마지막에 곱해지는, "이번 발사의
+    /// 최종 데미지 전체"에 적용되는 배율(로봇 공격력 분배분·치명타·디스크 효과까지 전부 포함된
+    /// 값에 곱해진다). 근접·빔·투사체가 전부 그 함수를 거치므로 여기 한 곳이면 세 발사 방식에
+    /// 모두 적용된다.
+    ///
+    /// <b>프라이빗 컴스톡의 [정밀] 공격력 x2는 여기 포함되지 않는다</b>(2026-08-19) -
+    /// <see cref="WeaponAttackMultiplier"/> 참고.
     /// </summary>
     public static float DamageMultiplier(WeaponData weapon)
     {
@@ -219,9 +226,6 @@ public static class HeadEffects
             case HeadEffect.Berserker:
                 return IsBerserkerActive() ? BerserkerDamage : 1f;
 
-            case HeadEffect.PrivateComstock:
-                return IsType(weapon, WeaponType.Precision) ? PrivateComstockDamage : 1f;
-
             // 소다캔: 로켓 엔진 다리 파츠와 이동속도 램프업 패시브가 프로젝트에 없어 조건을
             // 판정할 수가 없다. 다리 기획서가 나오면 여기서 SodaCanDamage를 돌려주면 된다.
             case HeadEffect.SodaCan:
@@ -230,6 +234,21 @@ public static class HeadEffects
             default:
                 return 1f;
         }
+    }
+
+    /// <summary>
+    /// <see cref="PlayerShootManager.ComputeDamage"/>가 <b>무기 자체 위력(weapon_atk)에만</b>
+    /// 곱하는 배율 - 로봇 전체 공격력(robot_atk, 슬롯 수만큼 균등 분배됨)에는 적용되면 안 되는
+    /// 종류의 보너스를 위한 것이다. 현재는 프라이빗 컴스톡의 [정밀] 공격력 x2가 유일하다.
+    ///
+    /// 2026-08-19 버그 수정: 예전에는 이 배율이 <see cref="DamageMultiplier"/>에 섞여 있어
+    /// robot_atk 분배분까지 함께 배로 늘어났다 - "정밀화기 장착 시 정밀화기의 공격력만 2배가
+    /// 되어야 한다"는 사용자 확정에 따라 분리했다.
+    /// </summary>
+    public static float WeaponAttackMultiplier(WeaponData weapon)
+    {
+        if (Current != HeadEffect.PrivateComstock) return 1f;
+        return IsType(weapon, WeaponType.Precision) ? PrivateComstockDamage : 1f;
     }
 
     /// <summary>버서커의 발동 조건(현재 체력이 최대치의 50% 이하). 플레이어 미바인딩 시 false.</summary>

@@ -9,6 +9,8 @@ using UnityEngine.UI;
 /// 우하단 아이콘은 화면 반대쪽 구석이라 전투 중 시선이 캐릭터에 있을 때 쿨다운을 볼 수 없었다.
 /// 게이지가 가득 차면 구를 수 있고, 구르면 비었다가 서서히 채워진다
 /// (<see cref="PlayerRobotController.DashCooldownRatio"/>의 반대값).
+/// 2026-08-19 사용자 요청으로 <b>완충되면 게이지 자체가 사라지고, 쿨타임(충전 중)일 때만
+/// 보인다</b>(항상 떠 있던 이전 방식 대체).
 ///
 /// <b>왜 월드 오브젝트가 아니라 캔버스 UI인가</b> — "DASH" 글자가 또렷해야 하고 막대 아트가
 /// 9-슬라이스라, 적 체력바처럼 SpriteRenderer로 만들면 글자를 위해 별도 3D 텍스트를 얹어야 한다.
@@ -35,6 +37,7 @@ public class DashGaugeUI : MonoBehaviour
     private PlayerRobotController player;
     private Camera cam;
     private RectTransform root;
+    private GameObject visual; // 배경/채움/글자를 묶는 자식 - 숨길 때 이 오브젝트만 끈다
     private RectTransform fill_rect;
     private Image fill_image;
     private TextMeshProUGUI label;
@@ -65,8 +68,16 @@ public class DashGaugeUI : MonoBehaviour
         root.anchorMax = Vector2.zero;
         root.pivot = new Vector2(0.5f, 0.5f);
 
+        // 배경/채움/글자는 전부 이 자식 하나에 묶는다 - 숨길 때 root가 아니라 이 오브젝트만
+        // 꺼야 한다(아래 LateUpdate 주석 참고).
+        var visualGo = new GameObject("Visual", typeof(RectTransform));
+        visualGo.transform.SetParent(root, false);
+        visual = visualGo;
+        RectTransform visualRect = (RectTransform)visualGo.transform;
+        Stretch(visualRect, Vector2.zero, Vector2.one);
+
         // 바탕(빈 게이지) - 아직 채워지지 않은 구간이 밝게 보이도록 흰색에 가깝게 둔다.
-        Image bg = CreateImage(root, "Background", new Color(0.93f, 0.94f, 0.93f, 0.95f));
+        Image bg = CreateImage(visualRect, "Background", new Color(0.93f, 0.94f, 0.93f, 0.95f));
         Stretch((RectTransform)bg.transform, Vector2.zero, Vector2.one);
         Sprite bgArt = Resources.Load<Sprite>("UI/Black_ui04");
         if (bgArt != null)
@@ -81,7 +92,7 @@ public class DashGaugeUI : MonoBehaviour
         bg.raycastTarget = false;
 
         // 채움 - 왼쪽 고정, 오른쪽만 늘어난다(anchorMax.x로 조절하므로 9-슬라이스가 유지된다).
-        fill_image = CreateImage(root, "Fill", new Color(0.42f, 0.80f, 0.55f, 1f));
+        fill_image = CreateImage(visualRect, "Fill", new Color(0.42f, 0.80f, 0.55f, 1f));
         fill_rect = (RectTransform)fill_image.transform;
         fill_rect.anchorMin = Vector2.zero;
         fill_rect.anchorMax = Vector2.one;
@@ -98,7 +109,7 @@ public class DashGaugeUI : MonoBehaviour
         fill_image.raycastTarget = false;
 
         // "DASH" 글자는 채움 위에 얹혀야 게이지가 줄어도 계속 읽힌다(형제 순서 = 그리기 순서).
-        label = CreateText(root, "Label", "DASH");
+        label = CreateText(visualRect, "Label", "DASH");
     }
 
     private void LateUpdate()
@@ -107,14 +118,27 @@ public class DashGaugeUI : MonoBehaviour
 
         // 정비/상점/AI 코어 화면과 게임오버 중에는 숨긴다. 런타임 생성 오브젝트라
         // GameFlowManager.combatHudObjects에 등록할 수 없어 직접 확인한다.
-        bool visible = !GameFlowManager.IsIntermission && !GameOverManager.IsGameOver
+        //
+        // <b>2026-08-19 버그 수정</b>: 예전에는 여기서 숨길 때 `root.gameObject.SetActive(false)`로
+        // "이 스크립트가 붙어 있는 바로 그 오브젝트"를 껐다. Unity는 비활성 오브젝트의
+        // LateUpdate를 아예 호출하지 않으므로, 한 번 숨은 뒤에는 자기 자신을 다시 켤 기회가
+        // 영원히 없었다(웨이브 1 종료 후 정비 화면에서 숨은 채로 다음 웨이브가 시작돼도 계속
+        // 사라져 있던 버그의 원인). 이제 root는 항상 켜 둔 채, 배경/채움/글자를 묶은 자식
+        // <see cref="visual"/>만 껐다 켠다 - root의 LateUpdate는 항상 돌아가야 스스로 다시
+        // 보여줄 수 있다.
+        bool scene_visible = !GameFlowManager.IsIntermission && !GameOverManager.IsGameOver
                        && !GameWinManager.IsGameWon && !player.IsDead;
 
-        if (root.gameObject.activeSelf != visible) root.gameObject.SetActive(visible);
-        if (!visible) return;
-
         if (cam == null) cam = Camera.main;
-        if (cam == null) return;
+
+        // 게이지는 "쓸 수 있는 정도" = 쿨다운의 반대값. 쿨다운이 없는 머리(팬봇)는 항상 가득이다.
+        float ready = 1f - Mathf.Clamp01(player.DashCooldownRatio);
+
+        // 사용자 요청(2026-08-19): 완충되면 게이지를 아예 숨기고, 쿨타임(충전 중)일 때만 보인다.
+        bool visible = scene_visible && cam != null && ready < 0.999f;
+
+        if (visual != null && visual.activeSelf != visible) visual.SetActive(visible);
+        if (!visible) return;
 
         // 1유닛이 화면에서 몇 픽셀인지(직교 카메라). 이 값으로 막대 크기를 잡으면
         // 해상도·줌이 바뀌어도 캐릭터 대비 비율이 유지된다.
@@ -128,15 +152,10 @@ public class DashGaugeUI : MonoBehaviour
         Vector3 screenPoint = cam.WorldToScreenPoint(worldPoint);
         root.anchoredPosition = new Vector2(screenPoint.x, screenPoint.y);
 
-        // 게이지는 "쓸 수 있는 정도" = 쿨다운의 반대값. 쿨다운이 없는 머리(팬봇)는 항상 가득이다.
-        float ready = 1f - Mathf.Clamp01(player.DashCooldownRatio);
         fill_rect.anchorMax = new Vector2(ready, 1f);
 
-        // 다 찼을 때만 글자를 또렷하게 - 차오르는 중에는 살짝 죽여 "아직 못 쓴다"를 알린다.
-        if (label != null)
-        {
-            label.color = ready >= 0.999f ? Color.white : new Color(1f, 1f, 1f, 0.55f);
-        }
+        // 보이는 동안은 항상 "충전 중"이므로(다 차면 숨는다) 글자는 항상 살짝 죽인 상태로 둔다.
+        if (label != null) label.color = new Color(1f, 1f, 1f, 0.55f);
     }
 
     // ── 생성 헬퍼 ────────────────────────────────────────────────────

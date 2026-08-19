@@ -12,8 +12,9 @@ public class DisruptorUnit : EnemyUnit
     [Header("디스럭터 자폭 (전부 밸런스 미확정 임시값)")]
     [Tooltip("한 번에 이 비율(최대체력 대비) 이상의 피해를 받으면 사거리와 무관하게 즉시 자폭한다")]
     [SerializeField] private float bigHitThresholdRatio = 0.3f;
+    // 2026-08-19 사용자 요청으로 폭발 범위 -25%(3.0 → 2.25).
     [Tooltip("자폭 폭발 반경(월드 유닛)")]
-    [SerializeField] private float explosionRadius = 3f;
+    [SerializeField] private float explosionRadius = 2.25f;
 
     private bool detonated;
 

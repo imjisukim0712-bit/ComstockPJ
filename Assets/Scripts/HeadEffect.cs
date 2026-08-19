@@ -52,7 +52,8 @@ public enum HeadEffect
     /// </summary>
     SodaCan = 10,
 
-    /// <summary>프라이빗 컴스톡 — [정밀] 무기의 공격력 x2, 공격속도 x0.5, 관통 +2.</summary>
+    /// <summary>프라이빗 컴스톡 — [정밀] 무기의 공격력 x2(무기 자체 위력에만 적용, 로봇
+    /// 공격력 분배분은 제외), 공격속도 x0.75, 관통 +1.</summary>
     PrivateComstock = 11,
 
     /// <summary>미니 픽시 — 경험치 획득량 +50%, 골드 수급량 -50%.</summary>
@@ -132,7 +133,7 @@ public static class HeadEffectExtensions
                        "(로켓 엔진 다리 파츠 미구현 - 현재 효과 없음)";
 
             case HeadEffect.PrivateComstock:
-                return $"[정밀] 무기 사용 시 공격력 x{HeadEffects.PrivateComstockDamage:0.##}, " +
+                return $"[정밀] 무기 자체 공격력 x{HeadEffects.PrivateComstockDamage:0.##}(로봇 공격력 분배분 제외), " +
                        $"공격속도 x{HeadEffects.PrivateComstockAttackSpeed:0.##}, 관통 +{HeadEffects.PrivateComstockPierce}";
 
             case HeadEffect.MiniPixie:
