@@ -97,6 +97,9 @@ public class GameFlowManager : MonoBehaviour
     // ESC 일시정지 메뉴(2026-08-18). 씬에 깔지 않고 Canvas 밑에 코드로 만들어 붙인다.
     private PauseMenuUI pauseMenu;
 
+    // 우상단 설정(톱니바퀴) 아이콘(2026-08-19). 같은 Canvas에 코드로 붙인다.
+    private SettingsIconUI settingsIcon;
+
     private void Awake()
     {
         if (aiCoreUpgradePanel != null) aiCoreUpgradePanel.SetActive(false);
@@ -104,16 +107,21 @@ public class GameFlowManager : MonoBehaviour
         EnsurePauseMenu();
     }
 
-    /// <summary>일시정지 메뉴가 없으면 만들어 붙인다. AiCoreExtraButtons와 같은 이유로
-    /// Awake에서 한 번, 필요하면 그 이후에도 다시 확인할 수 있게 열어 둔다.</summary>
+    /// <summary>일시정지 메뉴와 우상단 설정 아이콘이 없으면 만들어 붙인다. AiCoreExtraButtons와
+    /// 같은 이유로 Awake에서 한 번, 필요하면 그 이후에도 다시 확인할 수 있게 열어 둔다.</summary>
     private void EnsurePauseMenu()
     {
-        if (pauseMenu != null) return;
+        if (pauseMenu != null && settingsIcon != null) return;
 
         Canvas canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null) return;
 
-        pauseMenu = PauseMenuUI.EnsureAttached((RectTransform)canvas.transform);
+        var canvasRect = (RectTransform)canvas.transform;
+
+        if (pauseMenu == null) pauseMenu = PauseMenuUI.EnsureAttached(canvasRect);
+        // 설정 아이콘은 일시정지 메뉴보다 뒤에 붙여야 한다 - 형제 순서가 곧 그리기 순서라
+        // 먼저 붙이면 딤 배경에 가려진다(아이콘 쪽에서 메뉴가 열리면 스스로 숨기기도 한다).
+        if (settingsIcon == null) settingsIcon = SettingsIconUI.EnsureAttached(canvasRect);
     }
 
     /// <summary>

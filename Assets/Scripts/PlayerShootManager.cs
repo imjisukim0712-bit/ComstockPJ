@@ -177,7 +177,13 @@ public class PlayerShootManager : MonoBehaviour
              "따라 이 값만큼 좌우로 벌려서 배치한다")]
     [SerializeField] private float roll_rig_lateral_spread = 0.5f;
 
+    [Tooltip("근접무기가 적을 기다리는 동안 칼끝을 수평에서 위로 들어올리는 각도(도). " +
+             "왼팔 소켓은 왼쪽+위, 오른팔 소켓은 오른쪽+위로 정확히 미러링된다. 0이면 정확히 수평")]
+    [SerializeField] private float melee_rest_tilt_degrees = 15f;
+
     private PlayerRobotController player_stats; // 로봇 공격력/치명타 보정치를 가져오는 용도
+    // 소켓별 "몸의 왼쪽인가" 판정을 Awake에서 한 번만 굳혀 둔다(CacheSocketSides 참고).
+    private readonly Dictionary<int, bool> socket_is_left_by_slot = new Dictionary<int, bool>();
     private readonly Dictionary<int, Vector3> roll_home_local_position = new Dictionary<int, Vector3>();
     private bool was_rolling;
     private readonly Dictionary<int, WeaponData> weapon_data_by_slot = new Dictionary<int, WeaponData>();
@@ -229,6 +235,52 @@ public class PlayerShootManager : MonoBehaviour
             if (renderer != null && renderer.sprite != null)
                 expected_weapon_sprite_by_slot[i] = renderer.sprite;
         }
+
+        CacheSocketSides();
+    }
+
+    /// <summary>
+    /// 각 소켓이 몸의 왼쪽인지 오른쪽인지를 <b>한 번만</b> 기록한다(근접무기 대기 자세용).
+    ///
+    /// <b>왜 캐시하는가</b> — 판정 기준은 소켓 Transform의 로컬 x 부호인데,
+    /// <see cref="StartMeleeThrustVisual"/>이 찌르기 중 이 Transform을 실제로 밀어낸다.
+    /// Player의 localScale이 0.219라 월드 1유닛이 로컬 약 4.5유닛이어서, 찌르는 동안에는
+    /// x 부호가 뒤집힐 수 있다. 지금은 찌르기 중 조준 코드가 조기 반환해 도달하지 않지만,
+    /// 방향 판정을 매 프레임 움직이는 좌표에 의존시키는 것 자체가 위험하므로 authored 값을 굳힌다.
+    ///
+    /// <b>use_left_hand_image를 쓰지 않는 이유</b> — 그 플래그는 물리적 좌우와 반대로 박혀 있다
+    /// (실측: 로컬 x가 -2.75인 왼쪽 소켓의 값이 0). 총기용 미러링 이미지 선택에 쓰는 값이라
+    /// 물리적 방향 판정에 쓰면 좌우가 뒤집힌다.
+    /// </summary>
+    private void CacheSocketSides()
+    {
+        socket_is_left_by_slot.Clear();
+
+        for (int i = 0; i < weapon_slots.Count; i++)
+        {
+            WeaponSlot slot = weapon_slots[i];
+            Transform pivot = slot.rig_point != null ? slot.rig_point : slot.muzzle_point;
+            if (pivot == null) continue;
+
+            socket_is_left_by_slot[i] = pivot.localPosition.x < 0f;
+        }
+    }
+
+    /// <summary>
+    /// 근접무기가 적을 기다리는 동안 칼끝이 향할 화면 각도(도). 0 = 오른쪽, 180 = 왼쪽.
+    ///
+    /// 사용자 확정(2026-08-19): <b>왼팔 소켓은 왼쪽, 오른팔 소켓은 오른쪽</b>을 향하고
+    /// 둘 다 <see cref="melee_rest_tilt_degrees"/>만큼 위로 들린다(좌우 정확한 미러 -
+    /// 오른쪽 15도를 세로축 대칭하면 180-15=165도가 왼쪽 값이다).
+    ///
+    /// 총기의 <c>rest_rotation_degrees</c>(좌 8.112 / 우 -3.233)를 쓰지 않는 이유: 그 값들은
+    /// 좌우가 따로 그려진 미러링 총 이미지 기준으로 튜닝돼 둘 다 0도(오른쪽) 근처다. 근접무기 3종은
+    /// 좌우가 완전히 같은 이미지라 그 값을 공유하면 왼팔 칼도 오른쪽을 향한다(이번 리포트의 원인).
+    /// </summary>
+    private float MeleeRestFacingDegrees(int slot_index)
+    {
+        bool is_left = socket_is_left_by_slot.TryGetValue(slot_index, out bool cached) && cached;
+        return is_left ? 180f - melee_rest_tilt_degrees : melee_rest_tilt_degrees;
     }
 
     private void Start()
@@ -690,7 +742,14 @@ public class PlayerShootManager : MonoBehaviour
             // 자세가 총기 전용 기준(rest_rotation_degrees, 그림이 오른쪽을 향한다고 가정)으로만
             // 돌아가서, 칼끝이 실제로 그려진 방향(~140도, 좌상단)이 그대로 드러나 반대로 향해
             // 보인다(2026-08-19 "칼끝이 팔 방향과 반대로 가있다" 리포트로 발견).
-            float rest_target_angle = slot.rest_rotation_degrees + (is_melee ? weapon.weapon_imgangle : 0f);
+            //
+            // <b>2026-08-19 추가 수정</b>: 근접무기는 기준 각도도 총기의 rest_rotation_degrees가
+            // 아니라 소켓의 좌/우에서 뽑는다(MeleeRestFacingDegrees). 조준식이 imgangle을 더해
+            // 상쇄시키는 구조라 <b>근접무기의 화면상 대기 각도는 여기 넣는 기준값 그 자체</b>가
+            // 되는데, 총기용 값은 좌우 소켓이 각각 8.112 / -3.233(둘 다 오른쪽 근처)이라
+            // 왼팔 칼도 오른쪽을 향했다(사용자 리포트).
+            float rest_base_angle = is_melee ? MeleeRestFacingDegrees(slot_index) : slot.rest_rotation_degrees;
+            float rest_target_angle = rest_base_angle + (is_melee ? weapon.weapon_imgangle : 0f);
             float rest_angle = RotatePivotTowards(slot, weapon, pivot, rest_target_angle, slot_index);
             if (!is_melee) ApplyAngleFlip(slot, rest_angle, false);
             return;

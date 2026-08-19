@@ -19,6 +19,7 @@ public static class UiIconLibrary
 
     private static Sprite lock_icon;
     private static Sprite stamp_frame;
+    private static Sprite settings_icon;
 
     /// <summary>잠금 버튼에 쓸 자물쇠 아이콘.</summary>
     public static Sprite Lock()
@@ -43,11 +44,25 @@ public static class UiIconLibrary
         return stamp_frame;
     }
 
+    /// <summary>
+    /// 우상단 설정 버튼에 쓸 톱니바퀴 아이콘(2026-08-19 신설).
+    /// <c>Assets/Resources/UI/Settings_icon.png</c>를 넣으면 코드 수정 없이 자동 교체된다.
+    /// </summary>
+    public static Sprite Settings()
+    {
+        if (settings_icon != null) return settings_icon;
+
+        settings_icon = Resources.Load<Sprite>("UI/Settings_icon");
+        if (settings_icon == null) settings_icon = BuildSettings();
+        return settings_icon;
+    }
+
     /// <summary>에셋을 새로 넣은 뒤 캐시를 비우고 싶을 때 사용.</summary>
     public static void ClearCache()
     {
         lock_icon = null;
         stamp_frame = null;
+        settings_icon = null;
     }
 
     // ------------------------------------------------------------------
@@ -81,6 +96,34 @@ public static class UiIconLibrary
 
         const float border = thickness + 2;
         return Finish(tex, p, new Vector4(border, border, border, border));
+    }
+
+    // 톱니바퀴 = 바깥 톱니 8개 + 원판 + 중앙 구멍.
+    // 톱니를 먼저 찍고 원판을 덮어 이음매가 보이지 않게 한 뒤, 마지막에 가운데를 뚫는다.
+    private static Sprite BuildSettings()
+    {
+        const int cx = IconSize / 2, cy = IconSize / 2;
+        const int bodyRadius = 19;   // 원판
+        const int toothRing = 24;    // 톱니 중심이 놓이는 반지름
+        const int toothHalf = 5;     // 톱니 한 변의 절반
+        const int holeRadius = 7;    // 중앙 구멍
+
+        Color32[] p = NewCanvas("UiIcon_Settings", out Texture2D tex);
+
+        // 45도 간격 8개. 사각 톱니라 대각선 톱니도 축 정렬 사각형으로 근사하는데,
+        // 64x64에서는 육안으로 충분히 톱니바퀴로 읽힌다.
+        for (int i = 0; i < 8; i++)
+        {
+            float rad = i * 45f * Mathf.Deg2Rad;
+            int tx = cx + Mathf.RoundToInt(Mathf.Cos(rad) * toothRing);
+            int ty = cy + Mathf.RoundToInt(Mathf.Sin(rad) * toothRing);
+            Rect(p, tx - toothHalf, ty - toothHalf, toothHalf * 2, toothHalf * 2);
+        }
+
+        Disc(p, cx, cy, bodyRadius);
+        ClearDisc(p, cx, cy, holeRadius);
+
+        return Finish(tex, p, Vector4.zero);
     }
 
     // ------------------------------------------------------------------
@@ -128,6 +171,18 @@ public static class UiIconLibrary
         for (int iy = y; iy < y + h; iy++)
             for (int ix = x; ix < x + w; ix++)
                 Set(p, ix, iy, 0);
+    }
+
+    // 채워진 원(ClearDisc의 반대). 톱니바퀴 원판에 쓴다.
+    private static void Disc(Color32[] p, int cx, int cy, int r)
+    {
+        int rr = r * r;
+        for (int iy = cy - r; iy <= cy + r; iy++)
+            for (int ix = cx - r; ix <= cx + r; ix++)
+            {
+                int dx = ix - cx, dy = iy - cy;
+                if (dx * dx + dy * dy <= rr) Set(p, ix, iy, 255);
+            }
     }
 
     private static void ClearDisc(Color32[] p, int cx, int cy, int r)

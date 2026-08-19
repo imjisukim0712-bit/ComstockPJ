@@ -24,10 +24,13 @@ public class PauseMenuUI : MonoBehaviour
     public static PauseMenuUI Instance { get; private set; }
 
     private RectTransform overlayRoot;
+    // 딤 배경 + 옵션 패널을 묶는 자식. 숨길 때 루트가 아니라 이 오브젝트만 끈다
+    // (아래 Build/Update 주석의 2026-08-19 버그 수정 참고).
+    private GameObject content;
     private SettingsPanelUI settingsPanel;
     private float savedTimeScale = 1f;
 
-    public bool IsOpen => overlayRoot != null && overlayRoot.gameObject.activeSelf;
+    public bool IsOpen => content != null && content.activeSelf;
 
     /// <summary>이미 있으면 재사용하고, 없으면 Canvas 아래에 코드로 만든다. 에디터 도메인 리로드로
     /// <see cref="Instance"/> 참조가 날아가도 오브젝트 자체는 씬에 남아 있을 수 있으므로 먼저 찾아본다
@@ -61,15 +64,29 @@ public class PauseMenuUI : MonoBehaviour
         root.offsetMin = Vector2.zero;
         root.offsetMax = Vector2.zero;
 
+        // <b>2026-08-19 버그 수정 - 딤 배경·옵션 패널을 이 자식 하나에 묶는 이유.</b>
+        // 예전에는 Build() 마지막에 `root.gameObject.SetActive(false)`로 <b>이 스크립트 자신이
+        // 붙어 있는 GameObject</b>를 껐다(root == 이 컴포넌트의 transform). Unity는 비활성
+        // GameObject의 Update()를 아예 호출하지 않으므로 아래 Update()의 ESC 폴링이 단 한 번도
+        // 실행되지 않았고, 그래서 <b>ESC로 일시정지 메뉴를 여는 것이 구조적으로 불가능</b>했다
+        // (사용자 리포트 "인게임에서 esc누르면 설정창 나오고 일시정지 되어야 하는데 적용이 안됨").
+        // 같은 날 DashGaugeUI에서 고친 것과 완전히 동일한 함정이다.
+        // 이제 root는 항상 켜 둔 채 이 Content만 껐다 켠다.
+        var contentGo = new GameObject("Content", typeof(RectTransform));
+        contentGo.transform.SetParent(root, false);
+        content = contentGo;
+        var contentRect = (RectTransform)contentGo.transform;
+        Stretch(contentRect);
+
         // 1. 게임 일시정지 중임을 보여주는 반투명 배경(인게임 HUD 위에 덮인다).
         var bgGo = new GameObject("DimBackground", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        bgGo.transform.SetParent(root, false);
+        bgGo.transform.SetParent(contentRect, false);
         Stretch((RectTransform)bgGo.transform);
         bgGo.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.6f);
 
         // 2. 옵션 패널
         var panelGo = new GameObject("OptionPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        panelGo.transform.SetParent(root, false);
+        panelGo.transform.SetParent(contentRect, false);
         var panelRect = (RectTransform)panelGo.transform;
         panelRect.anchorMin = new Vector2(0.36f, 0.24f);
         panelRect.anchorMax = new Vector2(0.64f, 0.76f);
@@ -89,9 +106,11 @@ public class PauseMenuUI : MonoBehaviour
         CreateButton(panelRect, "SettingsButton", "설정", 0.10f, 0.205f, 0.90f, 0.32f, OpenSettings, true);
         CreateButton(panelRect, "QuitButton", "나가기", 0.10f, 0.045f, 0.90f, 0.16f, HandleQuitClicked, true);
 
+        // 설정 패널은 Content가 아니라 root 직속으로 둔다 - 자기 활성 상태를 스스로 관리하며,
+        // Content보다 뒤 형제라 그리기 순서상 딤 배경·옵션 패널 위에 덮인다(기존 동작 유지).
         settingsPanel = SettingsPanelUI.Attach(root);
 
-        root.gameObject.SetActive(false);
+        content.SetActive(false);
     }
 
     private void Update()
@@ -112,13 +131,28 @@ public class PauseMenuUI : MonoBehaviour
             return;
         }
 
+        TryOpenPause();
+    }
+
+    /// <summary>
+    /// 열 수 있는 상황이면 일시정지 메뉴를 열고 true를 돌려준다.
+    ///
+    /// ESC 키(<see cref="Update"/>)와 우상단 설정 아이콘(<see cref="SettingsIconUI"/>)이 <b>둘 다
+    /// 이 하나를 호출한다</b> - 게이팅 조건을 양쪽에 복사해 두면 나중에 한쪽만 고쳐 조건이
+    /// 어긋나기 때문이다.
+    /// </summary>
+    public bool TryOpenPause()
+    {
+        if (IsOpen) return false;
+
         // 게임오버/승리 화면이나 정비·상점(이미 전체 화면 UI + timeScale=0)에서는 열지 않는다.
         // CurrentState는 인스턴스 프로퍼티라 정적 컨텍스트에서 못 쓰므로, 1:1로 같은 뜻인
         // 정적 플래그 IsIntermission(Combat이 아니면 항상 true)으로 대신 확인한다.
-        if (GameOverManager.IsGameOver || GameWinManager.IsGameWon) return;
-        if (GameFlowManager.IsIntermission) return;
+        if (GameOverManager.IsGameOver || GameWinManager.IsGameWon) return false;
+        if (GameFlowManager.IsIntermission) return false;
 
         OpenPause();
+        return true;
     }
 
     private void OpenPause()
@@ -126,14 +160,14 @@ public class PauseMenuUI : MonoBehaviour
         savedTimeScale = Time.timeScale;
         Time.timeScale = 0f;
         GameFlowManager.SetPaused(true);
-        overlayRoot.gameObject.SetActive(true);
+        content.SetActive(true);
     }
 
     private void ClosePause()
     {
         if (settingsPanel != null && settingsPanel.IsOpen) settingsPanel.Close();
 
-        overlayRoot.gameObject.SetActive(false);
+        content.SetActive(false);
         GameFlowManager.SetPaused(false);
         Time.timeScale = savedTimeScale;
     }
