@@ -46,11 +46,10 @@ public class ScoreSummaryPopup : MonoBehaviour
         content = contentGo;
         Stretch((RectTransform)contentGo.transform);
 
-        var bgGo = new GameObject("DimBackground", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        bgGo.transform.SetParent(contentGo.transform, false);
-        Stretch((RectTransform)bgGo.transform);
-        bgGo.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.75f);
-
+        // 2026-08-20 사용자 요청("빅토리 뜨면서 화면 가리는거 없애") - 예전에는 여기 전체 화면을
+        // 75% 검게 덮는 DimBackground가 있어서, 승리 직후 필드(쓰러진 보스·HUD)가 화면에서 완전히
+        // 가려졌다. 정산 패널(아래 Panel)만 남기고 배경 암막은 없앤다 - 게임 화면이 그대로 보이는
+        // 채로 점수 내역과 계속/타이틀로 버튼만 그 위에 뜬다.
         var panelGo = new GameObject("Panel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         panelGo.transform.SetParent(contentGo.transform, false);
         var panelRect = (RectTransform)panelGo.transform;
@@ -92,9 +91,12 @@ public class ScoreSummaryPopup : MonoBehaviour
         if (breakdownText != null)
         {
             breakdownText.text =
-                $"도달 웨이브   {RunState.WaveNumber} x {RunScore.WaveWeight}  = {b.WaveScore:N0}\n" +
+                // 2026-08-20: WaveNumber/CoreLevel은 "현재 값"(1부터 시작)이라 그대로 곱하면
+                // 시작하자마자 기본점수가 붙는다(RunScore.ComputeBreakdown 참고) - 실제 계산과
+                // 똑같이 1을 뺀 값을 곱셈식으로 보여준다.
+                $"클리어한 웨이브 {Mathf.Max(0, RunState.WaveNumber - 1)} x {RunScore.WaveWeight}  = {b.WaveScore:N0}\n" +
                 $"적 처치 수    {RunScore.KillCount} x {RunScore.KillWeight}    = {b.KillScore:N0}\n" +
-                $"AI 코어 레벨  {RunState.CoreLevel} x {RunScore.CoreLevelWeight}  = {b.CoreLevelScore:N0}\n" +
+                $"AI 코어 레벨업 {Mathf.Max(0, RunState.CoreLevel - 1)} x {RunScore.CoreLevelWeight}  = {b.CoreLevelScore:N0}\n" +
                 $"보유 골드     {RunState.Gold} x {RunScore.GoldWeight}    = {b.GoldScore:N0}\n" +
                 $"악세사리 점수 = {b.AccessoryScore:N0}\n\n" +
                 $"<b>총점 {b.Total:N0}</b>\n\n" +

@@ -4,15 +4,19 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 도감(해금 목록) 화면(2026-08-19 Phase E). 타이틀 화면의 "도감" 버튼으로 연다.
+/// 도감(해금 목록) 화면(2026-08-19 Phase E, 2026-08-20 무기 탭 추가). 타이틀 화면의 "도감" 버튼으로 연다.
 ///
-/// <b>왜 씬이 아니라 코드로 만드나</b> — 항목 수(머리 12 / 디스크 21 / 악세사리 6)가 데이터에서
-/// 오므로 씬에 칸을 미리 깔 수 없다. <see cref="HeadSelectPanelUI"/>와 같은 판단·같은 관례다
-/// (정규화 앵커 + offset 0, 캔버스가 ConstantPixelSize라 절대 픽셀을 쓰면 다른 해상도에서 어긋난다).
+/// <b>왜 씬이 아니라 코드로 만드나</b> — 항목 수(머리 12 / 디스크 21 / 악세사리 6 / 무기 13)가
+/// 데이터에서 오므로 씬에 칸을 미리 깔 수 없다. <see cref="HeadSelectPanelUI"/>와 같은 판단·같은
+/// 관례다(정규화 앵커 + offset 0, 캔버스가 ConstantPixelSize라 절대 픽셀을 쓰면 다른 해상도에서 어긋난다).
 ///
 /// 해금 여부와 진행도는 <see cref="UnlockState"/>가 유일한 출처이고, 이름·아이콘은 각
-/// 카탈로그(파츠/상점/악세사리)에서 그때그때 조회한다 - 도감이 데이터를 따로 들고 있으면
+/// 카탈로그(파츠/상점/악세사리/무기)에서 그때그때 조회한다 - 도감이 데이터를 따로 들고 있으면
 /// 밸런스 조정 때 두 곳을 고쳐야 한다.
+///
+/// <b>무기 탭은 해금 조건이 없다</b>(사용자 확정: "무기는 해금 조건 없으니 도감에 명세만
+/// 추가하면 됨") - 13종 전부 <see cref="UnlockEntry.UnlockedFromStart"/>라 항상 열려 있고,
+/// 오른쪽 상세 패널은 "해금 조건" 대신 실제 무기 스탯(공격력/공격속도/사거리/분류 등)을 보여준다.
 /// </summary>
 public class CollectionPanelUI : MonoBehaviour
 {
@@ -42,6 +46,7 @@ public class CollectionPanelUI : MonoBehaviour
 
     private Image detailIcon;
     private TextMeshProUGUI detailName;
+    private TextMeshProUGUI detailConditionTitle;
     private TextMeshProUGUI detailCondition;
     private TextMeshProUGUI detailProgress;
     private Image detailProgressFill;
@@ -95,7 +100,7 @@ public class CollectionPanelUI : MonoBehaviour
 
     private void BuildTabs(RectTransform rootRect)
     {
-        var categories = new[] { UnlockCategory.Head, UnlockCategory.Disc, UnlockCategory.Accessory };
+        var categories = new[] { UnlockCategory.Head, UnlockCategory.Disc, UnlockCategory.Accessory, UnlockCategory.Weapon };
 
         const float x0 = 0.045f;
         const float x1 = 0.615f;
@@ -251,10 +256,10 @@ public class CollectionPanelUI : MonoBehaviour
                                 TextAlignmentOptions.Midline, 26f);
         detailName.color = AccentColor;
 
-        TextMeshProUGUI conditionTitle = CreateText(panelRect, "ConditionTitle", new Vector2(0.06f, 0.44f),
-                                                    new Vector2(0.94f, 0.51f), TextAlignmentOptions.Midline, 17f);
-        conditionTitle.text = "해금 조건";
-        conditionTitle.color = MutedTextColor;
+        detailConditionTitle = CreateText(panelRect, "ConditionTitle", new Vector2(0.06f, 0.44f),
+                                          new Vector2(0.94f, 0.51f), TextAlignmentOptions.Midline, 17f);
+        detailConditionTitle.text = "해금 조건";
+        detailConditionTitle.color = MutedTextColor;
 
         detailCondition = CreateText(panelRect, "Condition", new Vector2(0.06f, 0.24f), new Vector2(0.94f, 0.43f),
                                      TextAlignmentOptions.Top, 19f);
@@ -285,13 +290,53 @@ public class CollectionPanelUI : MonoBehaviour
         }
 
         if (detailName != null) detailName.text = unlocked ? ResolveName(entry) : "???";
+
+        // 무기는 해금 조건이 없다(2026-08-20 사용자 확정) - "해금 조건" 칸에 실제 무기 스탯을
+        // 보여준다. 다른 카테고리는 기존 그대로 조건 문구를 보여준다.
+        bool isWeapon = entry.category == UnlockCategory.Weapon;
+        if (detailConditionTitle != null) detailConditionTitle.text = isWeapon ? "무기 정보" : "해금 조건";
         if (detailCondition != null)
         {
-            detailCondition.text = entry.conditionText;
+            detailCondition.text = isWeapon ? BuildWeaponSpecText(entry.itemId) : entry.conditionText;
             detailCondition.color = unlocked ? Color.white : MutedTextColor;
         }
 
         UpdateProgress(entry, unlocked);
+    }
+
+    /// <summary>무기 도감 상세 칸에 보여줄 스탯 요약. 소켓·로봇 공격력 분배 없는 <b>데이터 원본값</b>이다
+    /// (도감은 특정 로봇/장비를 전제하지 않으므로 ShopPanelUI의 "실제 적용값" 방식을 쓸 수 없다).</summary>
+    private string BuildWeaponSpecText(int weaponId)
+    {
+        if (GameDataManager.Instance == null ||
+            !GameDataManager.Instance.Weapons.TryGetValue(weaponId, out WeaponData weapon))
+            return "정보를 불러올 수 없습니다";
+
+        var lines = new List<string>();
+
+        if (partsCatalog != null && partsCatalog.TryGetWeaponMeta(weaponId, out PartsCatalog.WeaponMetaEntry meta))
+            lines.Add($"{meta.weaponClass.ToKorean()} · {meta.type.ToKorean()}");
+
+        lines.Add($"공격력 {weapon.weapon_atk:0.##}  공격속도 {weapon.weapon_atsp:0.##}/초");
+        lines.Add($"사거리 {weapon.weapon_range:0.##}  감지거리 {weapon.weapon_detect:0.##}");
+        lines.Add($"발사 방식 {FireModeName(weapon.weapon_firemode)}");
+
+        if (weapon.ProjectileCount > 1) lines.Add($"동시 발사 {weapon.ProjectileCount}발");
+        if (weapon.weapon_splash > 0f) lines.Add($"스플래시 반경 {weapon.weapon_splash:0.##}");
+        if (weapon.weapon_defignore > 0f) lines.Add($"방어력 무시 {weapon.weapon_defignore * 100f:0.##}%");
+
+        return string.Join("\n", lines);
+    }
+
+    private static string FireModeName(WeaponFireMode mode)
+    {
+        switch (mode)
+        {
+            case WeaponFireMode.Projectile: return "투사체";
+            case WeaponFireMode.Beam: return "지속 빔";
+            case WeaponFireMode.MeleeSwing: return "근접 휘두르기";
+            default: return mode.ToString();
+        }
     }
 
     private void UpdateProgress(UnlockEntry entry, bool unlocked)
@@ -345,6 +390,12 @@ public class CollectionPanelUI : MonoBehaviour
             case UnlockCategory.Accessory:
                 if (AccessoryCatalog.TryGet(entry.itemId, out AccessoryData accessory)) return accessory.accessoryName;
                 break;
+
+            case UnlockCategory.Weapon:
+                if (GameDataManager.Instance != null &&
+                    GameDataManager.Instance.Weapons.TryGetValue(entry.itemId, out WeaponData weapon))
+                    return weapon.weapon_name;
+                break;
         }
 
         return entry.fallbackName;
@@ -363,6 +414,16 @@ public class CollectionPanelUI : MonoBehaviour
 
             case UnlockCategory.Accessory:
                 return AccessoryCatalog.TryGet(entry.itemId, out AccessoryData accessory) ? accessory.LoadIcon() : null;
+
+            case UnlockCategory.Weapon:
+                // 무기는 전용 아이콘이 없어 손에 드는 이미지(weapon_rgwpimg)를 그대로 재사용한다
+                // (ShopPanelUI.ResolveWeaponIcon과 같은 관례 - PlayerShootManager가 무기 장착 시
+                // 쓰는 것과 같은 스프라이트라 별도 아트 없이도 무기를 알아볼 수 있다).
+                if (GameDataManager.Instance != null &&
+                    GameDataManager.Instance.Weapons.TryGetValue(entry.itemId, out WeaponData weapon) &&
+                    !string.IsNullOrWhiteSpace(weapon.weapon_rgwpimg))
+                    return Resources.Load<Sprite>(weapon.weapon_rgwpimg);
+                break;
         }
 
         return null;
@@ -390,6 +451,7 @@ public class CollectionPanelUI : MonoBehaviour
         {
             case UnlockCategory.Head: return "머리";
             case UnlockCategory.Disc: return "디스크";
+            case UnlockCategory.Weapon: return "무기";
             default: return "악세사리";
         }
     }

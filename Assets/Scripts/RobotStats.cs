@@ -3,9 +3,12 @@ using UnityEngine;
 /// <summary>최종 집계된 로봇 스탯. PlayerRobotController/PlayerShootManager는 이 결과만 읽는다.</summary>
 public struct AggregatedRobotStats
 {
-    public int MaxHp;
-    public int Atk;
-    public int Def;
+    // 2026-08-20 파츠 명세에 공격력 +0.3 / 방어력 +2.5 같은 소수 수치가 대량으로 들어오면서
+    // int였던 세 스탯을 float로 바꿨다. 예전에는 ApplyBonus가 보너스를 개별 반올림해서
+    // +0.3이 그대로 0으로 사라졌다(사용자 지적: "소수점 아래 숫자 있으면 그것도 표시").
+    public float MaxHp;
+    public float Atk;
+    public float Def;
     public float MoveSpeed;
     public float Avoid;
     public float Luck;
@@ -59,6 +62,11 @@ public static class RobotStats
         // 무게 패널티·하한 클램프보다는 앞이라 결과가 음수로 튀어도 아래에서 정리된다.
         HeadEffects.ApplyStatBonuses(ref result);
 
+        // 2026-08-20 파츠 특수효과(연극 마스크의 행운 파생 방어력, 방탄모의 방어력 %증가 등).
+        // HeadEffects <b>다음</b>이어야 한다 - 파생 효과는 최종 행운·공격력을 읽어야 하고,
+        // 방어력 %증가는 가산·파생이 모두 끝난 값에 곱해져야 한다.
+        PartEffects.ApplyStatBonuses(ref result);
+
         // 2026-08-12 "무기 소켓 개별화" 플랜 - 무게 지탱력(자기장 코어+다리) 초과는 더 이상
         // 장착 자체를 막지 않는 대신(ModdingManager의 하드 캡 제거), 초과분에 비례해 이동속도를
         // 깎는다. ModdingManager.Instance가 없으면(씬 배치 누락 등) 패널티 없이 통과시킨다.
@@ -70,9 +78,9 @@ public static class RobotStats
         }
 
         // 디스크의 하락 스탯 때문에 값이 0 밑으로 내려가 이동 불가/즉사 같은 상태가 되지 않도록 최소값을 둔다.
-        result.MaxHp = Mathf.Max(1, result.MaxHp);
-        result.Atk = Mathf.Max(0, result.Atk);
-        result.Def = Mathf.Max(0, result.Def);
+        result.MaxHp = Mathf.Max(1f, result.MaxHp);
+        result.Atk = Mathf.Max(0f, result.Atk);
+        result.Def = Mathf.Max(0f, result.Def);
         result.MoveSpeed = Mathf.Max(0.1f, result.MoveSpeed);
         result.Avoid = Mathf.Max(0f, result.Avoid);
         result.Luck = Mathf.Max(0f, result.Luck);
@@ -87,9 +95,11 @@ public static class RobotStats
     {
         switch (type)
         {
-            case StatType.MaxHp: stats.MaxHp += Mathf.RoundToInt(amount); break;
-            case StatType.Atk: stats.Atk += Mathf.RoundToInt(amount); break;
-            case StatType.Def: stats.Def += Mathf.RoundToInt(amount); break;
+            // 2026-08-20: RoundToInt를 없앴다 - 보너스를 개별 반올림하면 +0.3 같은 소수가
+            // 통째로 사라지고, 여러 개를 더해도 절대 소수가 되지 않는다.
+            case StatType.MaxHp: stats.MaxHp += amount; break;
+            case StatType.Atk: stats.Atk += amount; break;
+            case StatType.Def: stats.Def += amount; break;
             case StatType.MoveSpeed: stats.MoveSpeed += amount; break;
             case StatType.Avoid: stats.Avoid += amount; break;
             case StatType.Luck: stats.Luck += amount; break;

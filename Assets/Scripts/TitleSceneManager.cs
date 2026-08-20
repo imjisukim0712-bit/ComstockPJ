@@ -22,7 +22,13 @@ public class TitleSceneManager : MonoBehaviour
     [SerializeField] private Button startButton;
     [SerializeField] private Button quitButton;
 
-    [Tooltip("음악 볼륨 슬라이더를 붙일 캔버스. 비워두면 씬의 첫 번째 캔버스를 찾아 쓴다")]
+    [Tooltip("설정 버튼(씬에 배치된 실제 오브젝트). 2026-08-20 사용자 지적 - 예전에는 이 버튼을 " +
+             "코드로 만들어서(다른 버튼과 크기가 안 맞고 좌우로 길었다) 플레이 모드에서만 하이라키에 " +
+             "보였다. 이제 시작/종료 버튼과 같은 방식(씬에 배치 + 같은 크기)으로 만들어 여기 연결한다.")]
+    [SerializeField] private Button settingsButton;
+
+    [Tooltip("설정 패널(과 도감/랭킹 등 코드 생성 UI)을 붙일 캔버스. 비워두면 씬의 첫 번째 캔버스를 찾아 쓴다. " +
+             "필드 이름은 예전 볼륨 슬라이더 시절 그대로 남겨뒀다(씬에 이미 연결돼 있을 수 있어 이름을 바꾸면 참조가 끊긴다).")]
     [SerializeField] private RectTransform volumeSliderParent;
 
     [Header("머리 선택 화면")]
@@ -38,6 +44,8 @@ public class TitleSceneManager : MonoBehaviour
     private HeadSelectPanelUI headSelectPanel;
     private CollectionPanelUI collectionPanel;
     private Button collectionButton;
+    private RankingPanelUI rankingPanel;
+    private Button rankingButton;
 
     private void Awake()
     {
@@ -48,8 +56,9 @@ public class TitleSceneManager : MonoBehaviour
         // ModdingManager.Awake가 같은 일을 한다(타이틀 씬에는 ModdingManager가 없다).
         if (partsCatalog != null) HeadEffects.Bind(partsCatalog);
 
-        AttachVolumeSlider();
+        AttachSettingsButton();
         AttachCollectionButton();
+        AttachRankingButton();
     }
 
     /// <summary>
@@ -124,22 +133,95 @@ public class TitleSceneManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 음악 볼륨 설정을 타이틀 화면에 붙인다(2026-08-13). 컨트롤은 씬에 배치하지 않고
-    /// <see cref="MusicVolumeSliderUI"/>가 코드로 만든다 - 같은 컨트롤을 상점 화면에서도
-    /// 쓰기 때문에 씬을 두 번 편집하지 않으려는 것이다.
+    /// "설정" 버튼에 <see cref="SettingsPanelUI"/>를 연결한다(2026-08-20). 버튼 자체는 씬에
+    /// 시작/종료 버튼과 같은 크기·같은 방식으로 미리 배치돼 있다(<see cref="settingsButton"/>) -
+    /// 예전에는 이 버튼을 코드로 만들어서 다른 버튼과 크기가 안 맞고(좌우로 훨씬 길었다)
+    /// 플레이 모드에서만 하이라키에 나타났다(사용자 지적). 패널은 일시정지 메뉴와 같은
+    /// <see cref="SettingsPanelUI"/>를 그대로 열어 배경음/효과음 슬라이더·화면 조정을 한 곳에서
+    /// 다루게 한다(중복 구현 방지).
     /// </summary>
-    private void AttachVolumeSlider()
+    private void AttachSettingsButton()
     {
-        RectTransform parent = volumeSliderParent;
-        if (parent == null)
-        {
-            Canvas canvas = FindFirstObjectByType<Canvas>();
-            if (canvas != null) parent = canvas.transform as RectTransform;
-        }
+        if (settingsButton == null) return;
+
+        RectTransform parent = ResolveCanvasRect();
         if (parent == null) return;
 
-        // 종료 버튼 아래의 빈 공간. 머리 선택 화면을 열 때 함께 숨기려고 참조를 들고 있는다.
-        volumeSlider = MusicVolumeSliderUI.Attach(parent, new Vector2(0.36f, 0.05f), new Vector2(0.64f, 0.10f));
+        settingsPanel = SettingsPanelUI.Attach(parent);
+        settingsButton.onClick.AddListener(() => settingsPanel.Open());
+    }
+
+    /// <summary>
+    /// 타이틀 우하단에 "랭킹" 버튼을 붙인다(2026-08-20). 도감 버튼(우상단)과 같은 관례로
+    /// 씬을 건드리지 않고 코드로 만든다.
+    /// </summary>
+    private void AttachRankingButton()
+    {
+        RectTransform parent = ResolveCanvasRect();
+        if (parent == null) return;
+
+        var go = new GameObject("RankingButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+
+        var rect = (RectTransform)go.transform;
+        rect.anchorMin = new Vector2(0.80f, 0.02f);
+        rect.anchorMax = new Vector2(0.965f, 0.09f);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        var image = go.GetComponent<Image>();
+        image.color = Color.white;
+        Sprite art = Resources.Load<Sprite>("UI/Purple_ui02");
+        if (art != null)
+        {
+            image.sprite = art;
+            image.type = Image.Type.Sliced;
+        }
+        else
+        {
+            image.color = new Color(0.30f, 0.24f, 0.52f, 1f);
+        }
+
+        var labelGo = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TMPro.TextMeshProUGUI));
+        labelGo.transform.SetParent(rect, false);
+        var labelRect = (RectTransform)labelGo.transform;
+        labelRect.anchorMin = Vector2.zero;
+        labelRect.anchorMax = Vector2.one;
+        labelRect.offsetMin = Vector2.zero;
+        labelRect.offsetMax = Vector2.zero;
+
+        var label = labelGo.GetComponent<TMPro.TextMeshProUGUI>();
+        label.text = "랭킹";
+        label.alignment = TMPro.TextAlignmentOptions.Midline;
+        label.color = Color.white;
+        label.raycastTarget = false;
+        label.enableAutoSizing = true;
+        label.fontSizeMin = 8f;
+        label.fontSizeMax = 24f;
+
+        rankingButton = go.AddComponent<Button>();
+        rankingButton.onClick.AddListener(OnRankingClicked);
+    }
+
+    /// <summary>"랭킹" - 도감과 같은 방식으로 연다(닫으면 타이틀 UI가 다시 보인다).
+    /// 타이틀에는 "지금 플레이 중인 맵"이 없으므로, 다음에 플레이할 맵(<see cref="nextSceneName"/>
+    /// - 지금은 게임 시작 버튼과 같은 값)의 랭킹을 보여준다. 나중에 맵 선택 화면이 생기면 그
+    /// 화면이 nextSceneName을 갱신해줄 것이므로 여기는 고칠 필요가 없다(2026-08-20).</summary>
+    private void OnRankingClicked()
+    {
+        RectTransform parent = ResolveCanvasRect();
+        if (parent == null) return;
+
+        if (rankingPanel != null) return; // 연타 방어(닫을 때 파괴된다)
+
+        SetTitleUiVisible(false);
+        rankingPanel = RankingPanelUI.Attach(parent, nextSceneName, OnRankingClosed);
+    }
+
+    private void OnRankingClosed()
+    {
+        rankingPanel = null;
+        SetTitleUiVisible(true);
     }
 
     /// <summary>
@@ -187,8 +269,9 @@ public class TitleSceneManager : MonoBehaviour
         if (startButton != null) startButton.gameObject.SetActive(visible);
         if (quitButton != null) quitButton.gameObject.SetActive(visible);
 
-        if (volumeSlider != null) volumeSlider.gameObject.SetActive(visible);
+        if (settingsButton != null) settingsButton.gameObject.SetActive(visible);
         if (collectionButton != null) collectionButton.gameObject.SetActive(visible);
+        if (rankingButton != null) rankingButton.gameObject.SetActive(visible);
 
         // 제목 텍스트와 그 뒤 판때기는 인스펙터에 연결돼 있지 않아 이름으로 찾는다.
         // 못 찾아도(이름이 바뀌었어도) 조용히 넘어간다 - 암막이 있어 치명적이지 않다.
@@ -202,9 +285,11 @@ public class TitleSceneManager : MonoBehaviour
         }
     }
 
-    private static readonly string[] TitleOnlyObjectNames = { "TitleText", "TitleText_BG" };
+    // 2026-08-20: 사용자가 제공한 로고 이미지("TitleLogo")로 기존 텍스트 제목(TitleText/TitleText_BG)을
+    // 대체했다 - 텍스트 오브젝트는 지우지 않고 비활성化해뒀다(되돌리려면 다시 켜고 TitleLogo를 지우면 됨).
+    private static readonly string[] TitleOnlyObjectNames = { "TitleText", "TitleText_BG", "TitleLogo" };
 
-    private MusicVolumeSliderUI volumeSlider;
+    private SettingsPanelUI settingsPanel;
 
     /// <summary>머리를 확정하고 플레이 씬으로 넘어간다.</summary>
     private void OnHeadConfirmed(int robotId)

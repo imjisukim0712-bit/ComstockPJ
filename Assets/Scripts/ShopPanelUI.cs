@@ -610,7 +610,7 @@ public class ShopPanelUI : MonoBehaviour
         RectTransform coin = MakeChild(priceBox, "Coin", 0.03f, 0.14f, 0.20f, 0.86f,
                                         typeof(CanvasRenderer), typeof(Image));
         decor.priceCoin = coin.GetComponent<Image>();
-        decor.priceCoin.sprite = Resources.Load<Sprite>("UI/Gold_icon00"); // 헤더 골드와 같은 코인
+        decor.priceCoin.sprite = Resources.Load<Sprite>("Gold"); // 헤더 골드 = 인게임 드랍 금화와 같은 코인
         decor.priceCoin.preserveAspect = true;
         decor.priceCoin.raycastTarget = false;
         decor.priceCoin.enabled = decor.priceCoin.sprite != null;
@@ -866,7 +866,7 @@ public class ShopPanelUI : MonoBehaviour
             ItemGrade grade = has ? socketPart.grade : ItemGrade.Normal;
 
             ItemCellUI.CreateIconCell(partsGrid, $"Cell_SocketPart_{i}",
-                                      PartIconLibrary.Get(PartSlot.ArmWeaponSocket),
+                                      has ? PartIconLibrary.Get(socketPart) : PartIconLibrary.Get(PartSlot.ArmWeaponSocket),
                                       grade.ToCellColor(CellPlainColor), $"소켓 {i + 1}", has,
                                       () => ShowDetail($"ws:{index}"));
         }
@@ -878,7 +878,8 @@ public class ShopPanelUI : MonoBehaviour
             bool has = modding != null && modding.TryGetEquippedPart(slot, out part);
             ItemGrade grade = has ? part.grade : ItemGrade.Normal;
 
-            ItemCellUI.CreateIconCell(partsGrid, $"Cell_Part_{slot}", PartIconLibrary.Get(slot),
+            ItemCellUI.CreateIconCell(partsGrid, $"Cell_Part_{slot}",
+                                      has ? PartIconLibrary.Get(part) : PartIconLibrary.Get(slot),
                                       grade.ToCellColor(CellPlainColor), slot.ToKorean(), has,
                                       () => ShowDetail($"p:{captured}"));
         }
@@ -1033,9 +1034,9 @@ public class ShopPanelUI : MonoBehaviour
 
         statsText.text =
             "[현재 능력치]\n" +
-            $"체력 {player.CurrentHp}/{player.MaxHp}\n" +
-            $"공격력 {player.Atk}\n" +
-            $"방어력 {player.Def}\n" +
+            $"체력 {player.CurrentHp:0.##}/{player.MaxHp:0.##}\n" +
+            $"공격력 {player.Atk:0.##}\n" +
+            $"방어력 {player.Def:0.##}\n" +
             $"치명타 확률 {player.Cc:0.##}%\n" +
             $"치명타 피해 {player.Cd:0.##}\n" +
             $"이동속도 {player.MoveSpeed:0.##}\n" +
@@ -1177,11 +1178,16 @@ public class ShopPanelUI : MonoBehaviour
         var lines = new List<string>
         {
             $"부위: 무기 소켓 {socketIndex + 1}",
-            $"장착 가능 무기: {(part.restrictsWeaponClass ? part.allowedWeaponClass.ToKorean() : "전체")}",
-            $"사거리 x{part.RangeMultiplier:0.##}",
-            $"감지거리 x{part.DetectRangeMultiplier:0.##}",
-            $"조준 회전속도 x{part.RotationSpeedMultiplier:0.##}"
+            $"장착 가능 카테고리: {(part.restrictsWeaponType ? part.allowedWeaponType.ToKorean() : "전체(범용)")}"
         };
+
+        // 2026-08-20 소켓 명세 - 등급 효과가 사거리/감지/회전 배율에서 아래 5종으로 바뀌었다.
+        if (part.socketAttackSpeedPercent != 0f) lines.Add($"공격 속도 +{part.socketAttackSpeedPercent:0.##}%");
+        if (part.socketDamageFlat != 0f) lines.Add($"공격력 +{part.socketDamageFlat:0.##}");
+        if (part.socketDamagePercent != 0f) lines.Add($"공격력 +{part.socketDamagePercent:0.##}%");
+        if (part.socketCritChancePercent != 0f) lines.Add($"치명타 확률 +{part.socketCritChancePercent:0.##}%");
+        if (part.socketSplashPercent != 0f) lines.Add($"스플래시 범위 +{part.socketSplashPercent:0.##}%");
+        if (part.socketDefIgnorePercent != 0f) lines.Add($"방어력 무시 +{part.socketDefIgnorePercent:0.##}%p");
 
         if (part.weight != 0f) lines.Add($"무게 {part.weight:0.##}");
 
@@ -1190,8 +1196,8 @@ public class ShopPanelUI : MonoBehaviour
         if (shootManager != null && shootManager.TryGetSocketInfo(socketIndex, out WeaponData weapon, out _))
         {
             lines.Add(modding.IsWeaponMismatched(socketIndex, weapon.weapon_id)
-                ? $"<color=#F2BF26>현재 장착 '{weapon.weapon_name}' - 타입 불일치 (무게 x{modding.MismatchWeightMultiplier:0.##})</color>"
-                : $"현재 장착 '{weapon.weapon_name}' - 타입 일치");
+                ? $"<color=#F2BF26>현재 장착 '{weapon.weapon_name}' - 카테고리 불일치 (무게 x{modding.MismatchWeightMultiplier:0.##}, 소켓 보정 없음)</color>"
+                : $"현재 장착 '{weapon.weapon_name}' - 카테고리 일치");
         }
 
         detail_popup.Show(
@@ -1205,13 +1211,14 @@ public class ShopPanelUI : MonoBehaviour
         ModdingManager modding = FindFirstObjectByType<ModdingManager>();
         if (modding == null || !modding.TryGetEquippedPart(slot, out PartData part)) return;
 
-        var lines = new List<string> { $"부위: {slot.ToKorean()}" };
-
-        if (part.bonusAmount != 0f) lines.Add($"{StatTypeNames.ToKorean(part.bonusStat)} +{part.bonusAmount:0.##}");
-        if (part.weightCapacity != 0f) lines.Add($"무게 지탱 +{part.weightCapacity:0.##}");
-        if (part.weight != 0f) lines.Add($"무게 {part.weight:0.##}");
-        if (slot == PartSlot.DiscSlot) lines.Add($"디스크 슬롯 {part.discSlotCount}칸");
-        if (lines.Count == 1) lines.Add("(보너스 없음)");
+        // 2026-08-20 파츠가 효과를 2개 이상 갖게 되면서 항목을 여기서 하나하나 나열하는 방식을
+        // 버렸다 - PartData.BuildDescription()이 데이터에서 매번 생성하므로 화면과 실제 값이
+        // 어긋날 수 없다(정비 화면도 같은 함수를 쓴다).
+        var lines = new List<string>
+        {
+            $"부위: {slot.ToKorean()}",
+            part.BuildDescription()
+        };
 
         // 무게는 개별 파츠만 봐서는 감이 안 오므로 로봇 전체 합계를 함께 보여준다.
         float total = modding.GetTotalWeight();
@@ -1226,7 +1233,7 @@ public class ShopPanelUI : MonoBehaviour
         detail_popup.Show(
             $"<color={part.grade.ToColorHex()}>{part.grade.ToKorean()}</color> {part.partName}",
             string.Join("\n", lines),
-            null);
+            PartIconLibrary.Get(part));
     }
 
     private void ShowDiscDetail(int discId)
@@ -1256,9 +1263,9 @@ public class ShopPanelUI : MonoBehaviour
             if (disc.maxUses > 0) numbers.Add($"최대 {disc.maxUses}회");
             if (numbers.Count > 0) lines.Add(string.Join(" · ", numbers));
 
-            AppendDiscStat(lines, disc.statA, disc.amountA);
-            AppendDiscStat(lines, disc.statB, disc.amountB);
-            AppendDiscStat(lines, disc.statC, disc.amountC);
+            AppendDiscStat(lines, disc, disc.statA, disc.amountA, isStackStat: true);
+            AppendDiscStat(lines, disc, disc.statB, disc.amountB);
+            AppendDiscStat(lines, disc, disc.statC, disc.amountC);
 
             detail_popup.Show(
                 $"<color={disc.grade.ToColorHex()}>{disc.grade.ToKorean()}</color> {disc.discName}",
@@ -1268,9 +1275,36 @@ public class ShopPanelUI : MonoBehaviour
         }
     }
 
-    private static void AppendDiscStat(List<string> lines, StatType stat, float amount)
+    /// <summary>
+    /// 디스크 상세 팝업 아래에 붙는 스탯 한 줄.
+    ///
+    /// <b>누적형(OnKillStackStat) 디스크는 "지금까지 누적된 총량"을 앞세운다</b>(2026-08-20 사용자 지적).
+    /// 예전에는 데이터의 <c>amountA</c>를 그대로 찍어서, 처치당 증가량인 <c>공격력 +0.05</c>만 보이고
+    /// "실제로 총 얼마나 올랐는지"는 어디에도 없었다 - 사용자가 "저 숫자는 왜 있는지 모르겠다"고 한 것이
+    /// 이것이다. 누적치는 <see cref="RunState.DiscStackProgress"/>가 이미 들고 있으므로 그것을 읽는다.
+    /// </summary>
+    private static void AppendDiscStat(List<string> lines, DiscData disc, StatType stat, float amount,
+                                       bool isStackStat = false)
     {
         if (amount == 0f) return;
+
+        if (isStackStat && disc.effectType == DiscEffectType.OnKillStackStat)
+        {
+            RunState.DiscStackProgress.TryGetValue(disc.discId, out float progress);
+
+            int copies = 0;
+            foreach (int id in RunState.EquippedDiscIds)
+            {
+                if (id == disc.discId) copies++;
+            }
+
+            // 장 수만큼 상한도 함께 늘어난다(DiscData.BuildDescription/ApplyKillStack과 같은 규칙).
+            float totalCap = disc.cap * Mathf.Max(1, copies);
+
+            lines.Add($"<color=#88FF88>{StatTypeNames.ToKorean(stat)} +{progress:0.##}</color>" +
+                      $"<size=80%><color=#9AA3AB> (처치당 +{amount:0.###} · 최대 +{totalCap:0.##})</color></size>");
+            return;
+        }
 
         string sign = amount > 0f ? "+" : string.Empty;
         string color = amount > 0f ? "#88FF88" : "#FF8080";

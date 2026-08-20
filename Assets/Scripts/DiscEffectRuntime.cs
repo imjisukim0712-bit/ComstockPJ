@@ -113,7 +113,7 @@ public class DiscEffectRuntime : MonoBehaviour
                     break;
 
                 case DiscEffectType.OnKillHeal:
-                    player.Heal(Mathf.RoundToInt(disc.flatValue * copies));
+                    player.Heal(disc.flatValue * copies); // 2026-08-20 스탯 소수화: 반올림 제거
                     break;
 
                 case DiscEffectType.OnKillStackStat:
@@ -136,7 +136,7 @@ public class DiscEffectRuntime : MonoBehaviour
             if (d < best_dist) { best_dist = d; best = e; }
         }
 
-        if (best != null) best.TakeDamage(Mathf.RoundToInt(damage));
+        if (best != null) best.TakeDamage(damage); // 2026-08-20 스탯 소수화: 반올림 제거
     }
 
     /// <summary>처치마다 stat이 cap까지 누적되는 효과(교향곡:화염/바람 소리/금속음/교향곡:암석).</summary>
@@ -185,7 +185,7 @@ public class DiscEffectRuntime : MonoBehaviour
 
                 if (Time.time >= next)
                 {
-                    player.Heal(Mathf.RoundToInt(disc.flatValue * copies));
+                    player.Heal(disc.flatValue * copies); // 2026-08-20 스탯 소수화: 반올림 제거
                     periodic_next_time[discId] = Time.time + disc.interval;
                 }
             }
@@ -277,7 +277,7 @@ public class DiscEffectRuntime : MonoBehaviour
                 shield_total += disc.flatValue;
         }
 
-        player.SetShieldMaxHp(Mathf.RoundToInt(shield_total));
+        player.SetShieldMaxHp(shield_total); // 2026-08-20 스탯 소수화: 반올림 제거
         player.RefillShield();
     }
 

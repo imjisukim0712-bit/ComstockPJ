@@ -97,7 +97,7 @@ public class ChargerUnit : EnemyUnit
         if (hit_player == null) hit_player = other.GetComponentInParent<PlayerRobotController>();
         if (hit_player == null) return;
 
-        hit_player.TakeDamage(Atk, transform.position);
+        MeleeAttackPlayer(hit_player); // 돌진도 접촉 근접이라 가시 플레이트 반사 대상이다
 
         float cooldown = AtSp > 0f ? 1f / AtSp : 1f;
         next_ram_time = Time.time + cooldown;

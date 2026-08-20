@@ -41,11 +41,12 @@ public static class MeleeSwing
     /// 중복을 막는다(1프레임 즉발 판정용 기존 동작).
     /// </param>
     /// <returns>실제로 맞은 적의 수 (검증/로그용)</returns>
-    public static int Execute(Vector3 origin, Vector3 direction, float radius, int damage,
+    public static int Execute(Vector3 origin, Vector3 direction, float radius, float damage,
                               float def_ignore_percent, float knockback_strength,
                               float half_angle_degrees = DefaultHalfAngleDegrees,
                               HashSet<EnemyUnit> already_hit = null,
-                              int source_weapon_id = 0)
+                              int source_weapon_id = 0,
+                              bool isCrit = false)
     {
         if (radius <= 0f) return 0;
 
@@ -70,14 +71,14 @@ public static class MeleeSwing
             if (to_enemy.sqrMagnitude <= 0.0001f)
             {
                 // 완전히 겹쳐 있으면 방향을 잴 수 없으므로 무조건 맞은 것으로 본다
-                ApplyHit(enemy, direction, damage, def_ignore_percent, knockback_strength, source_weapon_id);
+                ApplyHit(enemy, direction, damage, def_ignore_percent, knockback_strength, source_weapon_id, isCrit);
                 hit_count++;
                 continue;
             }
 
             if (Vector3.Angle(direction, to_enemy) > half_angle_degrees) continue; // 부채꼴 밖
 
-            ApplyHit(enemy, to_enemy, damage, def_ignore_percent, knockback_strength, source_weapon_id);
+            ApplyHit(enemy, to_enemy, damage, def_ignore_percent, knockback_strength, source_weapon_id, isCrit);
             hit_count++;
         }
 
@@ -86,10 +87,11 @@ public static class MeleeSwing
         return hit_count;
     }
 
-    private static void ApplyHit(EnemyUnit enemy, Vector3 push_direction, int damage,
-                                 float def_ignore_percent, float knockback_strength, int source_weapon_id = 0)
+    private static void ApplyHit(EnemyUnit enemy, Vector3 push_direction, float damage,
+                                 float def_ignore_percent, float knockback_strength, int source_weapon_id = 0,
+                                 bool isCrit = false)
     {
-        enemy.TakeDamage(damage, def_ignore_percent, source_weapon_id);
+        enemy.TakeDamage(damage, def_ignore_percent, source_weapon_id, isCrit);
         if (knockback_strength > 0f) enemy.ApplyKnockback(push_direction, knockback_strength);
     }
 }

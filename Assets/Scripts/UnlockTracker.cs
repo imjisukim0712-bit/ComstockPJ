@@ -77,7 +77,7 @@ public static class UnlockTracker
     }
 
     /// <summary>플레이어가 실제로 피해를 입었을 때(회피·무적으로 무효화된 경우는 제외).</summary>
-    public static void ReportPlayerDamaged(int currentHp)
+    public static void ReportPlayerDamaged(float currentHp)
     {
         damagedThisWave = true;
         UnlockState.AddProgress(UnlockProgressKey.HitsTaken);
@@ -103,10 +103,11 @@ public static class UnlockTracker
     // ── 성장 ──────────────────────────────────────────────────────────────────────
 
     /// <summary>스탯이 다시 계산될 때마다 도달한 최고치를 기록한다(가드맨/메테우스/해피 픽셀).</summary>
-    public static void ReportStats(int defense, int attack, float luck)
+    public static void ReportStats(float defense, float attack, float luck)
     {
-        UnlockState.ReportMax(UnlockProgressKey.MaxDefense, defense);
-        UnlockState.ReportMax(UnlockProgressKey.MaxAttack, attack);
+        // 해금 조건은 정수 기준이라 소수 스탯은 내림해서 기록한다(2026-08-20 스탯 소수화).
+        UnlockState.ReportMax(UnlockProgressKey.MaxDefense, Mathf.FloorToInt(defense));
+        UnlockState.ReportMax(UnlockProgressKey.MaxAttack, Mathf.FloorToInt(attack));
         UnlockState.ReportMax(UnlockProgressKey.MaxLuck, Mathf.FloorToInt(luck));
     }
 

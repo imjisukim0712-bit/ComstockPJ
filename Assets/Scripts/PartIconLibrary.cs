@@ -4,9 +4,11 @@ using UnityEngine;
 /// <summary>
 /// 로봇 파츠 슬롯별 아이콘을 돌려준다.
 ///
-/// <b>진짜 아이콘으로 교체하는 법</b>: `Assets/Resources/PartIcons/` 폴더를 만들고 슬롯 이름
-/// 그대로 PNG를 넣으면 된다 — 코드는 건드릴 필요가 없다.
-///   ArmWeaponSocket / ArmArmor / MagneticCore / Leg / LegArmor / Foot / Helmet / DiscSlot
+/// <b>아이콘 우선순위</b>(2026-08-20 파츠 25종 아트 적용으로 파츠별 아이콘이 생겼다):
+///   1) 파츠별 아이콘 — `Assets/Resources/PartIcons/{PartData.iconName}`
+///   2) 슬롯 공용 아이콘 — `Assets/Resources/PartIcons/{PartSlot}`
+///      (ArmWeaponSocket / ArmArmor / MagneticCore / Leg / LegArmor / Foot / Helmet / DiscSlot / Memory)
+///   3) 코드로 그린 임시 실루엣
 /// (텍스처 임포트 설정은 Sprite(2D and UI)여야 한다.)
 ///
 /// 파일이 없으면 아래에서 <b>코드로 그린 임시 아이콘</b>을 대신 쓴다(2026-08-18, 사용자가
@@ -19,6 +21,29 @@ public static class PartIconLibrary
     private const int IconSize = 64;
 
     private static readonly Dictionary<PartSlot, Sprite> cache = new Dictionary<PartSlot, Sprite>();
+    private static readonly Dictionary<string, Sprite> icon_cache = new Dictionary<string, Sprite>();
+
+    /// <summary>
+    /// 이 파츠의 아이콘. 파츠별 아이콘(iconName)이 있으면 그것을, 없으면 슬롯 공용 아이콘 →
+    /// 임시 실루엣 순으로 폴백한다. 같은 슬롯이라도 종류마다 그림이 달라야 하므로
+    /// <b>파츠를 아는 화면은 이 오버로드를 쓴다</b>(슬롯만 아는 빈 칸 표시는 아래 것을 쓴다).
+    /// </summary>
+    public static Sprite Get(PartData part)
+    {
+        if (!string.IsNullOrEmpty(part.iconName))
+        {
+            if (icon_cache.TryGetValue(part.iconName, out Sprite cached_icon) && cached_icon != null) return cached_icon;
+
+            Sprite loaded = Resources.Load<Sprite>(ResourceFolder + part.iconName);
+            if (loaded != null)
+            {
+                icon_cache[part.iconName] = loaded;
+                return loaded;
+            }
+        }
+
+        return Get(part.slot);
+    }
 
     /// <summary>슬롯에 해당하는 아이콘. 실제 에셋이 있으면 그것을, 없으면 임시 아이콘을 돌려준다.</summary>
     public static Sprite Get(PartSlot slot)
@@ -33,7 +58,11 @@ public static class PartIconLibrary
     }
 
     /// <summary>에셋을 새로 넣은 뒤 캐시를 비우고 싶을 때 사용.</summary>
-    public static void ClearCache() => cache.Clear();
+    public static void ClearCache()
+    {
+        cache.Clear();
+        icon_cache.Clear();
+    }
 
     // ------------------------------------------------------------------
     // 임시 아이콘 생성 (슬롯마다 구분되는 단순 도형)

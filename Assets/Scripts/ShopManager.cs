@@ -319,6 +319,10 @@ public class ShopManager : MonoBehaviour
             // 착용 디스크 총 개수(이번에 추가된 것 포함)에 비례하므로, 매 장착마다 다시 계산한다.
             RecomputeCritChancePerDisc(disc);
         }
+
+        // 2026-08-20 디스크 슬롯 파츠(확장 프레임/코어 연결망/허브 접속기/교향곡 모음집)의
+        // "장착한 디스크 1개당" 보너스는 디스크 수가 바뀔 때마다 값이 달라지므로 여기서 다시 계산한다.
+        if (ModdingManager.Instance != null) ModdingManager.Instance.RecomputePartBonuses();
     }
 
     /// <summary>

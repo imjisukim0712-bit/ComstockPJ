@@ -252,11 +252,19 @@ public class GameFlowManager : MonoBehaviour
 
     private void HandleEndlessDeclineChosen()
     {
-        RunScore.SubmitToLeaderboard();
+        // 2026-08-20 사용자 요청 - 제출 직전에 닉네임 입력만 한 번 받는다(로봇 이름으로 미리
+        // 채워져 있어 그냥 확인만 눌러도 예전과 동일하게 동작한다).
+        Canvas canvas = FindFirstObjectByType<Canvas>();
+        RectTransform parent = canvas != null ? (RectTransform)canvas.transform : null;
 
-        Time.timeScale = 1f;
-        GameFlowManager.SetPaused(false);
-        UnityEngine.SceneManagement.SceneManager.LoadScene("Title");
+        NicknameInputPopup.Attach(parent, RunScore.ResolveDefaultPlayerName(), name =>
+        {
+            RunScore.SubmitToLeaderboard(name);
+
+            Time.timeScale = 1f;
+            GameFlowManager.SetPaused(false);
+            UnityEngine.SceneManagement.SceneManager.LoadScene("Title");
+        });
     }
 
     private void EnterIntermissionScreens()

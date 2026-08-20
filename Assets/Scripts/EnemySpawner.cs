@@ -451,9 +451,10 @@ public class EnemySpawner : MonoBehaviour
         // 웨이브가 지날수록 체력과 공격력을 조금씩 올린다(2026-08-13 사용자 지정 5%/웨이브).
         // MonsterData는 struct라 여기서 값을 바꿔도 GameDataManager의 원본 데이터는 그대로다
         // (class였다면 딕셔너리 안의 원본이 영구히 오염돼 웨이브마다 값이 누적 상승한다).
+        // 2026-08-20 스탯 소수화: 예전에는 여기서 int 필드를 반올림해 곱했는데, 작은 증가율
+        // (2.5%/웨이브)이 반올림에 먹혀 사라지는 구간이 있었다. 이제 Init 뒤에 유닛의 float
+        // 스탯에 그대로 곱한다(EnemyUnit.ApplyWaveStatMultiplier).
         float statMultiplier = CurrentStatMultiplier;
-        data.monster_hp = Mathf.Max(1, Mathf.RoundToInt(data.monster_hp * statMultiplier));
-        data.monster_atk = Mathf.Max(1, Mathf.RoundToInt(data.monster_atk * statMultiplier));
 
         GameObject obj = Instantiate(prefab, position, Quaternion.identity);
 
@@ -462,6 +463,7 @@ public class EnemySpawner : MonoBehaviour
         if (unit == null) unit = (EnemyUnit)obj.AddComponent(componentType);
 
         unit.Init(data);
+        unit.ApplyWaveStatMultiplier(statMultiplier);
         return unit;
     }
 }

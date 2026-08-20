@@ -18,7 +18,8 @@ using UnityEngine;
 ///                       (2026-08-13 - 판정은 찌르는 칼 그림의 실제 범위로 한다. 근접의 range/detect는
 ///                        "이 거리에 적이 오면 찌르기를 시작한다"는 감지 거리 의미만 남았다)
 /// - weapon_detect     : 적을 감지해 발사를 시작하는 거리. 사거리와 <b>별개 필드</b>이며 사거리로 잘린다
-///                       (둘 다 무기 소켓 파츠 등급의 배율이 곱해진다 - ModdingManager.GetWeaponSocketModifiers)
+///                       (2026-08-20부터 소켓 파츠는 사거리가 아니라 공격속도·공격력·치명타·
+///                       스플래시·방어력무시를 보정한다 - ModdingManager.GetWeaponSocketModifiers)
 /// - weapon_speed      : 투사체 이동 속도
 /// - weapon_rotspeed   : 조준 방향으로 돌아가는 속도(도/초)
 /// - weapon_atsize     : 투사체 크기(스케일). 빔에서는 빔의 반폭
@@ -131,7 +132,8 @@ public class PlayerShootManager : MonoBehaviour
         public float melee_thrust_distance;
 
         // 찌르는 동안 매 프레임 같은 값으로 판정하기 위해 발사 시점의 데미지 계산 결과를 들고 있는다.
-        public int melee_damage;
+        public float melee_damage;
+        public bool melee_is_crit;    // 2026-08-20 데미지 숫자 팝업 색/아이콘용
         public int melee_weapon_id;   // 해금 진행도용(어떤 무기로 죽였는지, 2026-08-19 Phase E)
         public float melee_def_ignore;
         public float melee_knockback;
@@ -618,14 +620,19 @@ public class PlayerShootManager : MonoBehaviour
         return null;
     }
 
-    /// <summary>소켓별로 독립된 무기 소켓 파츠(등급)가 주는 사거리/감지거리/회전속도 배율.
-    /// 2026-08-12 "무기 소켓 개별화" 전에는 소켓 파츠가 모든 소켓에 공통 적용돼 프레임당
-    /// 한 번만 읽어도 됐지만, 이제 소켓마다 다른 파츠를 낄 수 있어 소켓 인덱스별로 조회한다.</summary>
-    private ModdingManager.SocketModifiers GetSocketModifiers(int slot_index)
+    /// <summary>
+    /// 이 소켓에 낀 무기 소켓 파츠가 <b>그 소켓의 무기</b>에 주는 보정
+    /// (공격속도·공격력·치명타·스플래시·방어력무시). 2026-08-20 소켓 명세 반영으로
+    /// 반환 내용이 사거리/감지/회전 배율에서 통째로 바뀌었다.
+    ///
+    /// 카테고리가 안 맞는 무기를 끼우면 보정이 0이다(장착 자체는 막지 않고 무게만 늘어난다) -
+    /// 판정은 ModdingManager가 한다. 소켓마다 다른 파츠를 낄 수 있어 소켓 인덱스별로 조회한다.
+    /// </summary>
+    private ModdingManager.SocketModifiers GetSocketModifiers(int slot_index, WeaponData weapon)
     {
         return ModdingManager.Instance != null
-            ? ModdingManager.Instance.GetWeaponSocketModifiers(slot_index)
-            : ModdingManager.SocketModifiers.Identity;
+            ? ModdingManager.Instance.GetWeaponSocketModifiers(slot_index, weapon.weapon_id)
+            : ModdingManager.SocketModifiers.None;
     }
 
     private void Update()
@@ -805,15 +812,17 @@ public class PlayerShootManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 탄이 실제로 날아가는 최대 거리 = 무기 사거리 x 이 소켓의 사거리 배율 x AI 코어 사거리 증폭
-    /// x 머리 효과 배율, 마지막으로 머리 효과의 사거리 상한으로 자른다.
+    /// 탄이 실제로 날아가는 최대 거리 = 무기 사거리 x AI 코어 사거리 증폭 x 머리 효과 배율,
+    /// 마지막으로 머리 효과의 사거리 상한으로 자른다.
+    /// (2026-08-20 소켓 명세 교체로 <b>소켓의 사거리 배율은 폐기</b>됐다 - 소켓은 이제
+    /// 공격속도·공격력·치명타·스플래시·방어력무시만 보정한다.)
     ///
     /// 머리 효과는 픽시 하나뿐이다 - 모든 소켓이 근접이면 배율 x2, 원거리가 하나라도 섞이면
     /// 그 원거리 무기만 근접급 상한으로 잘린다.
     /// </summary>
     private float GetTravelRange(WeaponData weapon, int slot_index)
     {
-        float range = weapon.TravelRange * GetSocketModifiers(slot_index).Range * GetWeaponRangeBonusMultiplier()
+        float range = weapon.TravelRange * GetWeaponRangeBonusMultiplier()
                       * HeadEffects.RangeMultiplier(weapon);
 
         if (HeadEffects.TryGetRangeCap(weapon, out float cap)) range = Mathf.Min(range, cap);
@@ -821,14 +830,14 @@ public class PlayerShootManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 적을 감지해 발사를 시작하는 거리 = 무기 감지거리(weapon_detect) x 이 소켓의 감지거리 배율
-    /// x AI 코어 사거리 증폭. 두 가지로 한 번 더 잘린다:
+    /// 적을 감지해 발사를 시작하는 거리 = 무기 감지거리(weapon_detect) x AI 코어 사거리 증폭.
+    /// (소켓의 감지거리 배율은 2026-08-20에 폐기됐다.) 두 가지로 한 번 더 잘린다:
     /// 1) 사거리 - 감지한 적에게 탄이 닿아야 의미가 있다
     /// 2) max_detect_range - 화면 밖의 보이지 않는 적과 교전하지 않도록 하는 상한
     /// </summary>
     private float GetDetectRange(WeaponData weapon, int slot_index)
     {
-        float detect = weapon.DetectRange * GetSocketModifiers(slot_index).DetectRange * GetWeaponRangeBonusMultiplier()
+        float detect = weapon.DetectRange * GetWeaponRangeBonusMultiplier()
                        * HeadEffects.RangeMultiplier(weapon);
         detect = Mathf.Min(detect, GetTravelRange(weapon, slot_index));
 
@@ -837,7 +846,8 @@ public class PlayerShootManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 무기 피벗을 목표 각도 쪽으로 무기의 회전 속도(x 이 소켓의 회전속도 배율)만큼만 돌리고,
+    /// 무기 피벗을 목표 각도 쪽으로 무기의 회전 속도만큼만 돌리고,
+    /// (소켓의 회전속도 배율은 2026-08-20에 폐기됐다.)
     /// 이번 프레임에 실제로 적용된 각도를 돌려준다.
     /// 무기 데이터에 회전 속도가 없으면 슬롯 값으로 폴백하고, 그것도 0 이하면 즉시 스냅한다.
     /// </summary>
@@ -856,8 +866,7 @@ public class PlayerShootManager : MonoBehaviour
         else
         {
             float current_angle = pivot.eulerAngles.z;
-            float speed = base_speed * GetSocketModifiers(slot_index).RotationSpeed;
-            applied_angle = Mathf.MoveTowardsAngle(current_angle, target_angle, speed * Time.deltaTime);
+            applied_angle = Mathf.MoveTowardsAngle(current_angle, target_angle, base_speed * Time.deltaTime);
         }
 
         pivot.rotation = Quaternion.Euler(0f, 0f, applied_angle);
@@ -943,7 +952,7 @@ public class PlayerShootManager : MonoBehaviour
 
         // 최종 데미지 = weapon_atk + (robot_atk를 투사체 수로 나눈 값), 그리고 robot_cc/cd(치명타) 적용.
         // 여러 발이 나가는 무기는 발사 1회에 한 번만 치명타를 굴려 모든 탄에 동일하게 적용한다.
-        int damage = ComputeDamage(weapon);
+        float damage = ComputeDamage(weapon, slot_index, out bool is_crit);
 
         // 발사 동작이 지속되는 시간. 빔만 0보다 크고 나머지는 즉발이다.
         float attack_duration = 0f;
@@ -951,7 +960,7 @@ public class PlayerShootManager : MonoBehaviour
         switch (weapon.weapon_firemode)
         {
             case WeaponFireMode.Beam:
-                FireBeam(weapon, fire_origin, aim_direction, damage, slot_index);
+                FireBeam(weapon, fire_origin, aim_direction, damage, slot_index, is_crit);
                 attack_duration = Mathf.Max(0f, weapon.weapon_duration);
                 break;
 
@@ -962,7 +971,7 @@ public class PlayerShootManager : MonoBehaviour
                 // 이제는 찌르는 동작 자체가 판정이다 - StartMeleeThrustVisual이 판정 파라미터를
                 // 저장하고, UpdateMeleeThrustVisual이 칼이 나가는 프레임마다 칼 그림 범위를 판정한다.
                 attack_duration = Mathf.Max(0f, weapon.weapon_duration);
-                StartMeleeThrustVisual(slot_index, slot, weapon, aim_direction, damage);
+                StartMeleeThrustVisual(slot_index, slot, weapon, aim_direction, damage, is_crit);
                 break;
 
             default:
@@ -970,7 +979,7 @@ public class PlayerShootManager : MonoBehaviour
                 GameObject projectile_prefab = ResolveProjectilePrefab(weapon, slot);
                 if (projectile_prefab == null) return;
 
-                FireProjectiles(projectile_prefab, slot, weapon, fire_origin, aim_direction, target_distance, damage, slot_index);
+                FireProjectiles(projectile_prefab, slot, weapon, fire_origin, aim_direction, target_distance, damage, slot_index, is_crit);
                 break;
         }
 
@@ -980,14 +989,16 @@ public class PlayerShootManager : MonoBehaviour
         int extra_bursts = HeadEffects.ExtraBursts(weapon);
         if (extra_bursts > 0 && weapon.weapon_firemode == WeaponFireMode.Projectile)
         {
-            StartCoroutine(FireExtraBursts(extra_bursts, slot, weapon, target, damage, aim_direction));
+            StartCoroutine(FireExtraBursts(extra_bursts, slot, weapon, target, damage, aim_direction, is_crit));
         }
 
         // 대기시간은 <b>발사 동작이 끝난 뒤부터</b> 흐른다(사용자 확정 사항).
         // 덕분에 3초짜리 빔은 3초 + 대기시간이 한 주기가 되어 빔이 여러 개 겹치지 않는다.
         // 머리 효과의 공격속도 배율(컴스톡 연사/메테우스 폭발/버서커/해피픽셀/네온아이/핫팟/
         // 프라이빗 컴스톡)은 기존 임시 버프 배율과 <b>곱셈으로</b> 함께 걸린다.
-        float attack_speed = CurrentAttackSpeedMultiplier() * HeadEffects.AttackSpeedMultiplier(weapon);
+        // 2026-08-20 소켓 명세 - 연사/산탄/근접/범용 소켓의 공격 속도 +5~17%도 같은 곱셈에 얹는다.
+        float attack_speed = CurrentAttackSpeedMultiplier() * HeadEffects.AttackSpeedMultiplier(weapon)
+                             * GetSocketModifiers(slot_index, weapon).AttackSpeedMultiplier;
         float cooldown = weapon.weapon_atsp > 0f && attack_speed > 0f
             ? 1f / (weapon.weapon_atsp * attack_speed)
             : 1f;
@@ -1008,7 +1019,7 @@ public class PlayerShootManager : MonoBehaviour
     /// 아니라 "쏘고 엉뚱한 각도로 튄" 것처럼 보였다(사용자 리포트: "한 번 쏘고 180도 돌고 두 번째
     /// 발사"). 호출부(TryFireSlot)가 이미 계산해 둔 1회차 `aim_direction`을 받아 초기값으로 쓴다.
     /// </summary>
-    private System.Collections.IEnumerator FireExtraBursts(int bursts, WeaponSlot slot, WeaponData weapon, EnemyUnit target, int damage, Vector3 initial_direction)
+    private System.Collections.IEnumerator FireExtraBursts(int bursts, WeaponSlot slot, WeaponData weapon, EnemyUnit target, float damage, Vector3 initial_direction, bool isCrit)
     {
         // 슬롯 인덱스를 다시 찾지 않도록 발사에 필요한 것만 들고 간다.
         int slot_index = weapon_slots.IndexOf(slot);
@@ -1036,7 +1047,7 @@ public class PlayerShootManager : MonoBehaviour
             GameObject prefab = ResolveProjectilePrefab(weapon, slot);
             if (prefab == null) yield break;
 
-            FireProjectiles(prefab, slot, weapon, origin, last_direction, distance, damage, slot_index);
+            FireProjectiles(prefab, slot, weapon, origin, last_direction, distance, damage, slot_index, isCrit);
         }
     }
 
@@ -1049,7 +1060,7 @@ public class PlayerShootManager : MonoBehaviour
     /// 복귀하는 버그가 있었다(2026-08-12 사용자 리포트). 밀어내는 거리(offset)는 여전히 월드
     /// 단위로 더한다 - 로컬로 하면 부모 스케일/회전에 따라 밀리는 거리가 달라진다.
     /// </summary>
-    private void StartMeleeThrustVisual(int slot_index, WeaponSlot slot, WeaponData weapon, Vector3 direction, int damage)
+    private void StartMeleeThrustVisual(int slot_index, WeaponSlot slot, WeaponData weapon, Vector3 direction, float damage, bool isCrit)
     {
         Transform pivot = slot.rig_point != null ? slot.rig_point : slot.muzzle_point;
         if (pivot == null) return;
@@ -1073,8 +1084,10 @@ public class PlayerShootManager : MonoBehaviour
         }
 
         state.melee_damage = damage;
+        state.melee_is_crit = isCrit;
         state.melee_weapon_id = weapon.weapon_id;
-        state.melee_def_ignore = weapon.weapon_defignore;
+        state.melee_def_ignore = Mathf.Clamp01(weapon.weapon_defignore
+                                               + GetSocketModifiers(slot_index, weapon).DefIgnorePercent * 0.01f);
         state.melee_knockback = weapon.weapon_knockback;
         state.melee_hit_targets.Clear(); // 이번 찌르기의 중복 방지 집합을 새로 시작
     }
@@ -1160,7 +1173,8 @@ public class PlayerShootManager : MonoBehaviour
 
         MeleeSwing.Execute(center, state.melee_thrust_direction, radius, state.melee_damage,
                            state.melee_def_ignore, state.melee_knockback,
-                           MeleeSwing.FullAngleDegrees, state.melee_hit_targets, state.melee_weapon_id);
+                           MeleeSwing.FullAngleDegrees, state.melee_hit_targets, state.melee_weapon_id,
+                           state.melee_is_crit);
     }
 
     /// <summary>
@@ -1171,8 +1185,13 @@ public class PlayerShootManager : MonoBehaviour
     /// 8발이 나가는 산탄총만 robot_atk를 8배로 받아가고, 1발짜리 저격총은 거의 이득이 없다.
     /// 무기 등급 배율은 곱하지 않는다 - 등급별 공격력이 데이터 행에 이미 반영되어 있다.
     /// </summary>
-    private int ComputeDamage(WeaponData weapon)
+    private float ComputeDamage(WeaponData weapon, int slot_index, out bool isCrit)
     {
+        isCrit = false;
+
+        // 이 소켓의 무기 소켓 파츠 보정(카테고리가 맞을 때만 값이 들어 있다).
+        ModdingManager.SocketModifiers socket = GetSocketModifiers(slot_index, weapon);
+
         // 디스크(공명의 소리/결정의 마찰음 등)의 시간제/영구 공격력 보정치를 포함한다.
         float robot_atk = 0f;
         if (player_stats != null) robot_atk = player_stats.Atk + player_stats.GetTempStatBonus(StatType.Atk);
@@ -1188,12 +1207,21 @@ public class PlayerShootManager : MonoBehaviour
         float weapon_component = weapon.weapon_atk * HeadEffects.WeaponAttackMultiplier(weapon);
         float damage = weapon_component + robot_atk / weapon.ProjectileCount;
 
-        if (player_stats != null && player_stats.Cc > 0f)
+        // 2026-08-20 소켓 명세 - 연사/산탄/정밀/에너지 소켓의 "공격력 +0.3~1.5"(절대값)와
+        // 근접 소켓의 "공격력 +4~20%"(비율). 절대값은 로봇 공격력처럼 투사체 수로 나눠서
+        // 더한다(산탄총만 이득을 몰아가지 않게 - 위 robot_atk와 같은 이유).
+        damage += socket.DamageFlat / weapon.ProjectileCount;
+        damage *= socket.DamageMultiplier;
+
+        // 치명타 확률에 소켓 보정(정밀/폭발/범용 소켓)이 더해진다.
+        float crit_chance = (player_stats != null ? player_stats.Cc : 0f) + socket.CritChancePercent;
+        if (crit_chance > 0f && player_stats != null)
         {
             float crit_roll = UnityEngine.Random.Range(0f, 100f);
-            if (crit_roll <= player_stats.Cc)
+            if (crit_roll <= crit_chance)
             {
                 damage += damage * player_stats.Cd;
+                isCrit = true; // 2026-08-20 데미지 숫자 팝업 색/아이콘용
             }
         }
 
@@ -1209,7 +1237,9 @@ public class PlayerShootManager : MonoBehaviour
         // 에는 1을 돌려준다) - 이미 위에서 `WeaponAttackMultiplier`로 weapon_atk에만 적용했다.
         damage *= HeadEffects.DamageMultiplier(weapon);
 
-        return Mathf.Max(1, Mathf.RoundToInt(damage));
+        // 2026-08-20 스탯 소수화: 반올림하지 않는다. 반올림하면 공격력 +0.3 같은 소수 보너스가
+        // 데미지 1 단위에 먹혀 사라진다(사용자 지시 "전부 소수화 해라 안짤리게").
+        return Mathf.Max(1f, damage);
     }
 
     // 2026-08-12 디스크 기획서 "광분 바이러스 디스크" 반영 - 이 게임에 "공격속도"라는 로봇
@@ -1228,13 +1258,17 @@ public class PlayerShootManager : MonoBehaviour
     private float CurrentAttackSpeedMultiplier() => Time.time < temp_attack_speed_expire_time ? temp_attack_speed_multiplier : 1f;
 
     /// <summary>지속시간 동안 직선 범위를 태우는 빔을 만든다(플라즈마 캐논).</summary>
-    private void FireBeam(WeaponData weapon, Vector3 origin, Vector3 direction, int total_damage, int slot_index)
+    private void FireBeam(WeaponData weapon, Vector3 origin, Vector3 direction, float total_damage, int slot_index, bool isCrit)
     {
         Sprite visual = ResolveWeaponSprite(beam_sprite_name, weapon);
 
+        // 에너지 소켓의 "방어력 무시 +4~16%p"가 무기 자체 방어력 무시에 더해진다(2026-08-20).
+        float def_ignore = Mathf.Clamp01(weapon.weapon_defignore
+                                         + GetSocketModifiers(slot_index, weapon).DefIgnorePercent * 0.01f);
+
         BeamProjectile.Fire(visual, origin, direction, GetTravelRange(weapon, slot_index), weapon.ProjectileSize,
-                            total_damage, weapon.weapon_duration, weapon.weapon_defignore, weapon.weapon_knockback,
-                            weapon.weapon_id);
+                            total_damage, weapon.weapon_duration, def_ignore, weapon.weapon_knockback,
+                            weapon.weapon_id, isCrit);
     }
 
     /// <summary>
@@ -1281,7 +1315,7 @@ public class PlayerShootManager : MonoBehaviour
     /// 탄퍼짐(weapon_aim)과 확률 관통(weapon_pierce_chance)은 <b>탄마다 따로</b> 굴린다.
     /// 그래야 "탄마다 60% 확률로 1번 관통" 같은 원안 스펙이 그대로 재현된다.
     /// </summary>
-    private void FireProjectiles(GameObject projectile_prefab, WeaponSlot slot, WeaponData weapon, Vector3 origin, Vector3 direction, float target_distance, int damage, int slot_index)
+    private void FireProjectiles(GameObject projectile_prefab, WeaponSlot slot, WeaponData weapon, Vector3 origin, Vector3 direction, float target_distance, float damage, int slot_index, bool isCrit)
     {
         int projectile_count = weapon.ProjectileCount;
 
@@ -1298,7 +1332,9 @@ public class PlayerShootManager : MonoBehaviour
         }
 
         // 메테우스의 폭발 범위 +20%. 조기 폭발 판정(위)은 반경이 아니라 거리만 보므로 영향 없다.
-        float splash_radius = weapon.weapon_splash * HeadEffects.SplashRadiusMultiplier(weapon);
+        // 2026-08-20 폭발 소켓의 "스플래시 범위 +6~22%"도 여기에 함께 곱해진다.
+        ModdingManager.SocketModifiers socket = GetSocketModifiers(slot_index, weapon);
+        float splash_radius = weapon.weapon_splash * HeadEffects.SplashRadiusMultiplier(weapon) * socket.SplashMultiplier;
 
         // 프라이빗 컴스톡의 관통 +2. 무제한 관통(-1)인 무기는 더할 것이 없으므로 건드리지 않는다
         // (-1에 2를 더하면 1이 되어 오히려 관통이 <b>줄어든다</b>).
@@ -1340,10 +1376,11 @@ public class PlayerShootManager : MonoBehaviour
                 Size = weapon.ProjectileSize,
                 PierceCount = pierce,
                 SplashRadius = splash_radius,
-                DefIgnore = weapon.weapon_defignore,
+                DefIgnore = Mathf.Clamp01(weapon.weapon_defignore + socket.DefIgnorePercent * 0.01f),
                 Knockback = weapon.weapon_knockback,
                 BlastVisualDuration = blast_visual_duration,
-                SourceWeaponId = weapon.weapon_id
+                SourceWeaponId = weapon.weapon_id,
+                IsCrit = isCrit
             });
         }
     }

@@ -208,10 +208,34 @@ public class ModdingManager : MonoBehaviour
     {
         get
         {
-            if (TryGetEquippedPart(PartSlot.Memory, out PartData memory) && memory.coreMaxLevelBonus > 0)
-                return memory.coreMaxLevelBonus;
+            // 2026-08-20 메모리 명세는 "AI 코어 최대 레벨 +15/25/35/43/50"(가산형)이다.
+            // 그 전 데이터는 절대값(50/55/...)이었고 이 프로퍼티도 값을 대체했는데, 명세대로
+            // 바꾸면서 머리 기본값에 더하는 방식으로 통일했다.
+            int bonus = TryGetEquippedPart(PartSlot.Memory, out PartData memory)
+                ? Mathf.Max(0, memory.coreMaxLevelBonus)
+                : 0;
 
-            return DefaultCoreMaxLevel;
+            return DefaultCoreMaxLevel + bonus;
+        }
+    }
+
+    /// <summary>
+    /// AI 코어의 시작 레벨(뉴럴 캐시 = PartEffect.CoreStartLevel). 파츠가 없으면 1이다.
+    /// 런을 시작할 때 AiCoreManager가 이 값을 읽어 코어 레벨을 올려둔다.
+    /// </summary>
+    public int CoreStartLevel
+    {
+        get
+        {
+            int bonus = 0;
+
+            foreach (PartSlot slot in System.Enum.GetValues(typeof(PartSlot)))
+            {
+                if (!TryGetEquippedPart(slot, out PartData part)) continue;
+                if (part.effect == PartEffect.CoreStartLevel) bonus += Mathf.RoundToInt(part.effectAmount);
+            }
+
+            return Mathf.Max(1, 1 + bonus);
         }
     }
 
@@ -436,23 +460,27 @@ public class ModdingManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 이 소켓에 낀 무기 소켓 파츠가 이 무기의 타입(경무장/중무장/근접무기)을 제한하는데
-    /// 이 무기가 그 타입이 아니면 true. 투사체 타입(연사/산탄/정밀 등)과는 무관하다
-    /// (소켓은 무기 타입만 제한한다 - 사용자 확정 사항).
+    /// 이 소켓에 낀 무기 소켓 파츠가 <b>무기 카테고리</b>(연사/산탄/정밀/폭발/에너지/근접)를
+    /// 제한하는데 이 무기가 그 카테고리가 아니면 true.
     ///
-    /// 2026-08-12 "무기 소켓 개별화" 플랜부터 이 불일치는 더 이상 장착을 막지 않는다 -
-    /// 대신 GetEffectiveWeaponWeight가 무게에 배율을 곱해 이동속도 패널티로 이어진다.
+    /// 2026-08-20 소켓 명세 반영으로 제한축이 무기 타입(경무장/중무장/근접)에서
+    /// <b>무기 카테고리로 바뀌었다</b> - 명세의 소켓 7종이 "장착 가능한 무기 카테고리"를 정한다.
+    /// 범용 소켓은 restrictsWeaponType이 꺼져 있어 어떤 무기든 제 짝으로 받는다.
+    ///
+    /// 2026-08-12 "무기 소켓 개별화" 플랜부터 이 불일치는 장착을 막지 않는다 - 대신
+    /// GetEffectiveWeaponWeight가 무게에 배율을 곱해 이동속도 패널티로 이어지고,
+    /// 소켓의 등급 보정(GetWeaponSocketModifiers)도 받지 못한다.
     /// </summary>
     public bool IsWeaponMismatched(int socketIndex, int weaponId)
     {
-        if (!TryGetEquippedWeaponSocketPart(socketIndex, out PartData socketPart) || !socketPart.restrictsWeaponClass)
+        if (!TryGetEquippedWeaponSocketPart(socketIndex, out PartData socketPart) || !socketPart.restrictsWeaponType)
             return false;
 
-        // 이 무기의 타입 정보가 카탈로그에 없으면(데이터 누락) 불일치로 취급하지 않는다.
+        // 이 무기의 카테고리 정보가 카탈로그에 없으면(데이터 누락) 불일치로 취급하지 않는다.
         if (catalog == null || !catalog.TryGetWeaponMeta(weaponId, out PartsCatalog.WeaponMetaEntry meta))
             return false;
 
-        return meta.weaponClass != socketPart.allowedWeaponClass;
+        return !socketPart.AcceptsWeaponType(meta.type);
     }
 
     /// <summary>타입 불일치 무기에 곱해지는 무게 배율(PartsCatalog의 밸런스 임시값).</summary>
@@ -566,27 +594,42 @@ public class ModdingManager : MonoBehaviour
     /// </summary>
     public struct SocketModifiers
     {
-        public float Range;        // 탄이 날아가는 최대 거리 배율
-        public float DetectRange;  // 적을 감지해 발사를 시작하는 거리 배율
-        public float RotationSpeed; // 공격 방향 회전 속도 배율
+        public float AttackSpeedPercent;  // 공격 속도 +% (대기시간이 이만큼 짧아진다)
+        public float DamageFlat;          // 공격력 +절대값
+        public float DamagePercent;       // 공격력 +%
+        public float CritChancePercent;   // 치명타 확률 +%p
+        public float SplashPercent;       // 스플래시 반경 +%
+        public float DefIgnorePercent;    // 방어력 무시 +%p
 
-        public static SocketModifiers Identity => new SocketModifiers { Range = 1f, DetectRange = 1f, RotationSpeed = 1f };
+        /// <summary>보정 없음(소켓 파츠가 없거나 카테고리가 안 맞을 때).</summary>
+        public static SocketModifiers None => default;
+
+        public float AttackSpeedMultiplier => 1f + AttackSpeedPercent * 0.01f;
+        public float DamageMultiplier => 1f + DamagePercent * 0.01f;
+        public float SplashMultiplier => 1f + SplashPercent * 0.01f;
     }
 
     /// <summary>
-    /// socketIndex번 소켓에 장착된 무기 소켓 파츠의 등급 효과 배율. 2026-08-12 "무기 소켓
-    /// 개별화" 전에는 소켓 파츠 하나가 모든 소켓에 공통 적용돼 인자가 없었지만, 이제 소켓마다
-    /// 독립된 파츠를 낄 수 있어 인덱스를 받는다.
+    /// socketIndex번 소켓에 장착된 무기 소켓 파츠가 <b>그 소켓에 낀 무기</b>에 주는 보정.
+    ///
+    /// 2026-08-20 소켓 명세 반영으로 반환값이 사거리/감지/회전 배율에서 공격속도·공격력·치명타·
+    /// 스플래시·방어력무시로 통째로 바뀌었다. <b>카테고리가 맞지 않으면 보정이 없다</b>
+    /// (범용 소켓은 카테고리 제한이 없으므로 항상 자기 보정을 준다).
+    /// PlayerShootManager가 매 프레임 조회하므로 값만 넘기는 가벼운 구조체로 반환한다.
     /// </summary>
-    public SocketModifiers GetWeaponSocketModifiers(int socketIndex)
+    public SocketModifiers GetWeaponSocketModifiers(int socketIndex, int weaponId)
     {
-        if (!TryGetEquippedWeaponSocketPart(socketIndex, out PartData socketPart)) return SocketModifiers.Identity;
+        if (!TryGetEquippedWeaponSocketPart(socketIndex, out PartData socketPart)) return SocketModifiers.None;
+        if (IsWeaponMismatched(socketIndex, weaponId)) return SocketModifiers.None;
 
         return new SocketModifiers
         {
-            Range = socketPart.RangeMultiplier,
-            DetectRange = socketPart.DetectRangeMultiplier,
-            RotationSpeed = socketPart.RotationSpeedMultiplier
+            AttackSpeedPercent = socketPart.socketAttackSpeedPercent,
+            DamageFlat = socketPart.socketDamageFlat,
+            DamagePercent = socketPart.socketDamagePercent,
+            CritChancePercent = socketPart.socketCritChancePercent,
+            SplashPercent = socketPart.socketSplashPercent,
+            DefIgnorePercent = socketPart.socketDefIgnorePercent
         };
     }
 
@@ -600,6 +643,10 @@ public class ModdingManager : MonoBehaviour
 
     // 디스크(RunState.DiscStatBonuses)는 구매할 때마다 누적만 하면 되지만, 파츠는 같은
     // 슬롯을 교체하면 이전 파츠의 보너스가 사라져야 하므로 매번 전체를 다시 계산한다.
+    //
+    // 2026-08-20 명세 반영으로 (1) 가산 스탯이 파츠당 2쌍이 되고 (2) "장착 디스크 1개당" 계열
+    // 효과가 생겼다. 후자는 디스크를 사고 팔 때도 값이 바뀌므로 ShopManager가 디스크 장착 후에
+    // RecomputePartBonuses()를 호출한다.
     private void RecomputePartStatBonuses()
     {
         RunState.PartStatBonuses.Clear();
@@ -607,10 +654,70 @@ public class ModdingManager : MonoBehaviour
         foreach (var kv in RunState.EquippedPartIds)
         {
             if (!catalog.TryGetPart(kv.Value, out PartData part)) continue;
-            if (part.bonusAmount == 0f) continue;
 
-            if (!RunState.PartStatBonuses.ContainsKey(part.bonusStat)) RunState.PartStatBonuses[part.bonusStat] = 0f;
-            RunState.PartStatBonuses[part.bonusStat] += part.bonusAmount;
+            AddPartBonus(part.bonusStat, part.bonusAmount);
+            AddPartBonus(part.bonusStat2, part.bonusAmount2);
+
+            switch (part.effect)
+            {
+                case PartEffect.PerDiscStat:
+                    AddPartBonus(part.effectStat, part.effectAmount * RunState.EquippedDiscIds.Count);
+                    break;
+
+                case PartEffect.PerSymphonyDiscAtk:
+                    AddPartBonus(StatType.Atk, part.effectAmount * CountSymphonyDiscs());
+                    break;
+            }
         }
     }
+
+    private static void AddPartBonus(StatType stat, float amount)
+    {
+        if (amount == 0f) return;
+
+        if (!RunState.PartStatBonuses.ContainsKey(stat)) RunState.PartStatBonuses[stat] = 0f;
+        RunState.PartStatBonuses[stat] += amount;
+    }
+
+    /// <summary>
+    /// 디스크를 사고 판 뒤 파츠 보너스를 다시 계산한다("장착 디스크 1개당" 계열 효과 때문).
+    /// 디스크 자체의 상시 스탯은 ShopManager가 RunState.DiscStatBonuses에 따로 넣는다.
+    /// </summary>
+    public void RecomputePartBonuses() => RecomputePartStatBonuses();
+
+    /// <summary>
+    /// 장착한 디스크 중 이름이 "교향곡"으로 시작하는 것의 개수(교향곡 모음집 슬롯이 읽는다).
+    /// 디스크 이름은 ShopCatalog가 갖고 있어 씬에서 ShopManager를 한 번만 찾아 캐시한다.
+    /// </summary>
+    private int CountSymphonyDiscs()
+    {
+        if (RunState.EquippedDiscIds.Count == 0) return 0;
+
+        if (symphony_disc_ids == null)
+        {
+            symphony_disc_ids = new HashSet<int>();
+
+            ShopManager shopManager = FindFirstObjectByType<ShopManager>();
+            ShopCatalog shopCatalog = shopManager != null ? shopManager.Catalog : null;
+
+            if (shopCatalog != null)
+            {
+                foreach (DiscData disc in shopCatalog.Discs)
+                {
+                    if (!string.IsNullOrEmpty(disc.discName) && disc.discName.StartsWith("교향곡"))
+                        symphony_disc_ids.Add(disc.discId);
+                }
+            }
+        }
+
+        int count = 0;
+        foreach (int id in RunState.EquippedDiscIds)
+        {
+            if (symphony_disc_ids.Contains(id)) count++;
+        }
+
+        return count;
+    }
+
+    private HashSet<int> symphony_disc_ids;
 }

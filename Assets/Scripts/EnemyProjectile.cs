@@ -14,7 +14,7 @@ public class EnemyProjectile : MonoBehaviour
 {
     private Vector3 direction;
     private float speed;
-    private int damage;
+    private float damage;
     private float max_range;
     private Vector3 spawn_position;
 
@@ -31,7 +31,7 @@ public class EnemyProjectile : MonoBehaviour
 
     private static Sprite cached_sprite;
 
-    public static EnemyProjectile Spawn(Vector3 position, Vector3 direction, float speed, int damage, float range, float visualSize)
+    public static EnemyProjectile Spawn(Vector3 position, Vector3 direction, float speed, float damage, float range, float visualSize)
     {
         GameObject go = new GameObject("EnemyProjectile");
         go.transform.position = position;
@@ -54,7 +54,7 @@ public class EnemyProjectile : MonoBehaviour
         return proj;
     }
 
-    private void Launch(Vector3 dir, float spd, int dmg, float range, float visualSize)
+    private void Launch(Vector3 dir, float spd, float dmg, float range, float visualSize)
     {
         direction = dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.right;
         speed = spd > 0f ? spd : 10f;

@@ -398,7 +398,7 @@ public class ModdingPanelUI : MonoBehaviour
                 : part.grade.ToCellColor(cellNormalColor);
 
             Image cellImage = CreateIconCell(inventoryContent, $"InventoryCell_{index}",
-                                             PartIconLibrary.Get(part.slot), cellColor, null, true,
+                                             PartIconLibrary.Get(part), cellColor, null, true,
                                              () => HandleInventoryCellClicked(index));
             inventoryCellImages.Add(cellImage);
         }
@@ -464,7 +464,7 @@ public class ModdingPanelUI : MonoBehaviour
                 : grade.ToCellColor(slotNormalColor);
 
             CreateIconCell(headRow, $"Slot_WeaponSocket_{i}",
-                           PartIconLibrary.Get(PartSlot.ArmWeaponSocket), color,
+                           equipped ? PartIconLibrary.Get(socketPart) : PartIconLibrary.Get(PartSlot.ArmWeaponSocket), color,
                            $"무기 소켓 {i + 1}", equipped,
                            () => HandleWeaponSocketCellClicked(socketIndex));
         }
@@ -482,7 +482,8 @@ public class ModdingPanelUI : MonoBehaviour
                 ? slotHighlightColor
                 : grade.ToCellColor(slotNormalColor);
 
-            CreateIconCell(slotContent, $"Slot_{slot}", PartIconLibrary.Get(slot), color,
+            CreateIconCell(slotContent, $"Slot_{slot}",
+                           equipped ? PartIconLibrary.Get(part) : PartIconLibrary.Get(slot), color,
                            slot.ToKorean(), equipped,
                            () => HandleSlotClicked(captured));
         }
@@ -516,9 +517,9 @@ public class ModdingPanelUI : MonoBehaviour
         statsText.text =
             levelLine +
             "[능력치]\n" +
-            $"체력 {player.CurrentHp}/{player.MaxHp}\n" +
-            $"공격력 {player.Atk}\n" +
-            $"방어력 {player.Def}\n" +
+            $"체력 {player.CurrentHp:0.##}/{player.MaxHp:0.##}\n" +
+            $"공격력 {player.Atk:0.##}\n" +
+            $"방어력 {player.Def:0.##}\n" +
             $"치명타 확률 {player.Cc:0.##}%\n" +
             $"치명타 데미지 {player.Cd:0.##}\n" +
             $"이동속도 {player.MoveSpeed:0.##}\n" +
@@ -665,13 +666,13 @@ public class ModdingPanelUI : MonoBehaviour
         PartData selected = parts[selectedInventoryIndex];
 
         detailSelectedIcon.enabled = true;
-        detailSelectedIcon.sprite = PartIconLibrary.Get(selected.slot);
+        detailSelectedIcon.sprite = PartIconLibrary.Get(selected);
         detailSelectedIcon.color = Color.white;
         detailSelectedText.text = BuildPartDetail(selected);
 
         detailTargetTitle.gameObject.SetActive(true);
         detailTargetIcon.enabled = true;
-        detailTargetIcon.sprite = PartIconLibrary.Get(selected.slot);
+        detailTargetIcon.sprite = PartIconLibrary.Get(selected);
 
         // 무기 소켓 파츠는 소켓이 여러 개라 "교체 대상"이 하나로 정해지지 않는다 - 소켓별로 나열한다.
         if (selected.slot == PartSlot.ArmWeaponSocket)
@@ -693,6 +694,7 @@ public class ModdingPanelUI : MonoBehaviour
         if (moddingManager != null && moddingManager.TryGetEquippedPart(selected.slot, out PartData equipped))
         {
             detailTargetIcon.color = Color.white;
+            detailTargetIcon.sprite = PartIconLibrary.Get(equipped);
             detailTargetText.text = BuildPartDetail(equipped);
         }
         else
@@ -732,7 +734,7 @@ public class ModdingPanelUI : MonoBehaviour
         }
 
         detailSelectedIcon.enabled = true;
-        detailSelectedIcon.sprite = PartIconLibrary.Get(slot);
+        detailSelectedIcon.sprite = PartIconLibrary.Get(equipped);
         detailSelectedIcon.color = Color.white;
         detailSelectedText.text = $"<size=85%><color=#F2BF26>[장착 중] {header}</color></size>\n" + BuildPartDetail(equipped);
     }

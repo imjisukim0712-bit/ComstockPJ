@@ -14,6 +14,10 @@ public static class RewardPickupManager
     // 2026-08-10 "인게임 모든 이미지 1/2" 지시로 0.7 → 0.35까지 줄었다가, 2026-08-18 사용자가
     // "드랍 아이템이 너무 작다"고 지적해 0.6으로 다시 키웠다(원래 의도했던 부품 상자 크기 수준).
     private const float VisualWorldSize = 0.6f;
+
+    // 2026-08-20 사용자 요청 "부품 상자 크기 가로세로 2배" - 골드/경험치는 그대로 두고
+    // 부품 상자만 키운다. GetVisualWorldSize()가 타입별로 갈라서 돌려준다.
+    private const float PartBoxVisualWorldSize = VisualWorldSize * 2f;
     private const int SortingOrder = 5;      // 바닥/캐릭터에 가려지지 않도록
 
     private const string GoldResourceName = "Gold";
@@ -34,6 +38,12 @@ public static class RewardPickupManager
         Vector2 scatter = Random.insideUnitCircle * 0.6f;
         position += new Vector3(scatter.x, scatter.y, 0f);
         position.z = 0f; // X-Y 평면 규칙
+
+        // 2026-08-20 사용자 리포트 "가끔 상자가 맵 밖으로 나간다" - 몬스터가 맵 경계 근처에서
+        // 죽으면 위 산개(scatter)가 맵 밖으로 밀어낼 수 있었다. 절반 크기(픽업이 화면 밖으로
+        // 반쯖 삐져나오지 않도록)만큼 여유를 두고 맵 안으로 되접는다. MapBounds가 맵을 못 찾으면
+        // 기존 동작 그대로(제한 없음) 통과한다.
+        position = MapBounds.ClampPosition(position, GetVisualWorldSize(type) * 0.5f);
 
         GameObject root = new GameObject($"Reward_{type}_{amount}");
         root.transform.position = position;
@@ -64,8 +74,14 @@ public static class RewardPickupManager
         if (sr.sprite != null)
         {
             float spriteSize = Mathf.Max(sr.sprite.bounds.size.x, sr.sprite.bounds.size.y, 0.0001f);
-            visual.transform.localScale = Vector3.one * (VisualWorldSize / spriteSize);
+            visual.transform.localScale = Vector3.one * (GetVisualWorldSize(type) / spriteSize);
         }
+    }
+
+    /// <summary>타입별 최종 렌더 크기(가로=세로, 월드 유닛). 부품 상자만 2배로 키운다.</summary>
+    private static float GetVisualWorldSize(RewardType type)
+    {
+        return type == RewardType.PartBox ? PartBoxVisualWorldSize : VisualWorldSize;
     }
 
     private static Sprite ResolveIcon(RewardType type)

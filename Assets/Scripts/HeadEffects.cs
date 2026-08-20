@@ -389,7 +389,8 @@ public static class HeadEffects
 
                 // 보너스가 음수가 될 수 있다(무기 7정 이상). 공격력은 그대로 반영하고
                 // RobotStats의 하한 클램프(Atk >= 0)가 받아준다.
-                stats.Atk += Mathf.RoundToInt(bonus);
+                // 2026-08-20 스탯 소수화: 반올림 없이 그대로 더한다.
+                stats.Atk += bonus;
                 stats.MaxHp += NeonEyeHpPerWeapon * weapons;
                 stats.Def += NeonEyeDefPerWeapon * weapons;
                 break;
@@ -398,8 +399,8 @@ public static class HeadEffects
             case HeadEffect.HotPot:
             {
                 float bonus = HotPotBonus();
-                stats.Atk += Mathf.RoundToInt(bonus);
-                stats.Def += Mathf.RoundToInt(bonus);
+                stats.Atk += bonus;
+                stats.Def += bonus;
                 stats.MoveSpeed += bonus;
                 break;
             }

@@ -41,7 +41,7 @@ public class PlayerHitFeedback : MonoBehaviour
     }
 
     /// <summary>공격을 받았을 때 <see cref="PlayerRobotController.TakeDamage"/>가 호출한다.</summary>
-    public void OnHit(int damage, Vector3? attackerPosition)
+    public void OnHit(float damage, Vector3? attackerPosition)  // 2026-08-20 스탯 소수화
     {
         cameraFollow?.Shake(shakeDuration, shakeMagnitude);
         FlashVignette();

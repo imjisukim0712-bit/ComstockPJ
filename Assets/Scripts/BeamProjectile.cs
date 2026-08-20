@@ -23,9 +23,10 @@ public class BeamProjectile : MonoBehaviour
     private Vector3 direction;
     private float length;
     private float half_width;
-    private int tick_damage;
+    private float tick_damage;
     private float def_ignore;
     private int source_weapon_id;
+    private bool is_crit;
     private float knockback;
     private float remaining_time;
     private float next_tick_time;
@@ -40,22 +41,24 @@ public class BeamProjectile : MonoBehaviour
     /// <param name="total_damage">지속시간 전체에 걸쳐 들어갈 총 데미지 (weapon_atk)</param>
     /// <param name="duration">빔이 유지되는 시간(초). 0 이하면 1틱만 발생</param>
     public static BeamProjectile Fire(Sprite visual, Vector3 origin, Vector3 fire_direction, float beam_length,
-                                      float beam_half_width, int total_damage, float duration,
-                                      float def_ignore_percent, float knockback_strength, int source_weapon_id = 0)
+                                      float beam_half_width, float total_damage, float duration,
+                                      float def_ignore_percent, float knockback_strength, int source_weapon_id = 0,
+                                      bool isCrit = false)
     {
         GameObject obj = new GameObject("Beam");
         obj.transform.position = origin;
 
         BeamProjectile beam = obj.AddComponent<BeamProjectile>();
         beam.Init(visual, fire_direction, beam_length, beam_half_width, total_damage, duration,
-                  def_ignore_percent, knockback_strength, source_weapon_id);
+                  def_ignore_percent, knockback_strength, source_weapon_id, isCrit);
         return beam;
     }
 
     private void Init(Sprite visual, Vector3 fire_direction, float beam_length, float beam_half_width,
-                      int total_damage, float duration, float def_ignore_percent, float knockback_strength,
-                      int weapon_id = 0)
+                      float total_damage, float duration, float def_ignore_percent, float knockback_strength,
+                      int weapon_id = 0, bool isCrit = false)
     {
+        is_crit = isCrit;
         direction = fire_direction.sqrMagnitude > 0.0001f ? fire_direction.normalized : Vector3.right;
         direction.z = 0f;
 
@@ -135,7 +138,7 @@ public class BeamProjectile : MonoBehaviour
             // 틱마다 집합을 비우므로 같은 적이 다음 틱에는 다시 맞는다(계속 태우는 것이 빔의 동작)
             if (enemy == null || enemy.IsDead || !hit_this_tick.Add(enemy)) continue;
 
-            enemy.TakeDamage(tick_damage, def_ignore, source_weapon_id);
+            enemy.TakeDamage(tick_damage, def_ignore, source_weapon_id, is_crit);
             if (knockback > 0f) enemy.ApplyKnockback(direction, knockback);
         }
     }

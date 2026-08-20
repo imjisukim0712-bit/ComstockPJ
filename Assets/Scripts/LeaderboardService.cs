@@ -17,11 +17,13 @@ using UnityEngine;
 public interface ILeaderboardService
 {
     /// <summary>점수를 제출한다. onComplete(성공 여부)는 반드시 호출된다(동기 구현이라도 콜백
-    /// 방식을 유지해야 Firebase의 비동기 응답과 호출부 코드가 그대로 호환된다).</summary>
-    void SubmitScore(string playerName, int score, Action<bool> onComplete);
+    /// 방식을 유지해야 Firebase의 비동기 응답과 호출부 코드가 그대로 호환된다).
+    /// <paramref name="mapId"/>는 맵마다 랭킹을 분리하는 키다(2026-08-20 - 지금은 씬 이름을
+    /// 그대로 쓴다. 맵이 늘어나도 씬 이름만 다르면 자동으로 갈라진다).</summary>
+    void SubmitScore(string mapId, string playerName, int score, Action<bool> onComplete);
 
-    /// <summary>점수 내림차순 상위 count개를 가져온다.</summary>
-    void FetchTopScores(int count, Action<List<ScoreEntry>> onComplete);
+    /// <summary>해당 맵의 점수 내림차순 상위 count개를 가져온다.</summary>
+    void FetchTopScores(string mapId, int count, Action<List<ScoreEntry>> onComplete);
 }
 
 [Serializable]
@@ -40,7 +42,7 @@ public struct ScoreEntry
 /// </summary>
 public class LocalLeaderboardService : ILeaderboardService
 {
-    private const string PrefsKey = "Comstock.Leaderboard.Local.v1";
+    private const string PrefsKeyPrefix = "Comstock.Leaderboard.Local.v1"; // 맵마다 뒤에 mapId를 붙인다
     private const int MaxStoredEntries = 50; // 기기에 무한정 쌓이지 않도록 상위 N개만 보관
 
     [Serializable]
@@ -49,9 +51,9 @@ public class LocalLeaderboardService : ILeaderboardService
         public List<ScoreEntry> entries = new List<ScoreEntry>();
     }
 
-    public void SubmitScore(string playerName, int score, Action<bool> onComplete)
+    public void SubmitScore(string mapId, string playerName, int score, Action<bool> onComplete)
     {
-        Wrapper wrapper = Load();
+        Wrapper wrapper = Load(mapId);
 
         wrapper.entries.Add(new ScoreEntry
         {
@@ -64,35 +66,40 @@ public class LocalLeaderboardService : ILeaderboardService
         if (wrapper.entries.Count > MaxStoredEntries)
             wrapper.entries.RemoveRange(MaxStoredEntries, wrapper.entries.Count - MaxStoredEntries);
 
-        Save(wrapper);
+        Save(mapId, wrapper);
         onComplete?.Invoke(true);
     }
 
-    public void FetchTopScores(int count, Action<List<ScoreEntry>> onComplete)
+    public void FetchTopScores(string mapId, int count, Action<List<ScoreEntry>> onComplete)
     {
-        Wrapper wrapper = Load();
+        Wrapper wrapper = Load(mapId);
         int take = Mathf.Clamp(count, 0, wrapper.entries.Count);
         onComplete?.Invoke(wrapper.entries.GetRange(0, take));
     }
 
-    private static Wrapper Load()
+    private static Wrapper Load(string mapId)
     {
-        string json = PlayerPrefs.GetString(PrefsKey, string.Empty);
+        string json = PlayerPrefs.GetString(PrefsKeyPrefix + "." + mapId, string.Empty);
         if (string.IsNullOrEmpty(json)) return new Wrapper();
 
         Wrapper wrapper = JsonUtility.FromJson<Wrapper>(json);
         return wrapper ?? new Wrapper();
     }
 
-    private static void Save(Wrapper wrapper)
+    private static void Save(string mapId, Wrapper wrapper)
     {
-        PlayerPrefs.SetString(PrefsKey, JsonUtility.ToJson(wrapper));
+        PlayerPrefs.SetString(PrefsKeyPrefix + "." + mapId, JsonUtility.ToJson(wrapper));
         PlayerPrefs.Save();
     }
 }
 
-/// <summary>호출부가 쓰는 진입점. 기본값은 로컬 구현 - Firebase 연동 시 이 한 줄만 바꾼다.</summary>
+/// <summary>호출부가 쓰는 진입점(2026-08-20 Firebase 연동). 문제가 생기면 아래 한 줄을
+/// <c>new LocalLeaderboardService()</c>로 되돌리면 즉시 로컬 저장으로 폴백된다.</summary>
 public static class LeaderboardService
 {
-    public static ILeaderboardService Current { get; set; } = new LocalLeaderboardService();
+    private const string FirebaseDatabaseUrl =
+        "https://comstock-d3868-default-rtdb.asia-southeast1.firebasedatabase.app";
+
+    public static ILeaderboardService Current { get; set; } =
+        new FirebaseLeaderboardService(FirebaseDatabaseUrl);
 }

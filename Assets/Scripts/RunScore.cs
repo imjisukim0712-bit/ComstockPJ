@@ -1,11 +1,19 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// 점수(Score) 시스템 - 엔드리스 모드·악세사리·랭킹의 선행 조건(2026-08-19 Phase B).
 ///
 /// 공식(임시값, 20웨이브 클리어 기준 약 45,000점이 되도록 잡았다):
-/// <c>도달 웨이브 x 1,000 + 누적 처치 수 x 10 + 최종 AI 코어 레벨 x 200 + 남은 골드 x 1
+/// <c>클리어한 웨이브 수 x 1,000 + 누적 처치 수 x 10 + AI 코어 레벨업 횟수 x 200 + 남은 골드 x 1
 /// + 악세사리 점수 합계</c>.
+///
+/// <b>웨이브·코어 레벨은 "진행도"가 아니라 "현재 값"이라 그대로 곱하면 시작하자마자 기본점수가
+/// 생긴다</b>(2026-08-20 버그 리포트 - "기본점수 1200점 주는거 고치셈, 0점부터 시작해야됨").
+/// `WaveNumber`는 웨이브 1을 시작하는 순간 1이 되고(<see cref="WaveManager"/>), `CoreLevel`은
+/// 업그레이드를 하나도 안 해도 기본값이 1이다(<see cref="RunState.CoreLevel"/>) - 그래서 런을
+/// 시작하자마자 1x1000 + 1x200 = 1200점이 조건 없이 붙어 있었다. 그래서 <see cref="ComputeBreakdown"/>
+/// 은 둘 다 1을 뺀 값(= 실제로 "클리어한" 웨이브 수 / "레벨업한" 횟수)을 곱한다.
 ///
 /// 누적 처치 수는 지금까지 어디에도 집계되지 않았으므로(해금 조건 "적 N마리 처치"도 이 값을
 /// 공유한다) <see cref="EnsureKillTrackingSubscribed"/>가 <see cref="EnemyUnit.OnKilledByPlayer"/>를
@@ -64,9 +72,11 @@ public static class RunScore
     {
         var b = new Breakdown
         {
-            WaveScore = RunState.WaveNumber * WaveWeight,
+            // WaveNumber(웨이브 1 시작 시 1)·CoreLevel(기본값 1)은 둘 다 "현재 값"이지 "진행도"가
+            // 아니므로 1을 빼서 실제로 쌓은 진행도만 점수화한다(위 클래스 설명 참고).
+            WaveScore = Mathf.Max(0, RunState.WaveNumber - 1) * WaveWeight,
             KillScore = KillCount * KillWeight,
-            CoreLevelScore = RunState.CoreLevel * CoreLevelWeight,
+            CoreLevelScore = Mathf.Max(0, RunState.CoreLevel - 1) * CoreLevelWeight,
             GoldScore = RunState.Gold * GoldWeight,
             AccessoryScore = AccessoryScore
         };
@@ -77,28 +87,40 @@ public static class RunScore
     public static int ComputeTotal() => ComputeBreakdown().Total;
 
     /// <summary>
-    /// 현재 점수를 랭킹 서비스에 제출한다(2026-08-19 Phase C). 정산 팝업("타이틀로")과
-    /// 일시정지 메뉴("나가기", 엔드리스 중일 때만)가 공유하는 진입점이라 여기 한 곳에 둔다.
-    ///
-    /// 플레이어 이름 입력 UI가 아직 없어(이번 범위 밖) 선택한 로봇(머리) 이름을 대신 쓴다.
-    /// 실제 네트워크 연동(Firebase)은 없고 <see cref="LocalLeaderboardService"/>가 PlayerPrefs에
-    /// 저장한다 - 사용자 지시: "파이어베이스는 나중에 연결할 거니까 그것만 빼고 만들어놔"
-    /// (LeaderboardService.cs 참고).
+    /// 닉네임 입력 팝업(<see cref="NicknameInputPopup"/>)의 기본값/제안값으로 쓸 이름을 정한다
+    /// (2026-08-20). 선택한 로봇(머리) 이름을 기본으로 삼는다 - 아직 로봇 정보를 못 찾으면
+    /// "플레이어"로 대체한다.
     /// </summary>
-    public static void SubmitToLeaderboard()
+    public static string ResolveDefaultPlayerName()
     {
         PlayerRobotController player = Object.FindFirstObjectByType<PlayerRobotController>();
-        string name = "플레이어";
         if (player != null && GameDataManager.Instance != null &&
             GameDataManager.Instance.Robots.TryGetValue(player.RobotId, out RobotData data))
         {
-            name = data.robot_name;
+            return data.robot_name;
         }
 
+        return "플레이어";
+    }
+
+    /// <summary>
+    /// 현재 점수를 랭킹 서비스에 제출한다(2026-08-19 Phase C). 정산 팝업("타이틀로")과
+    /// 일시정지 메뉴("나가기", 엔드리스 중일 때만)가 공유하는 진입점이라 여기 한 곳에 둔다.
+    ///
+    /// <paramref name="playerName"/>은 <see cref="NicknameInputPopup"/>에서 사용자가 확정한
+    /// 닉네임이다(2026-08-20 - 예전에는 로봇 이름을 자동으로 썼지만 사용자 요청으로 닉네임
+    /// 입력 화면이 생겼다). <b>맵마다 랭킹이 분리된다</b>(앞으로 맵이 여러 개 추가될 예정이라
+    /// 현재 활성 씬 이름을 mapId로 그대로 쓴다. 이 메서드는 항상 맵 씬(Ground01 등) 안에서
+    /// 호출되므로 별도 맵 선택 상태 없이 <see cref="SceneManager.GetActiveScene"/>만으로 충분하다).
+    /// </summary>
+    public static void SubmitToLeaderboard(string playerName)
+    {
+        string name = string.IsNullOrWhiteSpace(playerName) ? ResolveDefaultPlayerName() : playerName;
+        string mapId = SceneManager.GetActiveScene().name;
         int score = ComputeTotal();
-        LeaderboardService.Current.SubmitScore(name, score, success =>
+        LeaderboardService.Current.SubmitScore(mapId, name, score, success =>
         {
-            Debug.Log(success ? $"랭킹 제출 완료 (점수 {score})" : "랭킹 제출 실패");
+            Debug.Log(success ? $"랭킹 제출 완료 (맵 {mapId}, 닉네임 {name}, 점수 {score})" : "랭킹 제출 실패");
         });
     }
 }

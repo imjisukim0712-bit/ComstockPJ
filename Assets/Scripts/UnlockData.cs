@@ -2,12 +2,17 @@ using System.Collections.Generic;
 
 /// <summary>
 /// 해금(도감)의 대상 분류. 맵은 아트가 없어 이번 범위에서 제외했다(사용자 확정, 2026-08-19).
+///
+/// <b>무기(2026-08-20 추가)는 해금 조건이 없다</b>(사용자 확정: "무기는 해금 조건 없으니
+/// 도감에 명세만 추가하면 됨") - 13종 전부 <see cref="UnlockEntry.UnlockedFromStart"/>로
+/// 등록되어 처음부터 열려 있고, 도감은 그 스탯·설명을 보여주는 용도로만 쓰인다.
 /// </summary>
 public enum UnlockCategory
 {
     Head,
     Disc,
-    Accessory
+    Accessory,
+    Weapon
 }
 
 /// <summary>
@@ -88,8 +93,10 @@ public struct UnlockEntry
 }
 
 /// <summary>
-/// 해금 조건표 39개(머리 12 + 디스크 21 + 악세사리 6). `20260818_해금기획서_Ver01_김재원.pdf`
-/// 전사본(작업.md 2026-08-19 계획 항목)을 그대로 옮긴 것이다.
+/// 도감 항목 52개(머리 12 + 디스크 21 + 악세사리 6 + 무기 13). 앞의 39개는
+/// `20260818_해금기획서_Ver01_김재원.pdf` 전사본(작업.md 2026-08-19 계획 항목)을 그대로
+/// 옮긴 것이다. **무기 13종(2026-08-20 추가)은 해금 기획서에 없던 항목이라 조건 없이
+/// 전부 초기 해금으로 등록했다**(사용자 확정) - 도감에서는 명세(스탯)만 보여준다.
 ///
 /// <b>디스크 이름 대응</b> — 해금 기획서와 디스크 기획서(Ver01)의 표기가 3건 다르다. 효과를
 /// 대조해 아래처럼 대응시켰다(2026-08-19).
@@ -217,7 +224,37 @@ public static class UnlockCatalog
                           conditionText = "엔드리스 진입 이후 위위아래아래좌우좌우 + 스페이스 2번 입력" },
         new UnlockEntry { category = UnlockCategory.Accessory, itemId = 600006, fallbackName = "의문의 검은 고양이 귀",
                           counterKey = UnlockProgressKey.EndlessSprinterKills, requiredAmount = 200,
-                          conditionText = "엔드리스에서 스프린터 200마리 처치" }
+                          conditionText = "엔드리스에서 스프린터 200마리 처치" },
+
+        // ── 무기 13종 (전부 초기 해금 - 2026-08-20 사용자 확정, 명세만 보여주는 용도) ─────────
+        // itemId는 각 종류의 일반 등급 행(Assets/Data/GameDataAsset.asset의 weapon_id)이다.
+        // ID 체계는 WeaponTableGenerator.MakeWeaponId(kind, 0)과 동일: 300000 + 종류x100 + 1.
+        new UnlockEntry { category = UnlockCategory.Weapon, itemId = 300101, fallbackName = "중기관총",
+                          conditionText = "처음부터 사용할 수 있습니다" },
+        new UnlockEntry { category = UnlockCategory.Weapon, itemId = 300201, fallbackName = "전투산탄총",
+                          conditionText = "처음부터 사용할 수 있습니다" },
+        new UnlockEntry { category = UnlockCategory.Weapon, itemId = 300301, fallbackName = "대물저격총",
+                          conditionText = "처음부터 사용할 수 있습니다" },
+        new UnlockEntry { category = UnlockCategory.Weapon, itemId = 300401, fallbackName = "플라즈마캐논",
+                          conditionText = "처음부터 사용할 수 있습니다" },
+        new UnlockEntry { category = UnlockCategory.Weapon, itemId = 300501, fallbackName = "로켓런처",
+                          conditionText = "처음부터 사용할 수 있습니다" },
+        new UnlockEntry { category = UnlockCategory.Weapon, itemId = 300601, fallbackName = "소드오프샷건",
+                          conditionText = "처음부터 사용할 수 있습니다" },
+        new UnlockEntry { category = UnlockCategory.Weapon, itemId = 300701, fallbackName = "레이저피스톨",
+                          conditionText = "처음부터 사용할 수 있습니다" },
+        new UnlockEntry { category = UnlockCategory.Weapon, itemId = 300801, fallbackName = "지정사수소총",
+                          conditionText = "처음부터 사용할 수 있습니다" },
+        new UnlockEntry { category = UnlockCategory.Weapon, itemId = 300901, fallbackName = "기관단총",
+                          conditionText = "처음부터 사용할 수 있습니다" },
+        new UnlockEntry { category = UnlockCategory.Weapon, itemId = 301001, fallbackName = "유탄발사기",
+                          conditionText = "처음부터 사용할 수 있습니다" },
+        new UnlockEntry { category = UnlockCategory.Weapon, itemId = 301101, fallbackName = "생존단검",
+                          conditionText = "처음부터 사용할 수 있습니다" },
+        new UnlockEntry { category = UnlockCategory.Weapon, itemId = 301201, fallbackName = "전술 마체테",
+                          conditionText = "처음부터 사용할 수 있습니다" },
+        new UnlockEntry { category = UnlockCategory.Weapon, itemId = 301301, fallbackName = "전기톱검",
+                          conditionText = "처음부터 사용할 수 있습니다" }
     };
 
     public static bool TryGet(int itemId, out UnlockEntry entry)

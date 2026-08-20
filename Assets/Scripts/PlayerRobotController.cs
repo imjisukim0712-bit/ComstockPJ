@@ -6,10 +6,12 @@ using UnityEngine.InputSystem;
 public class PlayerRobotController : MonoBehaviour
 {
     public int RobotId { get; private set; }
-    public int MaxHp { get; private set; }
-    public int CurrentHp { get; private set; }
-    public int Atk { get; private set; }
-    public int Def { get; private set; }
+    // 2026-08-20 스탯 소수화 - 파츠 명세에 공격력 +0.3 / 방어력 +2.5 같은 소수가 대량으로
+    // 들어와서 int였던 네 값을 float로 바꿨다(표시도 소수점까지 그대로 보인다).
+    public float MaxHp { get; private set; }
+    public float CurrentHp { get; private set; }
+    public float Atk { get; private set; }
+    public float Def { get; private set; }
     public float MoveSpeed { get; private set; }
     public float Avoid { get; private set; }
     public float Luck { get; private set; }
@@ -116,8 +118,8 @@ public class PlayerRobotController : MonoBehaviour
     private float conditionalMoveSpeedBonus;
 
     // "에너지 베리어 디스크" - 회복되지 않는 여분 체력. 웨이브가 시작될 때마다 가득 채워진다.
-    private int shieldMaxHp;
-    private int shieldHp;
+    private float shieldMaxHp;
+    private float shieldHp;
 
     // "마지막 발악 디스크" - 발동 중 무적 종료 시각(0이면 비활성).
     private float lastStandInvulnUntil;
@@ -138,6 +140,7 @@ public class PlayerRobotController : MonoBehaviour
         GameFlowManager.ResetStaticState();
         MapBounds.ResetCache();
         HitFlash.ResetStaticCaches();
+        DamageNumberUI.ResetCache();
 
         startPosition = transform.position;
 
@@ -259,7 +262,7 @@ public class PlayerRobotController : MonoBehaviour
     {
         AggregatedRobotStats stats = RobotStats.Compute(baseRobotData);
 
-        int previousMaxHp = MaxHp;
+        float previousMaxHp = MaxHp;
         MaxHp = stats.MaxHp;
         Atk = stats.Atk;
         Def = stats.Def;
@@ -270,14 +273,14 @@ public class PlayerRobotController : MonoBehaviour
         Cd = stats.Cd;
         Mess = stats.Mess;
 
-        CurrentHp = isInitialApply ? MaxHp : Mathf.Min(MaxHp, CurrentHp + Mathf.Max(0, MaxHp - previousMaxHp));
+        CurrentHp = isInitialApply ? MaxHp : Mathf.Min(MaxHp, CurrentHp + Mathf.Max(0f, MaxHp - previousMaxHp));
 
         // 로봇 질량(robot_mess)을 Rigidbody에 반영. 0/미설정이면 물리 계산이 깨지므로 기존 값 유지
         if (rb != null && Mess > 0f) rb.mass = Mess;
 
         // 머리 해금 3건(가드맨=방어력 10 / 메테우스=공격력 20 / 해피 픽셀=행운 20)이 "달성한
         // 최고치"를 조건으로 쓴다. 스탯이 다시 계산되는 이 자리가 유일한 갱신 지점이다.
-        UnlockTracker.ReportStats(Def, Atk, Luck);
+        UnlockTracker.ReportStats(Def, Atk, Luck);  // 해금 조건은 정수 기준이라 안에서 내림 처리한다
     }
 
     /// <summary>
@@ -288,7 +291,7 @@ public class PlayerRobotController : MonoBehaviour
     /// 4) 이 데미지로 체력이 0 이하가 되는 순간 "마지막 발악" 디스크가 남아있으면 대신 발동한다.
     /// 체력이 0 이하가 되면 1회차 게임오버 처리를 한다.
     /// </summary>
-    public void TakeDamage(int enemyAtk, Vector3? attackerPosition = null)
+    public void TakeDamage(float enemyAtk, Vector3? attackerPosition = null)
     {
         if (IsDead) return;
 
@@ -306,21 +309,28 @@ public class PlayerRobotController : MonoBehaviour
         // 예전에는 하한이 0이라 방어력만 올려두면 특정 적에게 완전 무적이 됐다 - 방어력
         // 업그레이드 몇 번으로 난이도가 통째로 무너지던 원인이다. 적 쪽 피해 계산
         // (EnemyUnit.TakeDamage)은 원래부터 최소 1이었으므로 이제 양쪽 규칙이 같다.
-        float effective_def = Def + GetTempStatBonus(StatType.Def);
-        int dmg = Mathf.Max(1, enemyAtk - Mathf.RoundToInt(effective_def));
+        // 2026-08-20 탈(PartEffect.DefWhenLowHp) - 체력이 절반 이하일 때만 붙는 방어력.
+        // 스탯을 만드는 RobotStats.Compute는 현재 체력을 모르므로 이 자리에서 더한다.
+        float effective_def = Def + GetTempStatBonus(StatType.Def) + PartEffects.GetLowHpDefBonus(CurrentHp, MaxHp);
+        float dmg = Mathf.Max(1f, enemyAtk - effective_def);
 
-        if (shieldHp > 0)
+        // 2026-08-20 사용자 요청 - 맞았을 때 데미지 숫자를 잠깐 띄운다(치명타 개념이 없는
+        // 적의 공격이라 항상 일반 표시). 실드 흡수 전 값을 보여준다 - "이번 공격의 위력"을
+        // 그대로 알려주는 것이 실드로 깎인 값보다 직관적이다.
+        DamageNumberUI.ShowTaken(transform.position + Vector3.up * 1.6f, dmg);
+
+        if (shieldHp > 0f)
         {
-            int absorbed = Mathf.Min(shieldHp, dmg);
+            float absorbed = Mathf.Min(shieldHp, dmg);
             shieldHp -= absorbed;
             dmg -= absorbed;
         }
 
-        int new_hp = CurrentHp - dmg;
+        float new_hp = CurrentHp - dmg;
 
-        if (new_hp <= 0 && DiscEffects != null && DiscEffects.TryTriggerLastStand(out float speedBonusRatio, out float invulnDuration))
+        if (new_hp <= 0f && DiscEffects != null && DiscEffects.TryTriggerLastStand(out float speedBonusRatio, out float invulnDuration))
         {
-            CurrentHp = 1;
+            CurrentHp = 1f;
             lastStandInvulnUntil = Time.time + invulnDuration;
             ApplyTempStatBonus(StatType.MoveSpeed, MoveSpeed * speedBonusRatio, invulnDuration);
             if (hitFlash != null) hitFlash.Play();
@@ -329,14 +339,14 @@ public class PlayerRobotController : MonoBehaviour
             return;
         }
 
-        CurrentHp = Mathf.Max(0, new_hp);
+        CurrentHp = Mathf.Max(0f, new_hp);
         UnlockTracker.ReportPlayerDamaged(CurrentHp); // 위장(피격 30회)/물 빠지는 소리(HP 20 이하)/바람 소리(무피격 클리어)
 
         if (hitFlash != null) hitFlash.Play(); // 피격 시 0.25초 흰색
         ApplyHitKnockback(attackerPosition);
         hitFeedback?.OnHit(dmg, attackerPosition);
 
-        if (CurrentHp <= 0) Die();
+        if (CurrentHp <= 0f) Die();
     }
 
     /// <summary>
@@ -359,11 +369,11 @@ public class PlayerRobotController : MonoBehaviour
     /// <paramref name="fromWaveEnd"/>는 웨이브를 넘길 때의 전체 회복(GameFlowManager)만 true다 -
     /// 에너지 베리어 디스크의 해금 조건이 "웨이브 종료 회복 <b>외</b>의 방법으로 회복"이라
     /// 그 둘을 구분해야 한다(2026-08-19 Phase E).</summary>
-    public void Heal(int amount, bool fromWaveEnd = false)
+    public void Heal(float amount, bool fromWaveEnd = false)
     {
         if (IsDead || amount <= 0) return;
 
-        int before = CurrentHp;
+        float before = CurrentHp;
         CurrentHp = Mathf.Min(MaxHp, CurrentHp + amount);
         if (CurrentHp > before) UnlockTracker.ReportHealed(fromWaveEnd);
     }
@@ -391,7 +401,7 @@ public class PlayerRobotController : MonoBehaviour
     public void SetConditionalMoveSpeedBonus(float amount) => conditionalMoveSpeedBonus = amount;
 
     /// <summary>"에너지 베리어 디스크" 전용 - 웨이브 시작마다 DiscEffectRuntime이 상한을 다시 설정한다.</summary>
-    public void SetShieldMaxHp(int amount) => shieldMaxHp = Mathf.Max(0, amount);
+    public void SetShieldMaxHp(float amount) => shieldMaxHp = Mathf.Max(0f, amount);
 
     /// <summary>실드를 상한까지 가득 채운다(웨이브 시작 시 호출).</summary>
     public void RefillShield() => shieldHp = shieldMaxHp;

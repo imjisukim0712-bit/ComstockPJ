@@ -21,11 +21,12 @@ public class PartsCatalog : ScriptableObject
     {
         public int weaponId;
 
-        [Tooltip("투사체 타입(연사/산탄/정밀/폭발/에너지/근접) - 공격 방식의 분류. " +
-                 "소켓 장착 제한과는 무관하다")]
+        [Tooltip("무기 카테고리(연사/산탄/정밀/폭발/에너지/근접). 2026-08-20 소켓 명세 반영으로 " +
+                 "<b>무기 소켓 파츠가 이 값으로 짝을 가린다</b>(불일치면 소켓 보정 없음 + 무게 x2)")]
         public WeaponType type;
 
-        [Tooltip("무기 타입(경무장/중무장/근접무기) - 무기 소켓 파츠가 이 값으로 장착 가능 여부를 가른다")]
+        [Tooltip("무기 타입(경무장/중무장/근접무기). 2026-08-20 소켓 명세 교체 이후 <b>소켓 장착 제한에는 " +
+                 "쓰이지 않는다</b>(그 역할은 위 type = 무기 카테고리가 맡는다) - 지금은 상점 표시용이다")]
         public WeaponClass weaponClass;
 
         [Tooltip("자기장 코어 + 다리의 weightCapacity 합과 비교되는 무게")]

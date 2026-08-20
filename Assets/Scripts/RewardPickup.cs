@@ -80,8 +80,11 @@ public class RewardPickup : MonoBehaviour
                 // 금화의 잔향(+10%)은 1.1/2.2/3.3이 전부 원래 값으로 반올림돼 증가분이 없었다.
                 // 이제 소수점 나머지를 이월하는 누적기로 넘겨 기대값을 정확히 보존한다
                 // (RunState.AddGoldWithFraction 주석 참고).
+                // 2026-08-20 아카식 레지스터(메모리 파츠)도 골드 획득량을 올린다 - 파츠 보너스는
+                // RunState.PartStatBonuses에 있으므로 PartEffects가 배율로 바꿔 함께 곱한다.
                 float gold_gain_percent = RunState.DiscStatBonuses.TryGetValue(StatType.GoldGain, out float g) ? g : 0f;
-                RunState.AddGoldWithFraction(Amount * (1f + gold_gain_percent / 100f) * HeadEffects.GoldGainMultiplier);
+                RunState.AddGoldWithFraction(Amount * (1f + gold_gain_percent / 100f) * HeadEffects.GoldGainMultiplier
+                                             * PartEffects.GainMultiplier(StatType.GoldGain));
                 break;
 
             // 부품 상자는 머리(로봇)의 적재량 상한이 있으므로 정비 매니저를 거쳐 지급한다.
@@ -95,7 +98,9 @@ public class RewardPickup : MonoBehaviour
             default:
                 // 머리 효과(미니 픽시 경험치 +50%). 반올림 후 최소 1은 보장한다 - 경험치 1짜리
                 // 픽업에 배율이 곱해져 0으로 사라지면 "먹었는데 아무 일도 없는" 픽업이 된다.
-                RunState.CoreExp += Mathf.Max(1, Mathf.RoundToInt(Amount * HeadEffects.ExpGainMultiplier));
+                // 2026-08-20 뉴럴 캐시·아카식 레지스터(메모리 파츠)의 경험치 획득량 +%도 함께 곱한다.
+                RunState.CoreExp += Mathf.Max(1, Mathf.RoundToInt(Amount * HeadEffects.ExpGainMultiplier
+                                                                  * PartEffects.GainMultiplier(StatType.ExpGain)));
                 break;
         }
 

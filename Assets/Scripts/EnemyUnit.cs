@@ -48,10 +48,13 @@ public class EnemyUnit : MonoBehaviour
     public const float ReferenceMass = 50f;
 
     public int MonsterId { get; private set; }
-    public int MaxHp { get; private set; }
-    public int CurrentHp { get; private set; }
-    public int Atk { get; private set; }
-    public int Def { get; private set; }
+    // 2026-08-20 스탯 소수화 - 플레이어의 공격력 +0.3 같은 소수 보너스가 실제 피해에
+    // 반영되려면 받는 쪽 체력도 소수여야 한다(정수로 두면 매 타격에서 잘려 사라진다).
+    // 원본 데이터(MonsterData)는 그대로 int이며, 여기서 float로 받아 웨이브 배율을 곱한다.
+    public float MaxHp { get; private set; }
+    public float CurrentHp { get; private set; }
+    public float Atk { get; private set; }
+    public float Def { get; private set; }
     public float MoveSpeed { get; private set; }
     public float AttackRange { get; private set; } // monster_range: 공격 사거리
     public float AtSp { get; private set; }         // monster_atsp: 공격속도 - 공격 쿨다운에 사용
@@ -117,8 +120,32 @@ public class EnemyUnit : MonoBehaviour
 
         Mass = data.EffectiveMass;
 
+        stat_multiplier = 1f;
+
         UpdateHealthBar(); // 스폰 직후는 항상 100%이므로 바를 숨긴 상태로 초기화한다
     }
+
+    /// <summary>
+    /// 웨이브 스탯 배율(EnemySpawner.CurrentStatMultiplier)을 체력·공격력에 곱한다.
+    /// 예전에는 EnemySpawner가 MonsterData의 int 필드를 반올림해서 곱했는데, 스탯 소수화
+    /// (2026-08-20) 이후에는 반올림 없이 여기서 곱한다 - 2.5%/웨이브 같은 작은 증가가
+    /// 정수 반올림에 먹히지 않는다. Init() 직후에 한 번만 호출한다.
+    /// </summary>
+    public void ApplyWaveStatMultiplier(float multiplier)
+    {
+        if (multiplier <= 0f || Mathf.Approximately(multiplier, 1f)) return;
+
+        stat_multiplier = multiplier;
+        MaxHp = Mathf.Max(1f, MaxHp * multiplier);
+        CurrentHp = MaxHp;
+        Atk = Mathf.Max(1f, Atk * multiplier);
+        UpdateHealthBar();
+    }
+
+    private float stat_multiplier = 1f;
+
+    /// <summary>이 유닛에 적용된 웨이브 스탯 배율(디버그·검증용).</summary>
+    public float WaveStatMultiplier => stat_multiplier;
 
     // protected virtual로 열어둔 이유: BossUnit이 이 클래스를 상속해서 광역 공격 패턴을 얹는다.
     // Awake를 override해서 base.Awake()를 호출해야 Alive 리스트 등록/물리 설정이 그대로 적용된다
@@ -526,6 +553,23 @@ public class EnemyUnit : MonoBehaviour
     }
 
     /// <summary>
+    /// <b>접촉 근접 공격</b>으로 플레이어를 때린다(기본 근접 / 차저 돌진 / 스프린터 대시가 모두 이 경로).
+    ///
+    /// 가시 플레이트(<see cref="PartEffect.MeleeReflectPercent"/>)의 반사가 여기서 일어난다 -
+    /// 스피터의 투사체·디스럭터 자폭·보스 광역은 이 함수를 거치지 않으므로 반사되지 않는다
+    /// (명세 "근접 공격 반사"를 글자 그대로 따른 것이다).
+    /// </summary>
+    protected void MeleeAttackPlayer(PlayerRobotController target)
+    {
+        if (target == null) return;
+
+        target.TakeDamage(Atk, transform.position);
+
+        float reflect_percent = PartEffects.GetMeleeReflectPercent();
+        if (reflect_percent > 0f && !IsDead) TakeDamage(Atk * reflect_percent * 0.01f);
+    }
+
+    /// <summary>
     /// duration 동안 from → to로 부드럽게 이동시킨다(물리 스텝에 맞춰 Rigidbody 위치를 직접 잡는다).
     /// 도중에 죽으면 즉시 중단한다.
     /// </summary>
@@ -558,7 +602,7 @@ public class EnemyUnit : MonoBehaviour
     /// </summary>
     protected virtual void ExecuteAttackEffect()
     {
-        player.TakeDamage(Atk, transform.position);
+        MeleeAttackPlayer(player);
     }
 
     /// <summary>공격 판정 시점에 플레이어가 여전히 사거리(+몸통 여유) 안에 있는지 재확인한다.</summary>
@@ -762,7 +806,7 @@ public class EnemyUnit : MonoBehaviour
     /// (플라즈마 캐논 0.5 = 방어력 절반 무시, 레이저 피스톨 0.25 등).
     /// 기본값이 0이라 방어무시가 없는 기존 호출부는 그대로 동작한다.
     /// </summary>
-    public virtual void TakeDamage(int amount, float def_ignore_percent = 0f, int source_weapon_id = 0)
+    public virtual void TakeDamage(float amount, float def_ignore_percent = 0f, int source_weapon_id = 0, bool isCrit = false)
     {
         if (IsDead) return;
 
@@ -771,12 +815,18 @@ public class EnemyUnit : MonoBehaviour
         // 0이 넘어오며, 그 경우 어느 무기 카운터도 오르지 않는다.
         if (source_weapon_id > 0) LastDamageWeaponId = source_weapon_id;
 
-        int effective_def = Mathf.RoundToInt(Def * (1f - Mathf.Clamp01(def_ignore_percent)));
-        int dmg = Mathf.Max(1, amount - effective_def);
+        float effective_def = Def * (1f - Mathf.Clamp01(def_ignore_percent));
+        float dmg = Mathf.Max(1f, amount - effective_def);
         CurrentHp -= dmg;
         UpdateHealthBar();
         PlayHitFlash();
-        if (CurrentHp <= 0) Die();
+
+        // 2026-08-20 사용자 요청 - 맞은 자리 위로 데미지 숫자를 잠깐 띄운다. 체력바가 이미
+        // 몸통 위 정확한 높이에 자리를 잡아뒀으므로 그 위치를 그대로 재사용한다.
+        Vector3 popup_pos = health_bar_root != null ? health_bar_root.position : transform.position + Vector3.up;
+        DamageNumberUI.ShowDealt(popup_pos, dmg, isCrit);
+
+        if (CurrentHp <= 0f) Die();
     }
 
     // ── 체력바 ──────────────────────────────────────────────────
@@ -846,7 +896,7 @@ public class EnemyUnit : MonoBehaviour
     {
         if (health_bar_root == null) return;
 
-        float ratio = MaxHp > 0 ? Mathf.Clamp01((float)CurrentHp / MaxHp) : 0f;
+        float ratio = MaxHp > 0f ? Mathf.Clamp01(CurrentHp / MaxHp) : 0f;
         bool should_show = ratio < 1f && ratio > 0f;
 
         health_bar_root.gameObject.SetActive(should_show);
@@ -937,7 +987,7 @@ public class EnemyUnit : MonoBehaviour
         // 픽업이 수백 개씩 쌓였다. 이제는 확률 드랍이다(사용자 지정: 경험치 1/2, 골드 1/3).
         if (Random.value < ExpDropChance)
         {
-            RewardPickupManager.SpawnReward(RewardType.Exp, Mathf.Max(1, MaxHp / ExpPerMaxHp), transform.position);
+            RewardPickupManager.SpawnReward(RewardType.Exp, Mathf.Max(1, Mathf.FloorToInt(MaxHp / ExpPerMaxHp)), transform.position);
         }
 
         if (Random.value < GoldDropChance)
@@ -945,7 +995,7 @@ public class EnemyUnit : MonoBehaviour
             // 나눗셈을 <b>반올림</b>한다(2026-08-13). 정수 나눗셈(내림)이었을 때는 체력이 낮은
             // 몬스터일수록 손실률이 커서(체력 110 → 1.83이 1로 깎여 -45%) 이번 체력 하향이
             // 골드 수입까지 조용히 깎아내렸다.
-            int goldAmount = Mathf.Max(1, Mathf.RoundToInt(MaxHp / (float)GoldPerMaxHp));
+            int goldAmount = Mathf.Max(1, Mathf.RoundToInt(MaxHp / GoldPerMaxHp));
             RewardPickupManager.SpawnReward(RewardType.Gold, goldAmount, transform.position);
         }
 

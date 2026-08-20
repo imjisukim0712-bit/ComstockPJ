@@ -10,13 +10,20 @@ using UnityEngine.UI;
 ///
 /// - 매 프레임 PlayerRobotController의 CurrentHp/MaxHp, RunState의 웨이브/골드/AI 코어
 ///   경험치를 읽어 실시간으로 갱신한다.
-/// - 게임 시작 시 Game Over/Victory 오브젝트를 항상 비활성화한다(씬에 켜진 채로 저장돼 있어도 무시).
+/// - 게임 시작 시 Game Over 오브젝트를 항상 비활성화한다(씬에 켜진 채로 저장돼 있어도 무시).
 /// - 2026-08-18 HUD 정리: 항목명 글자("HP"/"골드"/"부품 상자"/"레벨")를 전부 없애고 아이콘으로
 ///   대신한다. 체력·경험치는 게이지와 숫자를 한 줄로 합쳐 좌상단에 세로로 쌓고, 웨이브/남은 시간은
 ///   상단 중앙, 구르기 쿨다운은 우하단에 둔다. 배치는 씬(Ground01)이 갖고 있고 여기서는 문구만 만든다.
-/// - 체력이 0 이하가 되면(GameOverManager.OnGameOver) Game Over 오브젝트를,
-///   마지막 웨이브 보스를 처치하면(GameWinManager.OnGameWon) Victory 오브젝트를 활성화한다.
+/// - 체력이 0 이하가 되면(GameOverManager.OnGameOver) Game Over 오브젝트를 활성화한다.
 ///   플레이어 이동/발사 정지는 각 매니저가 이미 처리하므로 여기서는 UI 표시만 담당한다.
+///
+/// <b>승리 시 "VICTORY" 문구는 2026-08-20에 완전히 제거했다</b>(사용자 지적: 화면 중앙에
+/// 뜬 채로 사라지지도 않고 그 자리의 클릭도 막았다 - 무한모드로 넘어가면 `GameWinManager.
+/// TriggerWin()`이 런 전체에서 단 한 번만 불려서 이 오브젝트를 다시 끌 계기가 없었고,
+/// TextMeshProUGUI의 `raycastTarget`이 켜진 채로 화면 중앙(694x454px)을 덮어
+/// `ScoreSummaryPopup`의 "계속"/"타이틀로" 버튼 클릭을 영구히 가로챘다). 이제 승리 시에는
+/// `GameFlowManager.HandleGameWon()`이 띄우는 `ScoreSummaryPopup`(정산 화면)만 나온다.
+/// 씬의 `Victory` 오브젝트는 지우지 않고 항상 비활성 상태로만 남겨둔다.
 /// </summary>
 public class GameHUD : MonoBehaviour
 {
@@ -30,9 +37,6 @@ public class GameHUD : MonoBehaviour
     [Header("게임오버 / 승리")]
     [Tooltip("체력이 0 이하가 되면 활성화할 오브젝트 (예: GameOver 텍스트)")]
     [SerializeField] private GameObject gameOverObject;
-
-    [Tooltip("마지막 웨이브 보스를 처치하면 활성화할 오브젝트")]
-    [SerializeField] private GameObject victoryObject;
 
     [Header("웨이브/런 진행 표시 (비워두면 표시 생략)")]
     [Tooltip("현재 웨이브 번호를 표시할 텍스트")]
@@ -65,18 +69,15 @@ public class GameHUD : MonoBehaviour
     private void Awake()
     {
         if (gameOverObject != null) gameOverObject.SetActive(false); // 게임 시작 시 항상 비활성화
-        if (victoryObject != null) victoryObject.SetActive(false);
 
         FindPlayer();
 
         GameOverManager.OnGameOver += HandleGameOver;
-        GameWinManager.OnGameWon += HandleGameWon;
     }
 
     private void OnDestroy()
     {
         GameOverManager.OnGameOver -= HandleGameOver;
-        GameWinManager.OnGameWon -= HandleGameWon;
     }
 
     private void FindPlayer()
@@ -93,19 +94,21 @@ public class GameHUD : MonoBehaviour
             return;
         }
 
-        int max = Mathf.Max(1, player.MaxHp);
-        int current = Mathf.Clamp(player.CurrentHp, 0, max);
+        // 2026-08-20 스탯 소수화 - 체력이 float가 되어 표시도 소수점까지 보여준다("0.##"이라
+        // 정수일 때는 예전처럼 소수점이 붙지 않는다).
+        float max = Mathf.Max(1f, player.MaxHp);
+        float current = Mathf.Clamp(player.CurrentHp, 0f, max);
 
         if (hpSlider != null)
         {
             hpSlider.maxValue = max;
             hpSlider.value = current;
-            UpdateHpBarArt(current / (float)max);
+            UpdateHpBarArt(current / max);
         }
 
         if (hpValueText != null)
         {
-            hpValueText.text = $"{current} / {max}";
+            hpValueText.text = $"{current:0.##} / {max:0.##}";
         }
 
         // 항목명("웨이브"/"골드")은 상단 중앙 패널 위치와 골드 아이콘이 대신하므로 숫자만 쓴다
@@ -265,10 +268,5 @@ public class GameHUD : MonoBehaviour
     private void HandleGameOver()
     {
         if (gameOverObject != null) gameOverObject.SetActive(true);
-    }
-
-    private void HandleGameWon()
-    {
-        if (victoryObject != null) victoryObject.SetActive(true);
     }
 }

@@ -28,6 +28,7 @@ public class PauseMenuUI : MonoBehaviour
     // (아래 Build/Update 주석의 2026-08-19 버그 수정 참고).
     private GameObject content;
     private SettingsPanelUI settingsPanel;
+    private RankingPanelUI rankingPanel;
     private float savedTimeScale = 1f;
 
     public bool IsOpen => content != null && content.activeSelf;
@@ -101,7 +102,7 @@ public class PauseMenuUI : MonoBehaviour
         CreateLabel(panelRect, "Title", "옵션", 0.06f, 0.87f, 0.94f, 0.97f);
 
         CreateButton(panelRect, "ReturnButton", "돌아가기", 0.10f, 0.685f, 0.90f, 0.80f, ClosePause, true);
-        CreateButton(panelRect, "RankingButton", "랭킹 (준비 중)", 0.10f, 0.525f, 0.90f, 0.64f, null, false);
+        CreateButton(panelRect, "RankingButton", "랭킹", 0.10f, 0.525f, 0.90f, 0.64f, OpenRanking, true);
         CreateButton(panelRect, "CodexButton", "도감 (준비 중)", 0.10f, 0.365f, 0.90f, 0.48f, null, false);
         CreateButton(panelRect, "SettingsButton", "설정", 0.10f, 0.205f, 0.90f, 0.32f, OpenSettings, true);
         CreateButton(panelRect, "QuitButton", "나가기", 0.10f, 0.045f, 0.90f, 0.16f, HandleQuitClicked, true);
@@ -118,10 +119,16 @@ public class PauseMenuUI : MonoBehaviour
         if (Keyboard.current == null) return;
         if (!Keyboard.current.escapeKey.wasPressedThisFrame) return;
 
-        // 설정 화면이 열려 있으면 ESC로 그것부터 닫는다(옵션 패널로 한 단계만 돌아간다).
+        // 설정·랭킹 화면이 열려 있으면 ESC로 그것부터 닫는다(옵션 패널로 한 단계만 돌아간다).
         if (settingsPanel != null && settingsPanel.IsOpen)
         {
             settingsPanel.Close();
+            return;
+        }
+
+        if (rankingPanel != null)
+        {
+            rankingPanel.Close();
             return;
         }
 
@@ -166,6 +173,7 @@ public class PauseMenuUI : MonoBehaviour
     private void ClosePause()
     {
         if (settingsPanel != null && settingsPanel.IsOpen) settingsPanel.Close();
+        if (rankingPanel != null) rankingPanel.Close();
 
         content.SetActive(false);
         GameFlowManager.SetPaused(false);
@@ -177,16 +185,38 @@ public class PauseMenuUI : MonoBehaviour
         if (settingsPanel != null) settingsPanel.Open();
     }
 
+    /// <summary>"랭킹" - 연타 방어(닫을 때 파괴되므로 열려 있으면 다시 만들지 않는다).
+    /// 지금 플레이 중인 맵(활성 씬)의 랭킹을 보여준다 - 맵마다 랭킹이 분리된다(2026-08-20).</summary>
+    private void OpenRanking()
+    {
+        if (rankingPanel != null) return;
+        string mapId = SceneManager.GetActiveScene().name;
+        rankingPanel = RankingPanelUI.Attach(overlayRoot, mapId, () => rankingPanel = null);
+    }
+
     private void HandleQuitClicked()
     {
         // 엔드리스 모드 도중 나가기를 누르면(사용자 확정 사항, 2026-08-19 Phase C) 그 시점의
         // 점수를 랭킹에 남긴다 - 정산 팝업의 "타이틀로"와 같은 제출 경로(RunScore.SubmitToLeaderboard)
-        // 를 그대로 쓴다. 별도 확인 화면 없이 바로 제출 후 나간다(이미 "나가기"를 눌러 의사를
-        // 밝힌 상태라 한 번 더 물어보지 않는다).
-        if (RunState.IsEndless) RunScore.SubmitToLeaderboard();
+        // 를 그대로 쓴다. 2026-08-20부터 제출 직전에 닉네임 입력만 한 번 받는다(로봇 이름으로
+        // 미리 채워져 있어 그냥 확인만 눌러도 예전과 동일하게 동작한다).
+        if (RunState.IsEndless)
+        {
+            NicknameInputPopup.Attach(overlayRoot, RunScore.ResolveDefaultPlayerName(), name =>
+            {
+                RunScore.SubmitToLeaderboard(name);
+                FinishQuitToTitle();
+            });
+            return;
+        }
 
-        // 게임오버 요약 화면의 "타이틀로"와 같은 처리 - timeScale을 반드시 되돌려 놓고 이동한다
-        // (되돌리지 않으면 타이틀 화면 자체가 멈춘 채로 시작된다).
+        FinishQuitToTitle();
+    }
+
+    // 게임오버 요약 화면의 "타이틀로"와 같은 처리 - timeScale을 반드시 되돌려 놓고 이동한다
+    // (되돌리지 않으면 타이틀 화면 자체가 멈춘 채로 시작된다).
+    private void FinishQuitToTitle()
+    {
         Time.timeScale = 1f;
         GameFlowManager.SetPaused(false);
         SceneManager.LoadScene(TitleSceneName);

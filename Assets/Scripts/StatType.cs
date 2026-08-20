@@ -24,5 +24,10 @@ public enum StatType
     // 무기 사거리·감지거리에 곱해지는 비율(%))이라 RobotStats.ApplyBonus에는 연결하지 않는다.
     // PlayerShootManager.GetTravelRange()/GetDetectRange()가 RunState.CoreStatBonuses에서
     // 직접 읽어 사거리·감지거리 양쪽에 함께 곱한다.
-    WeaponRangeBonus
+    WeaponRangeBonus,
+
+    // 2026-08-20 메모리 파츠(뉴럴 캐시/아카식 레지스터) 반영 - GoldGain과 똑같은 성격(로봇 스탯이
+    // 아니라 경험치 수령량에 곱해지는 비율(%))이라 RobotStats.ApplyBonus에는 연결하지 않는다.
+    // RewardPickup이 디스크/파츠 보너스 양쪽에서 직접 읽어 경험치 수령량에 곱한다.
+    ExpGain
 }

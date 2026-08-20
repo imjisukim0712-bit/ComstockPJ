@@ -82,7 +82,7 @@ public class AiCoreExtraButtonsUI : MonoBehaviour
         Image icon = CreateImage(parent, "GoldIcon",
             new Vector2(bgMin.x + width * 0.04f, bgMin.y + 0.008f), new Vector2(iconMaxX, bgMax.y - 0.008f), Color.white);
         icon.raycastTarget = false;
-        Sprite iconSprite = Resources.Load<Sprite>("UI/Gold_icon00");
+        Sprite iconSprite = Resources.Load<Sprite>("Gold"); // 인게임 드랍 금화와 같은 그림(2026-08-20 통일)
         if (iconSprite != null)
         {
             icon.sprite = iconSprite;

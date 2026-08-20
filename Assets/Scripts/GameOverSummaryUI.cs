@@ -27,12 +27,29 @@ public class GameOverSummaryUI : MonoBehaviour
     [SerializeField] private Button titleButton;
     [SerializeField] private string titleSceneName = "Title";
 
+    [Header("랭킹 (2026-08-20)")]
+    [SerializeField] private Button rankingButton;
+
     // 이 화면이 여러 번 켜져도(이론상) 랭킹에 중복 제출되지 않도록 막는 가드(2026-08-19 Phase C).
     private bool scoreSubmitted;
+    private RankingPanelUI rankingPanel;
 
     private void Awake()
     {
         if (titleButton != null) titleButton.onClick.AddListener(GoToTitle);
+        if (rankingButton != null) rankingButton.onClick.AddListener(OpenRanking);
+    }
+
+    /// <summary>"랭킹" - 연타 방어(닫을 때 파괴되므로 열려 있으면 다시 만들지 않는다).
+    /// 방금 끝난 런의 맵(활성 씬)의 랭킹을 보여준다 - 맵마다 랭킹이 분리된다(2026-08-20).</summary>
+    private void OpenRanking()
+    {
+        if (rankingPanel != null) return;
+
+        Canvas canvas = GetComponentInParent<Canvas>();
+        RectTransform parent = canvas != null ? canvas.transform as RectTransform : null;
+        string mapId = SceneManager.GetActiveScene().name;
+        rankingPanel = RankingPanelUI.Attach(parent, mapId, () => rankingPanel = null);
     }
 
     private void OnEnable()
@@ -40,14 +57,17 @@ public class GameOverSummaryUI : MonoBehaviour
         RefreshSummary();
 
         // 죽음도 엔드리스 런의 정식 종료 조건이다(사용자 확정 - "플레이어 사망도 점수 정산 화면
-        // 으로 간다"). 정산 팝업의 "타이틀로"와 달리 사용자 선택이 필요 없으니(이미 죽어서 더 할
-        // 수 있는 게 없다) 화면을 띄우는 시점에 바로 제출한다. 엔드리스에 진입하지 않은 일반
-        // 사망(1~19웨이브)도 점수 자체는 유효하므로 함께 제출한다 - 낮은 점수는 랭킹에서
-        // 자연스럽게 아래로 밀린다.
+        // 으로 간다"). 정산 팝업의 "타이틀로"와 달리 계속/포기를 고를 필요는 없지만, 2026-08-20
+        // 사용자 요청으로 제출 전에 닉네임만 입력받는다(로봇 이름으로 미리 채워져 있어 그냥
+        // 확인만 눌러도 예전과 동일하게 동작한다). 엔드리스에 진입하지 않은 일반 사망(1~19웨이브)
+        // 도 점수 자체는 유효하므로 함께 제출한다 - 낮은 점수는 랭킹에서 자연스럽게 아래로 밀린다.
         if (!scoreSubmitted)
         {
             scoreSubmitted = true;
-            RunScore.SubmitToLeaderboard();
+
+            Canvas canvas = GetComponentInParent<Canvas>();
+            RectTransform parent = canvas != null ? canvas.transform as RectTransform : null;
+            NicknameInputPopup.Attach(parent, RunScore.ResolveDefaultPlayerName(), RunScore.SubmitToLeaderboard);
         }
     }
 
@@ -164,9 +184,9 @@ public class GameOverSummaryUI : MonoBehaviour
 
         statsText.text =
             "[최종 능력치]\n" +
-            $"체력 {Mathf.Max(0, player.CurrentHp)}/{player.MaxHp}\n" +
-            $"공격력 {player.Atk}\n" +
-            $"방어력 {player.Def}\n" +
+            $"체력 {Mathf.Max(0f, player.CurrentHp):0.##}/{player.MaxHp:0.##}\n" +
+            $"공격력 {player.Atk:0.##}\n" +
+            $"방어력 {player.Def:0.##}\n" +
             $"치명타 확률 {player.Cc:0.##}%\n" +
             $"치명타 피해 {player.Cd:0.##}\n" +
             $"이동속도 {player.MoveSpeed:0.##}\n" +
