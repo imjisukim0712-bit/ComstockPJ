@@ -94,6 +94,7 @@ public class EnemyUnit : MonoBehaviour
     {
         modding_manager_cache = null;
         max_body_radius = 0.5f; // 이전 판에 있던 보스 크기가 남아 검색 반경이 과도해지지 않도록
+        MonsterAnimationLibrary.ResetCache(); // 씬 재로드로 Resources가 언로드됐을 수 있다
     }
 
     // 처치 시 보상이 나올 확률(사용자 지정). 부품 상자 확률만 PartsCatalog 에셋에 있고
@@ -328,73 +329,99 @@ public class EnemyUnit : MonoBehaviour
         }
     }
 
-    // 좀비 전용 이동(걷기/셔플) 8프레임(Assets/Resources/ZombieMove/walk_left_f0~f7.png, 사용자가
-    // 2026-08-12에 제공). 원본이 250x250으로 Enemy_zombie_S.png와 정확히 같은 규격이라 별도
-    // 스케일 보정 없이 그대로 쓸 수 있다(import 설정도 Enemy_zombie_S와 동일하게 맞췄다 -
-    // spriteMode Single, PPU 100, pivot 중앙). 공격 프레임과 같은 이유로 기본 좀비(EnemyUnit,
-    // MonsterId 200001)에만 적용한다 - 다른 몬스터는 규격(소형~초대형)마다 픽셀 크기가 달라
-    // 이 프레임을 그대로 쓰면 몸 크기가 잠깐 바뀌어 보인다.
-    private static Sprite[] zombie_move_frames_cache;
+    // 이동(걷기/질주/꿈틀거림) 프레임 세트. 2026-08-20까지는 기본 좀비(200001)의
+    // Resources/ZombieMove만 하드코딩돼 있었으나, 사용자가 스피터/스프린터/디스럭터/리더 +
+    // 보스(좀비 군집체)의 8프레임 모션을 제공하면서 <see cref="MonsterAnimationLibrary"/>로
+    // 옮겨 몬스터ID 단위로 일반화했다. 세트가 없는 몬스터(차저)는 프리팹의 정지 스프라이트를
+    // 그대로 유지한다(사용자 지정: "아직 애니메이션 없는 건 멈춘 이미지로 놔둬").
+    private MonsterAnimationLibrary.Clip move_clip;
+    private bool move_clip_resolved;
 
-    private static Sprite[] ZombieMoveFrames
+    /// <summary>
+    /// 이 유닛이 쓸 이동 프레임 세트. 기본은 몬스터ID로 조회하며, 데이터테이블 밖에 있는
+    /// 유닛(<see cref="BossUnit"/> - WaveManager가 monster_id = -1로 만들어 넘긴다)은
+    /// 이 프로퍼티를 override해서 폴더를 직접 지정한다.
+    /// </summary>
+    protected virtual MonsterAnimationLibrary.Clip ResolveMoveClip() =>
+        MonsterAnimationLibrary.GetByMonsterId(MonsterId);
+
+    /// <summary>
+    /// 프레임 세트는 <see cref="Init"/>로 MonsterId가 들어온 뒤에야 결정된다(스폰 순서:
+    /// Instantiate → Awake → Init). 그래서 Awake가 아니라 처음 쓰이는 시점에 한 번 조회한다.
+    /// </summary>
+    private MonsterAnimationLibrary.Clip MoveClip
     {
         get
         {
-            if (zombie_move_frames_cache == null)
+            if (!move_clip_resolved)
             {
-                Sprite[] loaded = Resources.LoadAll<Sprite>("ZombieMove");
-                System.Array.Sort(loaded, (a, b) => string.CompareOrdinal(a.name, b.name));
-                zombie_move_frames_cache = loaded;
+                move_clip = ResolveMoveClip();
+                move_clip_resolved = true;
             }
-            return zombie_move_frames_cache;
+            return move_clip;
         }
     }
 
-    [Tooltip("좀비 전용 이동(걷기) 모션 재생 속도(초당 프레임 수). 8프레임이라 8이면 1초에 한 바퀴 순환한다")]
-    [SerializeField] private float walkFrameFps = 6f;
+    [Tooltip("이동 모션 재생 속도(초당 프레임 수) 강제 지정. 0 이하면 몬스터별 기본값" +
+             "(MonsterAnimationLibrary의 Fps)을 쓴다")]
+    [SerializeField] private float walkFrameFpsOverride = 0f;
 
     private float walk_frame_phase;
 
     /// <summary>
-    /// 기본 좀비가 이동 중일 때 <see cref="ZombieMoveFrames"/>를 순환 재생하고, 멈추거나
-    /// 공격 모션이 시작되면 원래 정지 스프라이트로 되돌린다. 공격 프레임(<see cref="PlayAttackFrames"/>)이
-    /// 이미 body_sprite_renderer.sprite를 직접 다루고 있는 동안(IsAttacking)에는 건드리지 않는다 -
-    /// 서로 다른 시점에만 소유권을 넘겨받으므로 매 프레임 충돌하지 않는다.
+    /// 이동 중일 때 <see cref="MoveClip"/>을 순환 재생하고, 멈추면 그 세트의 "멈춘 이미지"
+    /// (<see cref="MonsterAnimationLibrary.Clip.StillFrame"/>)로 되돌린다. 공격 프레임
+    /// (<see cref="PlayAttackFrames"/>)이 이미 body_sprite_renderer.sprite를 직접 다루고 있는
+    /// 동안(IsAttacking)에는 건드리지 않는다 - 서로 다른 시점에만 소유권을 넘겨받으므로
+    /// 매 프레임 충돌하지 않는다.
     /// </summary>
     private void UpdateWalkAnimation()
     {
-        if (!CanPlayZombieMoveFrames())
+        if (!CanPlayMoveFrames())
         {
             walk_frame_phase = 0f;
             return;
         }
 
-        Sprite[] frames = ZombieMoveFrames;
+        MonsterAnimationLibrary.Clip clip = MoveClip;
+        Sprite[] frames = clip.Frames;
         Vector2 planar_velocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y);
         bool is_moving = planar_velocity.sqrMagnitude > (FacingVelocityThreshold * FacingVelocityThreshold);
 
-        if (!is_moving)
+        if (!is_moving && !clip.PlayWhileIdle)
         {
             walk_frame_phase = 0f;
-            if (body_sprite_renderer.sprite != original_body_sprite) body_sprite_renderer.sprite = original_body_sprite;
+            Sprite still = clip.StillFrame != null ? clip.StillFrame : original_body_sprite;
+            if (still != null && body_sprite_renderer.sprite != still) body_sprite_renderer.sprite = still;
             return;
         }
 
-        // walkFrameFps는 "기준 이동속도(MoveSpeed)로 걸을 때"의 프레임 속도다. 실제 속도가
+        // fps는 "기준 이동속도(MoveSpeed)로 걸을 때"의 프레임 속도다. 실제 속도가
         // 기준보다 느려지면(감속 오라 등) 애니메이션도 같이 느려지고, 빨라지면(넉백 등) 같이
         // 빨라진다 - 고정 fps로 두면 이동속도를 조정할 때마다 애니메이션과 따로 놀았다
         // (2026-08-12, "애니메이션 속도가 이동속도에 비해 너무 느리다" 리포트로 발견).
         float speed_ratio = MoveSpeed > 0.01f ? planar_velocity.magnitude / MoveSpeed : 1f;
-        walk_frame_phase += Time.deltaTime * walkFrameFps * speed_ratio;
+        // 제자리에서도 재생하는 세트(보스 호흡)는 멈춰 있을 때 0배가 되어 얼어붙지 않도록 1을 하한으로 둔다.
+        if (clip.PlayWhileIdle) speed_ratio = Mathf.Max(1f, speed_ratio);
+
+        float fps = walkFrameFpsOverride > 0f ? walkFrameFpsOverride : clip.Fps;
+        walk_frame_phase += Time.deltaTime * fps * speed_ratio;
         int frame_index = Mathf.FloorToInt(walk_frame_phase) % frames.Length;
         body_sprite_renderer.sprite = frames[frame_index];
     }
 
-    /// <summary>좀비 전용 이동 프레임이 다른 EnemyUnit 파생형이나 Player 렌더러에 적용되지
-    /// 않도록 <see cref="CanPlayZombieAttackFrames"/>와 동일한 조건에 공격 중이 아닐 것을 더한다.</summary>
-    private bool CanPlayZombieMoveFrames()
+    /// <summary>
+    /// 이동 프레임을 재생해도 되는 상태인지. 프레임 세트는 몬스터ID 전용이라 남의 몸에
+    /// 적용될 일이 없지만(<see cref="MonsterAnimationLibrary"/>), 렌더러 소유권만은 확인한다 -
+    /// body_sprite_renderer가 자식/플레이어 오브젝트의 것이면 건드리지 않는다.
+    /// </summary>
+    private bool CanPlayMoveFrames()
     {
-        return !IsAttacking && !IsDead && CanPlayZombieAttackFrames() && ZombieMoveFrames.Length > 0;
+        return !IsAttacking && !IsDead &&
+               !CompareTag("Player") &&
+               body_sprite_renderer != null &&
+               body_sprite_renderer.gameObject == gameObject &&
+               MoveClip.HasFrames;
     }
 
     // monster_atsp(공격속도) 쿨다운에 맞춰 공격을 시작한다.

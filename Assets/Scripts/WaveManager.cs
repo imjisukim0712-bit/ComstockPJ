@@ -59,7 +59,8 @@ public class WaveManager : MonoBehaviour
     [Tooltip("이 웨이브 번호에 도달하면 보스를 스폰한다. 기획서 확정: 20")]
     [SerializeField] private int finalWaveNumber = 20;
 
-    [Tooltip("보스 프리팹(Assets/Prefebs/Boss.prefab). 전용 아트가 없어 좀비 프리팹을 확대·색조 변경해 임시로 사용 중")]
+    [Tooltip("보스 프리팹(Assets/Prefebs/Boss.prefab). 2026-08-20부터 전용 아트 " +
+             "'좀비 군집체'(Resources/BossMove, 초대형 규격 800px 상당)를 쓴다")]
     [SerializeField] private GameObject bossPrefab;
 
     [Tooltip("보스 등장 시 플레이어로부터 이 거리만큼 떨어진 지점에 스폰")]

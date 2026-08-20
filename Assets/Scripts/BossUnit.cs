@@ -6,8 +6,11 @@ using UnityEngine;
 /// 등록되므로 PlayerShootManager의 자동 타겟팅이 별도 처리 없이 그대로 조준한다), 주기적으로
 /// 예비 동작(텔레그래프) 후 범위 데미지를 주는 광역 공격 패턴을 추가한다.
 ///
-/// 전용 보스 아트가 아직 없어(2026-08-06 기준) 좀비 프리팹을 확대·색조 변경한 임시 비주얼을
-/// 쓰는 중이라, 광역 공격 범위도 별도 이펙트 에셋 없이 런타임에 생성한 원형 스프라이트로 표시한다.
+/// 2026-08-20 보스 아트를 사용자 제공 "좀비 군집체"(보스몬스터기획서 Ver01)로 교체했다 -
+/// 그 전까지는 일반 좀비 스프라이트를 확대·붉게 물들인 임시 비주얼이었다. 프레임 8장은
+/// <see cref="MonsterAnimationLibrary.BossFolder"/>(Resources/BossMove)에 있고 제자리에서도
+/// 계속 재생된다(<see cref="ResolveMoveClip"/>).
+/// 광역 공격 범위 표시는 아직 전용 이펙트 에셋이 없어 런타임에 생성한 원형 스프라이트를 쓴다.
 /// </summary>
 public class BossUnit : EnemyUnit
 {
@@ -27,8 +30,25 @@ public class BossUnit : EnemyUnit
     [Tooltip("경고 범위 표시 색상")]
     [SerializeField] private Color telegraphColor = new Color(1f, 0.15f, 0.15f, 0.35f);
 
+    [Header("이동/대기 모션 (좀비 군집체 8프레임)")]
+    [Tooltip("제자리에서도 재생하는 몸통 꿈틀거림 모션의 재생 속도(초당 프레임 수). " +
+             "이동속도에 비례해 자동으로 빨라진다(EnemyUnit.UpdateWalkAnimation)")]
+    [SerializeField] private float idleMotionFps = 5f;
+
     private float next_aoe_time;
     private bool telegraph_active;
+
+    /// <summary>
+    /// 보스 스탯은 데이터테이블 밖에서 WaveManager가 <c>monster_id = -1</c>로 만들어 넘기므로
+    /// 몬스터ID로는 프레임 세트를 찾을 수 없다. 그래서 폴더명(<see cref="MonsterAnimationLibrary.BossFolder"/>)을
+    /// 직접 지정한다.
+    ///
+    /// 이 세트(사용자 제공 "좀비 군집체" 8프레임)는 보행 사이클이 아니라 <b>제자리 꿈틀거림</b>
+    /// 이라서 <c>playWhileIdle = true</c>로 둔다 - 멈춘 동안 얼어붙어 있으면 죽은 것처럼 보인다.
+    /// </summary>
+    protected override MonsterAnimationLibrary.Clip ResolveMoveClip() =>
+        MonsterAnimationLibrary.GetByFolder(MonsterAnimationLibrary.BossFolder,
+                                            stillFrameIndex: 0, fps: idleMotionFps, playWhileIdle: true);
 
     private static Sprite cached_circle_sprite;
 
