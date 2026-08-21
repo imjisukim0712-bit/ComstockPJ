@@ -146,7 +146,9 @@ public static class WeaponTableGenerator
             pierce = 1, pierceChance = 0.6f, splash = 0f, defignore = 0f, knockback = 0f, duration = 0f,
             firemode = WeaponFireMode.Projectile,
             imgscale = 1.15f, weight = 4.5f, basePrice = 45,
-            tanhwan = "Bullets", leftImg = "LeftCombatShotgun", rightImg = "RightCombatShotgun"
+            // 2026-08-21 사용자 제공 "동그란탄환" 이펙트 적용 - 산탄 계열은 기본탄환(Bullets)과
+            // 구분되는 둥근 탄환 프리팹(Pellet)을 쓴다.
+            tanhwan = "Pellet", leftImg = "LeftCombatShotgun", rightImg = "RightCombatShotgun"
         },
         new WeaponDef {
             kind = 3, name = "대물저격총", wclass = WeaponClass.Heavy, wtype = WeaponType.Precision,
@@ -175,7 +177,16 @@ public static class WeaponTableGenerator
             pierce = 0, pierceChance = 0f, splash = 2.4f, defignore = 0f, knockback = 0f, duration = 0f,
             firemode = WeaponFireMode.Projectile,
             imgscale = 1.15f, weight = 5.5f, basePrice = 55,
-            tanhwan = "Bullets", leftImg = "LeftRocketLauncher", rightImg = "RightRocketLauncher"
+            // 2026-08-21 사용자가 제공한 <b>전용 로켓 투사체</b>(8프레임 배기 화염 애니메이션,
+            // Assets/Resources/RocketProjectile)를 쓴다. 프리팹은
+            // Assets/Resources/Prefebs/Rocket.prefab이며 ProjectileSpriteAnimator가 프레임을 돌린다.
+            // 로켓 그림은 오른쪽을 향하고 있고, FireProjectiles가 진행 각도로 회전시키므로
+            // (PlayerShootManager.cs의 "프리팹이 기본적으로 오른쪽을 바라본다고 가정" 주석 참고)
+            // 어느 방향으로 쏴도 로켓 머리가 진행 방향을 향한다.
+            //
+            // 참고: 폭발 연출은 아직 전용 이펙트가 없어 기존 방식을 그대로 쓴다 -
+            // Projectile.Explode()가 날아온 투사체 자신의 스프라이트를 폭발 반경만큼 확대한다.
+            tanhwan = "Rocket", leftImg = "LeftRocketLauncher", rightImg = "RightRocketLauncher"
         },
 
         // ===== 경무장 5종 =====
@@ -186,7 +197,9 @@ public static class WeaponTableGenerator
             pierce = 1, pierceChance = 0.4f, splash = 0f, defignore = 0f, knockback = 0f, duration = 0f,
             firemode = WeaponFireMode.Projectile,
             imgscale = 1.0f, weight = 2.0f, basePrice = 25,
-            tanhwan = "Bullets", leftImg = "LeftSawedOff", rightImg = "RightSawedOff"
+            // 2026-08-21 사용자 제공 "동그란탄환" 이펙트 적용 - 산탄 계열은 기본탄환(Bullets)과
+            // 구분되는 둥근 탄환 프리팹(Pellet)을 쓴다.
+            tanhwan = "Pellet", leftImg = "LeftSawedOff", rightImg = "RightSawedOff"
         },
         new WeaponDef {
             kind = 7, name = "레이저피스톨", wclass = WeaponClass.Light, wtype = WeaponType.Energy,
@@ -223,7 +236,8 @@ public static class WeaponTableGenerator
             pierce = 0, pierceChance = 0f, splash = 1.5f, defignore = 0f, knockback = 0f, duration = 0f,
             firemode = WeaponFireMode.Projectile,
             imgscale = 1.0f, weight = 3.0f, basePrice = 35,
-            tanhwan = "Bullets", leftImg = "LeftGrenadeLauncher", rightImg = "RightGrenadeLauncher"
+            // 로켓런처와 같은 이유로 폭발 무기는 둥근 탄환(Pellet)을 쓴다(위 주석 참고)
+            tanhwan = "Pellet", leftImg = "LeftGrenadeLauncher", rightImg = "RightGrenadeLauncher"
         },
 
         // ===== 근접 3종 (이미지가 방향별로 없어 좌우 공용) =====

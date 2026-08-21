@@ -18,6 +18,16 @@ using UnityEngine;
 /// 거치지 않고 보스를 그대로 <c>Destroy()</c>해버려 코루틴이 중간에 끊길 수 있다 - 이때 이미
 /// 만들어진 원이 임자를 잃고 화면(정비 화면 뒤)에 영원히 남아있던 버그가 있었다(2026-08-21).
 /// <see cref="OnDestroy"/>에서 남은 원을 확실히 정리해 고쳤다.
+///
+/// <b>그로기(기절) 상태 (2026-08-21 신설)</b> - 사용자가 좀비 군집체 전용 그로기 애니메이션
+/// 12프레임(Resources/BossGroggy) + 머리 위 별 이펙트 6프레임(Resources/BossGroggyStars)을
+/// 제공하면서, 광역 공격 하나가 끝난 직후 잠깐 무방비 상태가 되는 회복 딜레이를 새로 만들었다
+/// (판정/이동/사거리 확정 없이 "큰 기술을 쓴 뒤 짧게 vulnerable해지는" 통상적인 보스 패턴).
+/// 이동·공격을 잠그는 데 별도 플래그를 추가하는 대신 기존 <see cref="EnemyUnit.IsAttacking"/>을
+/// 재사용한다 - 이 플래그가 이미 <see cref="EnemyUnit.ComputeSeekDirection"/>(이동 정지)와
+/// <see cref="EnemyUnit.TryAttack"/>(공격 시작 차단), <see cref="EnemyUnit.CanPlayMoveFrames"/>
+/// (걷기 애니메이션이 몸 스프라이트를 건드리지 않음)를 전부 커버하므로 그로기 프레임을
+/// 이 코루틴이 직접 그려도 서로 충돌하지 않는다.
 /// </summary>
 public class BossUnit : EnemyUnit
 {
@@ -42,9 +52,28 @@ public class BossUnit : EnemyUnit
              "이동속도에 비례해 자동으로 빨라진다(EnemyUnit.UpdateWalkAnimation)")]
     [SerializeField] private float idleMotionFps = 5f;
 
+    [Header("그로기(기절) 상태 (좀비 군집체 전용, 밸런스 미확정 임시값)")]
+    [Tooltip("광역 공격이 끝난 직후 그로기 상태가 지속되는 시간(초) - 이 동안 이동/공격이 멈추고 피해를 더 받는다")]
+    [SerializeField] private float groggyDuration = 3f;
+
+    [Tooltip("그로기 상태 프레임(BossGroggy, 12프레임) 재생 속도(초당 프레임 수)")]
+    [SerializeField] private float groggyFps = 10f;
+
+    [Tooltip("그로기 상태에서 받는 피해 배율 (예: 1.5 = 50% 더 받음)")]
+    [SerializeField] private float groggyDamageMultiplier = 1.5f;
+
+    [Tooltip("머리 위 기절 이펙트(별)의 가로 크기(월드 유닛)")]
+    [SerializeField] private float groggyStarsWidth = 2.5f;
+
+    [Tooltip("머리 위 기절 이펙트가 몸 위로 얼마나 더 떠 있을지(월드 유닛)")]
+    [SerializeField] private float groggyStarsMargin = 0.3f;
+
+    private const string GroggyFolder = "BossGroggy";
+
     private float next_aoe_time;
     private bool telegraph_active;
     private GameObject active_telegraph;
+    private bool is_groggy;
 
     /// <summary>
     /// 보스 스탯은 데이터테이블 밖에서 WaveManager가 <c>monster_id = -1</c>로 만들어 넘기므로
@@ -111,9 +140,65 @@ public class BossUnit : EnemyUnit
                     break; // 플레이어는 한 명뿐이라 찾으면 바로 종료
                 }
             }
+
+            // 큰 기술을 쓴 직후의 회복 딜레이 - 플레이어에게 반격 기회를 주는 그로기(기절) 상태.
+            yield return PlayGroggySequence();
         }
 
         telegraph_active = false;
+    }
+
+    /// <summary>
+    /// 광역 공격 직후 잠깐 무방비 상태가 되는 그로기(기절) 시퀀스. 그로기 프레임(BossGroggy)을
+    /// 직접 재생하고 머리 위에 별 이펙트(BossGroggyStars)를 띄운다. <see cref="IsAttacking"/>을
+    /// 켜 두는 동안(클래스 헤더 주석 참고) 이동/공격이 자동으로 멈춘다.
+    /// </summary>
+    private IEnumerator PlayGroggySequence()
+    {
+        is_groggy = true;
+        IsAttacking = true;
+
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        MonsterAnimationLibrary.Clip clip = MonsterAnimationLibrary.GetByFolder(GroggyFolder, fps: groggyFps);
+
+        float head_offset = 1f;
+        if (sr != null)
+        {
+            float scale = transform.lossyScale.x;
+            if (Mathf.Approximately(scale, 0f)) scale = 1f;
+            head_offset = (sr.bounds.extents.y + groggyStarsMargin) / scale;
+        }
+        GroggyStarsEffect.Play(transform, head_offset, groggyDuration, sr != null ? sr.sortingOrder + 5 : 5, groggyStarsWidth);
+
+        if (sr != null && clip.HasFrames)
+        {
+            float elapsed = 0f;
+            float phase = 0f;
+            while (elapsed < groggyDuration)
+            {
+                if (IsDead || GameOverManager.IsGameOver) break;
+
+                phase += Time.deltaTime * clip.Fps;
+                sr.sprite = clip.Frames[Mathf.FloorToInt(phase) % clip.Frames.Length];
+
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+        }
+        else
+        {
+            yield return new WaitForSeconds(groggyDuration);
+        }
+
+        is_groggy = false;
+        IsAttacking = false;
+    }
+
+    /// <summary>그로기 상태에서는 피해를 <see cref="groggyDamageMultiplier"/>배 더 받는다.</summary>
+    public override void TakeDamage(float amount, float def_ignore_percent = 0f, int source_weapon_id = 0, bool isCrit = false)
+    {
+        if (is_groggy) amount *= groggyDamageMultiplier;
+        base.TakeDamage(amount, def_ignore_percent, source_weapon_id, isCrit);
     }
 
     private GameObject CreateTelegraphVisual(Vector3 position)

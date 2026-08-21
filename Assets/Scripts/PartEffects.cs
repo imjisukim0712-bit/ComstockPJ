@@ -30,6 +30,8 @@ public static class PartEffects
 
         float defFromDerived = 0f;
         float defPercent = 0f;
+        float moveSpeedPercent = 0f;
+        float massPercent = 0f;
 
         foreach (PartSlot slot in System.Enum.GetValues(typeof(PartSlot)))
         {
@@ -49,11 +51,31 @@ public static class PartEffects
                 case PartEffect.DefPercentBonus:
                     defPercent += part.effectAmount;
                     break;
+
+                case PartEffect.MoveSpeedPercentBonus:
+                    moveSpeedPercent += part.effectAmount;
+                    break;
+
+                case PartEffect.MassPercentBonus:
+                    massPercent += part.effectAmount;
+                    break;
             }
+        }
+
+        // 거미 다리의 질량 %효과("질량 * 0.5") - effect 필드는 다리마다 이동속도 %효과가 이미
+        // 쓰고 있어서(파츠 하나엔 PartEffect가 하나뿐이다) 전용 필드(legMassPercent)로 뺐다.
+        if (modding.TryGetEquippedPart(PartSlot.Leg, out PartData legPart) && legPart.legMassPercent != 0f)
+        {
+            massPercent += legPart.legMassPercent;
         }
 
         stats.Def += defFromDerived;
         if (defPercent != 0f) stats.Def *= 1f + defPercent * 0.01f;
+
+        // 다리 기획서 Ver02 - 이동속도/질량 %효과도 방어력 %증가와 같은 자리에서 곱해진다
+        // (가산 보너스·HeadEffects가 모두 끝난 값 기준).
+        if (moveSpeedPercent != 0f) stats.MoveSpeed *= 1f + moveSpeedPercent * 0.01f;
+        if (massPercent != 0f) stats.Mess *= 1f + massPercent * 0.01f;
     }
 
     /// <summary>

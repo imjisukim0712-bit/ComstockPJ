@@ -85,6 +85,28 @@ public struct PartData
     [Tooltip("장착 가능한 최대 디스크 개수. 이 파츠를 끼우면 로봇(머리) 기본값 대신 이 값이 쓰인다")]
     public int discSlotCount;
 
+    [Header("다리(Leg) 전용 액티브/패시브 스킬 (2026-08-18 다리 기획서 Ver02)")]
+    [Tooltip("Space를 눌렀을 때의 동작. None이면 액티브 스킬이 없다(로켓 추진기)")]
+    public LegSkillType legSkillType;
+
+    [Tooltip("legSkillType이 None이 아닐 때의 재사용 대기시간(초)")]
+    public float legSkillCooldown;
+
+    [Tooltip("체크하면 최대 체력의 25%를 잃을 때마다 이동속도가 5%씩 하락한다(거미 다리 전용, 누적)")]
+    public bool legHpLossSpeedPenalty;
+
+    [Tooltip("체크하면 같은 방향으로 2초 이상 이동할 때 이동속도가 점진적으로 최대 +2까지 가속한다" +
+             "(방향을 바꾸면 즉시 리셋). 로켓 추진기 전용")]
+    public bool legSpeedRampPassive;
+
+    [Tooltip("질량이 이 %만큼 변한다(거미 다리: -50). effect 필드는 이동속도 %효과가 이미 쓰고 " +
+             "있어서(파츠 하나는 PartEffect를 하나만 가진다) 별도 필드로 뺐다")]
+    public float legMassPercent;
+
+    [Tooltip("ProceduralCharacterRig가 다리 대신 그릴 시각 종류. legSkillType(Space 동작)과는 " +
+             "별개 필드다 - 지금은 다리 4종에 1:1로 대응한다")]
+    public LegVisualMode legVisualType;
+
     [Header("메모리 (Memory 슬롯 전용)")]
     [Tooltip("AI 코어 최대 레벨 증가량. 2026-08-20 명세부터 '머리 기본값을 대체'가 아니라 " +
              "'머리 기본값에 더한다'(명세 표기가 +15/+25/… 가산형이다)")]
@@ -123,6 +145,14 @@ public struct PartData
 
         string effectLine = BuildEffectLine();
         if (effectLine.Length > 0) lines.Add(effectLine);
+
+        if (legMassPercent != 0f) lines.Add($"질량 {legMassPercent:0.##}% 변화");
+        if (legSkillType != LegSkillType.None)
+            lines.Add($"액티브 스킬: {legSkillType.ToKorean()} (쿨타임 {legSkillCooldown:0.#}초)");
+        if (legHpLossSpeedPenalty)
+            lines.Add("체력 25% 감소마다 이동속도 -5% (누적)");
+        if (legSpeedRampPassive)
+            lines.Add("패시브: 동일 방향 2초 이동 시 이동속도 점진 가속(최대 +2)");
 
         AppendCommonLines(lines);
         return lines.Count > 0 ? string.Join("\n", lines) : "(보너스 없음)";
@@ -166,6 +196,10 @@ public struct PartData
                 return $"장착한 디스크 1개당 {StatTypeNames.ToKorean(effectStat)} +{effectAmount:0.##}";
             case PartEffect.PerSymphonyDiscAtk:
                 return $"장착한 \"교향곡\" 계열 디스크 1개당 공격력 +{effectAmount:0.###}";
+            case PartEffect.MoveSpeedPercentBonus:
+                return $"이동속도 {effectAmount:0.##}% 증가";
+            case PartEffect.MassPercentBonus:
+                return $"질량 {effectAmount:0.##}% 변화";
             default:
                 return string.Empty;
         }

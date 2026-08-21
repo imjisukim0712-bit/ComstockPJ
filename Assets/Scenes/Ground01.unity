@@ -12670,9 +12670,13 @@ MonoBehaviour:
     prefab: {fileID: 3409643553838284013, guid: 3b69ea4ae63faf544b78e9bc4a9f80af, type: 3}
   - prefab_name: Energy
     prefab: {fileID: 1813554706274653350, guid: 406f6c9ae2fe1b54dba02c4a2022b5ae, type: 3}
+  - prefab_name: Pellet
+    prefab: {fileID: 3409643553838284101, guid: af37c5f5184556c48838ed173aba44ab, type: 3}
   blast_visual_duration: 0.08
   max_detect_range: 6.1
-  beam_sprite_name: Energy
+  beam_sprite_name: PlasmaCannonBeam
+  muzzle_flash_target_width: 1.2
+  muzzle_flash_sorting_order: 20
   roll_rig_local_position: {x: 0, y: 4.3, z: 0}
   roll_rig_lateral_spread: 0.5
   melee_rest_tilt_degrees: 15

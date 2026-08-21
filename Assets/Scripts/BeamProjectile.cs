@@ -34,13 +34,21 @@ public class BeamProjectile : MonoBehaviour
     // OverlapBox 결과에서 중복 컴포넌트(자식 콜라이더 등)를 걸러내기 위한 틱 단위 임시 집합
     private readonly HashSet<EnemyUnit> hit_this_tick = new HashSet<EnemyUnit>();
 
+    // 빔 비주얼 애니메이션(2026-08-21, 플라즈마캐논 탄환 이펙트 2프레임 적용) - 프레임이 1장뿐이면
+    // 정지 이미지처럼 보인다(교체 전 단일 스프라이트 방식과 동일하게 동작).
+    private const float VisualFps = 8f;
+    private SpriteRenderer visual_renderer;
+    private Sprite[] visual_frames;
+    private float visual_frame_timer;
+    private int visual_frame_index;
+
     /// <summary>
     /// 빔 오브젝트를 코드로 만들어 발사한다. 전용 프리팹 없이 동작하도록
     /// RewardPickupManager와 같은 방식으로 SpriteRenderer를 직접 구성한다.
     /// </summary>
     /// <param name="total_damage">지속시간 전체에 걸쳐 들어갈 총 데미지 (weapon_atk)</param>
     /// <param name="duration">빔이 유지되는 시간(초). 0 이하면 1틱만 발생</param>
-    public static BeamProjectile Fire(Sprite visual, Vector3 origin, Vector3 fire_direction, float beam_length,
+    public static BeamProjectile Fire(Sprite[] visual_frames, Vector3 origin, Vector3 fire_direction, float beam_length,
                                       float beam_half_width, float total_damage, float duration,
                                       float def_ignore_percent, float knockback_strength, int source_weapon_id = 0,
                                       bool isCrit = false)
@@ -49,12 +57,12 @@ public class BeamProjectile : MonoBehaviour
         obj.transform.position = origin;
 
         BeamProjectile beam = obj.AddComponent<BeamProjectile>();
-        beam.Init(visual, fire_direction, beam_length, beam_half_width, total_damage, duration,
+        beam.Init(visual_frames, fire_direction, beam_length, beam_half_width, total_damage, duration,
                   def_ignore_percent, knockback_strength, source_weapon_id, isCrit);
         return beam;
     }
 
-    private void Init(Sprite visual, Vector3 fire_direction, float beam_length, float beam_half_width,
+    private void Init(Sprite[] frames, Vector3 fire_direction, float beam_length, float beam_half_width,
                       float total_damage, float duration, float def_ignore_percent, float knockback_strength,
                       int weapon_id = 0, bool isCrit = false)
     {
@@ -75,30 +83,47 @@ public class BeamProjectile : MonoBehaviour
         int tick_count = Mathf.Max(1, Mathf.RoundToInt(remaining_time / TickInterval));
         tick_damage = Mathf.Max(1, Mathf.RoundToInt((float)total_damage / tick_count));
 
-        BuildVisual(visual);
+        BuildVisual(frames);
 
         next_tick_time = 0f; // 발사 즉시 첫 틱
     }
 
-    // 빔을 길쭉한 스프라이트로 보여준다. 전용 아트가 없어 투사체 스프라이트를 늘려서 대신 쓴다.
-    private void BuildVisual(Sprite visual)
+    // 빔을 길쭉한 스프라이트로 보여준다. 프레임이 여러 장이면(플라즈마캐논 2프레임) 지속시간 내내
+    // 순환 재생한다 - BuildVisual이 첫 프레임 기준으로 크기/위치를 한 번만 잡고, 이후 Update()가
+    // sprite만 바꿔 낀다(크기는 프레임마다 다시 계산하지 않는다 - 두 프레임은 같은 크기다).
+    private void BuildVisual(Sprite[] frames)
     {
-        if (visual == null) return;
+        if (frames == null || frames.Length == 0) return;
+
+        visual_frames = frames;
+        Sprite first = frames[0];
 
         GameObject visual_obj = new GameObject("BeamVisual");
         visual_obj.transform.SetParent(transform, false);
 
-        SpriteRenderer renderer = visual_obj.AddComponent<SpriteRenderer>();
-        renderer.sprite = visual;
-        renderer.color = new Color(1f, 1f, 1f, 0.6f); // 겹쳐 보여도 눈이 아프지 않도록 반투명
+        visual_renderer = visual_obj.AddComponent<SpriteRenderer>();
+        visual_renderer.sprite = first;
+        visual_renderer.color = new Color(1f, 1f, 1f, 0.6f); // 겹쳐 보여도 눈이 아프지 않도록 반투명
 
-        float sprite_length = Mathf.Max(0.0001f, visual.bounds.size.x);
-        float sprite_height = Mathf.Max(0.0001f, visual.bounds.size.y);
+        float sprite_length = Mathf.Max(0.0001f, first.bounds.size.x);
+        float sprite_height = Mathf.Max(0.0001f, first.bounds.size.y);
 
         // 스프라이트의 왼쪽 끝이 총구에 오도록 절반 길이만큼 앞으로 밀어준다
         visual_obj.transform.localScale = new Vector3(length / sprite_length, (half_width * 2f) / sprite_height, 1f);
         visual_obj.transform.localPosition = direction * (length * 0.5f);
         visual_obj.transform.localRotation = Quaternion.FromToRotation(Vector3.right, direction);
+    }
+
+    private void UpdateVisualAnimation()
+    {
+        if (visual_renderer == null || visual_frames == null || visual_frames.Length < 2) return;
+
+        visual_frame_timer += Time.deltaTime;
+        if (visual_frame_timer < 1f / VisualFps) return;
+        visual_frame_timer = 0f;
+
+        visual_frame_index = (visual_frame_index + 1) % visual_frames.Length;
+        visual_renderer.sprite = visual_frames[visual_frame_index];
     }
 
     private void Update()
@@ -115,6 +140,8 @@ public class BeamProjectile : MonoBehaviour
             ApplyTick();
             next_tick_time = Time.time + TickInterval;
         }
+
+        UpdateVisualAnimation();
 
         remaining_time -= Time.deltaTime;
         if (remaining_time <= 0f) Destroy(gameObject);

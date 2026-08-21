@@ -78,7 +78,27 @@ public class Projectile : MonoBehaviour
         remaining_pierce = spec.PierceCount;
         spawn_position = transform.position;
 
-        transform.localScale = Vector3.one * (spec.Size > 0f ? spec.Size : 1f);
+        // <b>투사체 이미지는 원본 크기 그대로 그린다</b>(2026-08-21 사용자 지시:
+        // "무기 투사체 이미지를 임의로 늘리고 줄이지 말고 그대로 적용해줘").
+        //
+        // 예전에는 여기서 `localScale = spec.Size`(= weapon_atsize)를 절대 배율로 곱했다.
+        // 그런데 weapon_atsize 값(0.1~0.15)은 <b>옛 큰 이미지</b>(Bullets.png 640x640px,
+        // Energy.png 1254x1254px) 기준으로 튜닝된 것이라, 투사체 이미지를 신규 리소스
+        // (BasicBullet/Pellet 60x60px, LaserPistolBullet 256x64px)로 교체한 뒤에는 같은
+        // 배율이 전혀 다른 결과를 냈다 - 무기마다 탄환이 제각각 찌그러지거나 점처럼
+        // 작아 보이던 원인이다.
+        //
+        // 이 프로젝트의 다른 모든 시각 요소(MuzzleFlashEffect, DisruptorExplosionEffect,
+        // BeamProjectile 비주얼, 아래 ComputeBlastVisualScale, 손에 든 무기 이미지)는 전부
+        // "실제 스프라이트 bounds를 읽어 원하는 월드 크기로 역산"하는데, 날아가는 투사체
+        // 본체만 이 패턴에서 빠져 있었다. 이제 스케일 1로 고정해 리소스가 만들어진 크기를
+        // 그대로 쓴다(PPU 100이므로 60px 이미지는 0.6유닛). 프리팹의 SphereCollider 반지름
+        // (Bullets/Pellet 0.3)이 스케일 1에서 시각 반지름 0.3과 정확히 일치하므로,
+        // "보이는 크기 = 맞는 크기" 원칙도 함께 지켜진다.
+        //
+        // 참고: weapon_atsize는 빔 무기의 반폭(BeamProjectile)과 근접무기의 찌르는 거리로는
+        // 계속 쓰인다 - 여기(일반 투사체)에서만 의미를 갖지 않는다.
+        transform.localScale = Vector3.one;
     }
 
     private void Update()

@@ -37,6 +37,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 500002
     partName: "\uD45C\uC900 \uD314 \uC7A5\uAC11"
@@ -62,6 +68,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 500003
     partName: "\uD45C\uC900 \uC790\uAE30\uC7A5 \uCF54\uC5B4"
@@ -87,9 +99,15 @@ MonoBehaviour:
     weight: 2.5
     weightCapacity: 12
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 500004
-    partName: "\uD45C\uC900 \uB2E4\uB9AC"
+    partName: "\uAE30\uBCF8 \uB2E4\uB9AC"
     slot: 3
     grade: 0
     isDefaultStarter: 1
@@ -102,16 +120,22 @@ MonoBehaviour:
     socketCritChancePercent: 0
     socketSplashPercent: 0
     socketDefIgnorePercent: 0
-    bonusStat: 4
+    bonusStat: 0
     bonusAmount: 0
     bonusStat2: 0
     bonusAmount2: 0
-    effect: 0
+    effect: 9
     effectStat: 0
-    effectAmount: 0
+    effectAmount: 10
     weight: 3.5
     weightCapacity: 12
     discSlotCount: 0
+    legSkillType: 1
+    legSkillCooldown: 1
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 500005
     partName: "\uD45C\uC900 \uB2E4\uB9AC \uC7A5\uAC11"
@@ -137,6 +161,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 500007
     partName: "\uD45C\uC900 \uD5EC\uBA67"
@@ -162,6 +192,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 500008
     partName: "\uD45C\uC900 \uB514\uC2A4\uD06C \uC2AC\uB86F"
@@ -187,6 +223,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 6
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510050
     partName: "\uB098\uB178 \uCF54\uD305 \uC7A5\uAC11"
@@ -212,6 +254,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510051
     partName: "\uB098\uB178 \uCF54\uD305 \uC7A5\uAC11"
@@ -237,6 +285,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510052
     partName: "\uB098\uB178 \uCF54\uD305 \uC7A5\uAC11"
@@ -262,6 +316,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510053
     partName: "\uB098\uB178 \uCF54\uD305 \uC7A5\uAC11"
@@ -287,6 +347,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510054
     partName: "\uB098\uB178 \uCF54\uD305 \uC7A5\uAC11"
@@ -312,6 +378,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510060
     partName: "\uAC15\uD654 \uC7A5\uAC11"
@@ -337,6 +409,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510061
     partName: "\uAC15\uD654 \uC7A5\uAC11"
@@ -362,6 +440,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510062
     partName: "\uAC15\uD654 \uC7A5\uAC11"
@@ -387,6 +471,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510063
     partName: "\uAC15\uD654 \uC7A5\uAC11"
@@ -412,6 +502,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510064
     partName: "\uAC15\uD654 \uC7A5\uAC11"
@@ -437,6 +533,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510070
     partName: "\uCD08\uC804\uB3C4 \uCF54\uC5B4"
@@ -462,6 +564,12 @@ MonoBehaviour:
     weight: 2.5
     weightCapacity: 15
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510071
     partName: "\uCD08\uC804\uB3C4 \uCF54\uC5B4"
@@ -487,6 +595,12 @@ MonoBehaviour:
     weight: 2.5
     weightCapacity: 19.5
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510072
     partName: "\uCD08\uC804\uB3C4 \uCF54\uC5B4"
@@ -512,6 +626,12 @@ MonoBehaviour:
     weight: 2.5
     weightCapacity: 25.5
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510073
     partName: "\uCD08\uC804\uB3C4 \uCF54\uC5B4"
@@ -537,6 +657,12 @@ MonoBehaviour:
     weight: 2.5
     weightCapacity: 33
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510074
     partName: "\uCD08\uC804\uB3C4 \uCF54\uC5B4"
@@ -562,6 +688,12 @@ MonoBehaviour:
     weight: 2.5
     weightCapacity: 45
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510080
     partName: "\uACE0\uBC00\uB3C4 \uCF54\uC5B4"
@@ -587,6 +719,12 @@ MonoBehaviour:
     weight: 2.5
     weightCapacity: 21
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510081
     partName: "\uACE0\uBC00\uB3C4 \uCF54\uC5B4"
@@ -612,6 +750,12 @@ MonoBehaviour:
     weight: 2.5
     weightCapacity: 27.3
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510082
     partName: "\uACE0\uBC00\uB3C4 \uCF54\uC5B4"
@@ -637,6 +781,12 @@ MonoBehaviour:
     weight: 2.5
     weightCapacity: 35.7
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510083
     partName: "\uACE0\uBC00\uB3C4 \uCF54\uC5B4"
@@ -662,6 +812,12 @@ MonoBehaviour:
     weight: 2.5
     weightCapacity: 46.2
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 510084
     partName: "\uACE0\uBC00\uB3C4 \uCF54\uC5B4"
@@ -687,506 +843,12 @@ MonoBehaviour:
     weight: 2.5
     weightCapacity: 63
     discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510090
-    partName: "\uC720\uC555 \uB2E4\uB9AC"
-    slot: 3
-    grade: 0
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 4
-    bonusAmount: 2
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 3.5
-    weightCapacity: 15
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510091
-    partName: "\uC720\uC555 \uB2E4\uB9AC"
-    slot: 3
-    grade: 1
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 4
-    bonusAmount: 2.6
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 3.5
-    weightCapacity: 19.5
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510092
-    partName: "\uC720\uC555 \uB2E4\uB9AC"
-    slot: 3
-    grade: 2
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 4
-    bonusAmount: 3.4
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 3.5
-    weightCapacity: 25.5
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510093
-    partName: "\uC720\uC555 \uB2E4\uB9AC"
-    slot: 3
-    grade: 3
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 4
-    bonusAmount: 4.4
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 3.5
-    weightCapacity: 33
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510094
-    partName: "\uC720\uC555 \uB2E4\uB9AC"
-    slot: 3
-    grade: 4
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 4
-    bonusAmount: 6
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 3.5
-    weightCapacity: 45
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510100
-    partName: "\uC548\uC815\uD654 \uB2E4\uB9AC"
-    slot: 3
-    grade: 0
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 4
-    bonusAmount: 1
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 3.5
-    weightCapacity: 21
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510101
-    partName: "\uC548\uC815\uD654 \uB2E4\uB9AC"
-    slot: 3
-    grade: 1
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 4
-    bonusAmount: 1.3
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 3.5
-    weightCapacity: 27.3
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510102
-    partName: "\uC548\uC815\uD654 \uB2E4\uB9AC"
-    slot: 3
-    grade: 2
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 4
-    bonusAmount: 1.7
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 3.5
-    weightCapacity: 35.7
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510103
-    partName: "\uC548\uC815\uD654 \uB2E4\uB9AC"
-    slot: 3
-    grade: 3
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 4
-    bonusAmount: 2.2
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 3.5
-    weightCapacity: 46.2
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510104
-    partName: "\uC548\uC815\uD654 \uB2E4\uB9AC"
-    slot: 3
-    grade: 4
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 4
-    bonusAmount: 3
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 3.5
-    weightCapacity: 63
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510130
-    partName: "\uACBD\uB7C9 \uBD80\uCE20"
-    slot: 3
-    grade: 0
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 3
-    bonusAmount: 0.6
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.2
-    weightCapacity: 0
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510131
-    partName: "\uACBD\uB7C9 \uBD80\uCE20"
-    slot: 3
-    grade: 1
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 3
-    bonusAmount: 0.8
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.2
-    weightCapacity: 0
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510132
-    partName: "\uACBD\uB7C9 \uBD80\uCE20"
-    slot: 3
-    grade: 2
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 3
-    bonusAmount: 1
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.2
-    weightCapacity: 0
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510133
-    partName: "\uACBD\uB7C9 \uBD80\uCE20"
-    slot: 3
-    grade: 3
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 3
-    bonusAmount: 1.3
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.2
-    weightCapacity: 0
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510134
-    partName: "\uACBD\uB7C9 \uBD80\uCE20"
-    slot: 3
-    grade: 4
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 3
-    bonusAmount: 1.8
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.2
-    weightCapacity: 0
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510140
-    partName: "\uC81C\uD2B8 \uBD80\uC2A4\uD130"
-    slot: 3
-    grade: 0
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 3
-    bonusAmount: 0.9
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.2
-    weightCapacity: 0
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510141
-    partName: "\uC81C\uD2B8 \uBD80\uC2A4\uD130"
-    slot: 3
-    grade: 1
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 3
-    bonusAmount: 1.2
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.2
-    weightCapacity: 0
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510142
-    partName: "\uC81C\uD2B8 \uBD80\uC2A4\uD130"
-    slot: 3
-    grade: 2
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 3
-    bonusAmount: 1.5
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.2
-    weightCapacity: 0
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510143
-    partName: "\uC81C\uD2B8 \uBD80\uC2A4\uD130"
-    slot: 3
-    grade: 3
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 3
-    bonusAmount: 2
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.2
-    weightCapacity: 0
-    discSlotCount: 0
-    coreMaxLevelBonus: 0
-  - partId: 510144
-    partName: "\uC81C\uD2B8 \uBD80\uC2A4\uD130"
-    slot: 3
-    grade: 4
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 3
-    bonusAmount: 2.7
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.2
-    weightCapacity: 0
-    discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 500009
     partName: "\uD45C\uC900 \uBA54\uBAA8\uB9AC \uCE74\uB4DC"
@@ -1212,6 +874,12 @@ MonoBehaviour:
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530000
     partName: "\uC5F0\uADF9 \uB9C8\uC2A4\uD06C"
@@ -1237,6 +905,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530001
     partName: "\uC5F0\uADF9 \uB9C8\uC2A4\uD06C"
@@ -1262,6 +936,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530002
     partName: "\uC5F0\uADF9 \uB9C8\uC2A4\uD06C"
@@ -1287,6 +967,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530003
     partName: "\uC5F0\uADF9 \uB9C8\uC2A4\uD06C"
@@ -1312,6 +998,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530004
     partName: "\uC5F0\uADF9 \uB9C8\uC2A4\uD06C"
@@ -1337,6 +1029,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530010
     partName: "\uD589\uC6B4\uC758 \uC591\uB3D9\uC774"
@@ -1362,6 +1060,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530011
     partName: "\uD589\uC6B4\uC758 \uC591\uB3D9\uC774"
@@ -1387,6 +1091,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530012
     partName: "\uD589\uC6B4\uC758 \uC591\uB3D9\uC774"
@@ -1412,6 +1122,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530013
     partName: "\uD589\uC6B4\uC758 \uC591\uB3D9\uC774"
@@ -1437,6 +1153,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530014
     partName: "\uD589\uC6B4\uC758 \uC591\uB3D9\uC774"
@@ -1462,6 +1184,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530020
     partName: "\uBC29\uD0C4\uBAA8"
@@ -1487,6 +1215,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530021
     partName: "\uBC29\uD0C4\uBAA8"
@@ -1512,6 +1246,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530022
     partName: "\uBC29\uD0C4\uBAA8"
@@ -1537,6 +1277,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530023
     partName: "\uBC29\uD0C4\uBAA8"
@@ -1562,6 +1308,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530024
     partName: "\uBC29\uD0C4\uBAA8"
@@ -1587,6 +1339,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530030
     partName: "\uD0C8"
@@ -1612,6 +1370,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530031
     partName: "\uD0C8"
@@ -1637,6 +1401,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530032
     partName: "\uD0C8"
@@ -1662,6 +1432,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530033
     partName: "\uD0C8"
@@ -1687,6 +1463,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530034
     partName: "\uD0C8"
@@ -1712,6 +1494,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530040
     partName: "\uCCA0\uC778 \uD5EC\uBA67"
@@ -1737,6 +1525,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530041
     partName: "\uCCA0\uC778 \uD5EC\uBA67"
@@ -1762,6 +1556,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530042
     partName: "\uCCA0\uC778 \uD5EC\uBA67"
@@ -1787,6 +1587,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530043
     partName: "\uCCA0\uC778 \uD5EC\uBA67"
@@ -1812,6 +1618,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530044
     partName: "\uCCA0\uC778 \uD5EC\uBA67"
@@ -1837,6 +1649,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530050
     partName: "\uBE75\uBD09\uD22C"
@@ -1862,6 +1680,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530051
     partName: "\uBE75\uBD09\uD22C"
@@ -1887,6 +1711,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530052
     partName: "\uBE75\uBD09\uD22C"
@@ -1912,6 +1742,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530053
     partName: "\uBE75\uBD09\uD22C"
@@ -1937,6 +1773,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 530054
     partName: "\uBE75\uBD09\uD22C"
@@ -1962,6 +1804,12 @@ MonoBehaviour:
     weight: 1.5
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531000
     partName: "\uC591\uCCA0 \uD50C\uB808\uC774\uD2B8"
@@ -1987,6 +1835,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531001
     partName: "\uC591\uCCA0 \uD50C\uB808\uC774\uD2B8"
@@ -2012,6 +1866,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531002
     partName: "\uC591\uCCA0 \uD50C\uB808\uC774\uD2B8"
@@ -2037,6 +1897,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531003
     partName: "\uC591\uCCA0 \uD50C\uB808\uC774\uD2B8"
@@ -2062,6 +1928,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531004
     partName: "\uC591\uCCA0 \uD50C\uB808\uC774\uD2B8"
@@ -2087,6 +1959,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531010
     partName: "\uAC00\uC2DC \uD50C\uB808\uC774\uD2B8"
@@ -2112,6 +1990,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531011
     partName: "\uAC00\uC2DC \uD50C\uB808\uC774\uD2B8"
@@ -2137,6 +2021,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531012
     partName: "\uAC00\uC2DC \uD50C\uB808\uC774\uD2B8"
@@ -2162,6 +2052,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531013
     partName: "\uAC00\uC2DC \uD50C\uB808\uC774\uD2B8"
@@ -2187,6 +2083,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531014
     partName: "\uAC00\uC2DC \uD50C\uB808\uC774\uD2B8"
@@ -2212,6 +2114,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531020
     partName: "\uACBD\uC0AC \uC7A5\uAC11"
@@ -2237,6 +2145,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531021
     partName: "\uACBD\uC0AC \uC7A5\uAC11"
@@ -2262,6 +2176,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531022
     partName: "\uACBD\uC0AC \uC7A5\uAC11"
@@ -2287,6 +2207,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531023
     partName: "\uACBD\uC0AC \uC7A5\uAC11"
@@ -2312,6 +2238,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531024
     partName: "\uACBD\uC0AC \uC7A5\uAC11"
@@ -2337,6 +2269,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531030
     partName: "\uBC18\uC751\uD615 \uC7A5\uAC11"
@@ -2362,6 +2300,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531031
     partName: "\uBC18\uC751\uD615 \uC7A5\uAC11"
@@ -2387,6 +2331,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531032
     partName: "\uBC18\uC751\uD615 \uC7A5\uAC11"
@@ -2412,6 +2362,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531033
     partName: "\uBC18\uC751\uD615 \uC7A5\uAC11"
@@ -2437,6 +2393,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 531034
     partName: "\uBC18\uC751\uD615 \uC7A5\uAC11"
@@ -2462,6 +2424,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532000
     partName: "\uC5F0\uC0AC \uC18C\uCF13"
@@ -2487,6 +2455,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532001
     partName: "\uC5F0\uC0AC \uC18C\uCF13"
@@ -2512,6 +2486,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532002
     partName: "\uC5F0\uC0AC \uC18C\uCF13"
@@ -2537,6 +2517,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532003
     partName: "\uC5F0\uC0AC \uC18C\uCF13"
@@ -2562,6 +2548,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532004
     partName: "\uC5F0\uC0AC \uC18C\uCF13"
@@ -2587,6 +2579,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532010
     partName: "\uC0B0\uD0C4 \uC18C\uCF13"
@@ -2612,6 +2610,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532011
     partName: "\uC0B0\uD0C4 \uC18C\uCF13"
@@ -2637,6 +2641,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532012
     partName: "\uC0B0\uD0C4 \uC18C\uCF13"
@@ -2662,6 +2672,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532013
     partName: "\uC0B0\uD0C4 \uC18C\uCF13"
@@ -2687,6 +2703,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532014
     partName: "\uC0B0\uD0C4 \uC18C\uCF13"
@@ -2712,6 +2734,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532020
     partName: "\uC815\uBC00 \uC18C\uCF13"
@@ -2737,6 +2765,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532021
     partName: "\uC815\uBC00 \uC18C\uCF13"
@@ -2762,6 +2796,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532022
     partName: "\uC815\uBC00 \uC18C\uCF13"
@@ -2787,6 +2827,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532023
     partName: "\uC815\uBC00 \uC18C\uCF13"
@@ -2812,6 +2858,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532024
     partName: "\uC815\uBC00 \uC18C\uCF13"
@@ -2837,6 +2889,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532030
     partName: "\uD3ED\uBC1C \uC18C\uCF13"
@@ -2862,6 +2920,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532031
     partName: "\uD3ED\uBC1C \uC18C\uCF13"
@@ -2887,6 +2951,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532032
     partName: "\uD3ED\uBC1C \uC18C\uCF13"
@@ -2912,6 +2982,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532033
     partName: "\uD3ED\uBC1C \uC18C\uCF13"
@@ -2937,6 +3013,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532034
     partName: "\uD3ED\uBC1C \uC18C\uCF13"
@@ -2962,6 +3044,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532040
     partName: "\uC5D0\uB108\uC9C0 \uC18C\uCF13"
@@ -2987,6 +3075,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532041
     partName: "\uC5D0\uB108\uC9C0 \uC18C\uCF13"
@@ -3012,6 +3106,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532042
     partName: "\uC5D0\uB108\uC9C0 \uC18C\uCF13"
@@ -3037,6 +3137,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532043
     partName: "\uC5D0\uB108\uC9C0 \uC18C\uCF13"
@@ -3062,6 +3168,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532044
     partName: "\uC5D0\uB108\uC9C0 \uC18C\uCF13"
@@ -3087,6 +3199,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532050
     partName: "\uADFC\uC811 \uC18C\uCF13"
@@ -3112,6 +3230,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532051
     partName: "\uADFC\uC811 \uC18C\uCF13"
@@ -3137,6 +3261,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532052
     partName: "\uADFC\uC811 \uC18C\uCF13"
@@ -3162,6 +3292,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532053
     partName: "\uADFC\uC811 \uC18C\uCF13"
@@ -3187,6 +3323,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532054
     partName: "\uADFC\uC811 \uC18C\uCF13"
@@ -3212,6 +3354,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532060
     partName: "\uBC94\uC6A9 \uC18C\uCF13"
@@ -3237,6 +3385,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532061
     partName: "\uBC94\uC6A9 \uC18C\uCF13"
@@ -3262,6 +3416,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532062
     partName: "\uBC94\uC6A9 \uC18C\uCF13"
@@ -3287,6 +3447,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532063
     partName: "\uBC94\uC6A9 \uC18C\uCF13"
@@ -3312,6 +3478,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 532064
     partName: "\uBC94\uC6A9 \uC18C\uCF13"
@@ -3337,6 +3509,12 @@ MonoBehaviour:
     weight: 2
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 533000
     partName: "\uBA54\uBAA8\uB9AC \uCE69"
@@ -3362,6 +3540,12 @@ MonoBehaviour:
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 15
   - partId: 533001
     partName: "\uBA54\uBAA8\uB9AC \uCE69"
@@ -3387,6 +3571,12 @@ MonoBehaviour:
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 25
   - partId: 533002
     partName: "\uBA54\uBAA8\uB9AC \uCE69"
@@ -3412,6 +3602,12 @@ MonoBehaviour:
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 35
   - partId: 533003
     partName: "\uBA54\uBAA8\uB9AC \uCE69"
@@ -3437,6 +3633,12 @@ MonoBehaviour:
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 43
   - partId: 533004
     partName: "\uBA54\uBAA8\uB9AC \uCE69"
@@ -3462,6 +3664,12 @@ MonoBehaviour:
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 50
   - partId: 533010
     partName: "\uB274\uB7F4 \uCE90\uC2DC"
@@ -3487,6 +3695,12 @@ MonoBehaviour:
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 533011
     partName: "\uB274\uB7F4 \uCE90\uC2DC"
@@ -3512,6 +3726,12 @@ MonoBehaviour:
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 533012
     partName: "\uB274\uB7F4 \uCE90\uC2DC"
@@ -3537,6 +3757,12 @@ MonoBehaviour:
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 533013
     partName: "\uB274\uB7F4 \uCE90\uC2DC"
@@ -3562,6 +3788,12 @@ MonoBehaviour:
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 533014
     partName: "\uB274\uB7F4 \uCE90\uC2DC"
@@ -3587,6 +3819,12 @@ MonoBehaviour:
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 533020
     partName: "\uC544\uCE74\uC2DD \uB808\uC9C0\uC2A4\uD130"
@@ -3612,6 +3850,12 @@ MonoBehaviour:
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 15
   - partId: 533021
     partName: "\uC544\uCE74\uC2DD \uB808\uC9C0\uC2A4\uD130"
@@ -3637,6 +3881,12 @@ MonoBehaviour:
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 20
   - partId: 533022
     partName: "\uC544\uCE74\uC2DD \uB808\uC9C0\uC2A4\uD130"
@@ -3662,6 +3912,12 @@ MonoBehaviour:
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 25
   - partId: 533023
     partName: "\uC544\uCE74\uC2DD \uB808\uC9C0\uC2A4\uD130"
@@ -3687,6 +3943,12 @@ MonoBehaviour:
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 30
   - partId: 533024
     partName: "\uC544\uCE74\uC2DD \uB808\uC9C0\uC2A4\uD130"
@@ -3712,6 +3974,12 @@ MonoBehaviour:
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 35
   - partId: 534000
     partName: "\uAE30\uBCF8 \uC2AC\uB86F"
@@ -3737,6 +4005,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 4
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534001
     partName: "\uAE30\uBCF8 \uC2AC\uB86F"
@@ -3762,6 +4036,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 5
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534002
     partName: "\uAE30\uBCF8 \uC2AC\uB86F"
@@ -3787,6 +4067,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 6
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534003
     partName: "\uAE30\uBCF8 \uC2AC\uB86F"
@@ -3812,6 +4098,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 7
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534004
     partName: "\uAE30\uBCF8 \uC2AC\uB86F"
@@ -3837,6 +4129,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 8
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534010
     partName: "\uD655\uC7A5 \uD504\uB808\uC784"
@@ -3862,6 +4160,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 7
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534011
     partName: "\uD655\uC7A5 \uD504\uB808\uC784"
@@ -3887,6 +4191,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 8
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534012
     partName: "\uD655\uC7A5 \uD504\uB808\uC784"
@@ -3912,6 +4222,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 9
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534013
     partName: "\uD655\uC7A5 \uD504\uB808\uC784"
@@ -3937,6 +4253,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 10
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534014
     partName: "\uD655\uC7A5 \uD504\uB808\uC784"
@@ -3962,6 +4284,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 12
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534020
     partName: "\uCF54\uC5B4 \uC5F0\uACB0\uB9DD"
@@ -3987,6 +4315,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 5
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534021
     partName: "\uCF54\uC5B4 \uC5F0\uACB0\uB9DD"
@@ -4012,6 +4346,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 6
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534022
     partName: "\uCF54\uC5B4 \uC5F0\uACB0\uB9DD"
@@ -4037,6 +4377,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 7
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534023
     partName: "\uCF54\uC5B4 \uC5F0\uACB0\uB9DD"
@@ -4062,6 +4408,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 8
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534024
     partName: "\uCF54\uC5B4 \uC5F0\uACB0\uB9DD"
@@ -4087,6 +4439,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 9
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534030
     partName: "\uD5C8\uBE0C \uC811\uC18D\uAE30"
@@ -4112,6 +4470,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 5
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534031
     partName: "\uD5C8\uBE0C \uC811\uC18D\uAE30"
@@ -4137,6 +4501,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 6
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534032
     partName: "\uD5C8\uBE0C \uC811\uC18D\uAE30"
@@ -4162,6 +4532,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 7
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534033
     partName: "\uD5C8\uBE0C \uC811\uC18D\uAE30"
@@ -4187,6 +4563,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 8
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534034
     partName: "\uD5C8\uBE0C \uC811\uC18D\uAE30"
@@ -4212,6 +4594,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 9
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534040
     partName: "\uAD50\uD5A5\uACE1 \uBAA8\uC74C\uC9D1"
@@ -4237,6 +4625,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 6
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534041
     partName: "\uAD50\uD5A5\uACE1 \uBAA8\uC74C\uC9D1"
@@ -4262,6 +4656,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 7
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534042
     partName: "\uAD50\uD5A5\uACE1 \uBAA8\uC74C\uC9D1"
@@ -4287,6 +4687,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 8
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534043
     partName: "\uAD50\uD5A5\uACE1 \uBAA8\uC74C\uC9D1"
@@ -4312,6 +4718,12 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 9
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
     coreMaxLevelBonus: 0
   - partId: 534044
     partName: "\uAD50\uD5A5\uACE1 \uBAA8\uC74C\uC9D1"
@@ -4337,6 +4749,105 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 11
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 0
+    coreMaxLevelBonus: 0
+  - partId: 500010
+    partName: "\uAC70\uBBF8 \uB2E4\uB9AC"
+    slot: 3
+    grade: 0
+    isDefaultStarter: 0
+    iconName: 
+    restrictsWeaponType: 0
+    allowedWeaponType: 0
+    socketAttackSpeedPercent: 0
+    socketDamageFlat: 0
+    socketDamagePercent: 0
+    socketCritChancePercent: 0
+    socketSplashPercent: 0
+    socketDefIgnorePercent: 0
+    bonusStat: 0
+    bonusAmount: 0
+    bonusStat2: 0
+    bonusAmount2: 0
+    effect: 9
+    effectStat: 0
+    effectAmount: 20
+    weight: 3.5
+    weightCapacity: 12
+    discSlotCount: 0
+    legSkillType: 2
+    legSkillCooldown: 1
+    legHpLossSpeedPenalty: 1
+    legSpeedRampPassive: 0
+    legMassPercent: -50
+    legVisualType: 3
+    coreMaxLevelBonus: 0
+  - partId: 500011
+    partName: "\uCE90\uD130\uD544\uB7EC"
+    slot: 3
+    grade: 0
+    isDefaultStarter: 0
+    iconName: 
+    restrictsWeaponType: 0
+    allowedWeaponType: 0
+    socketAttackSpeedPercent: 0
+    socketDamageFlat: 0
+    socketDamagePercent: 0
+    socketCritChancePercent: 0
+    socketSplashPercent: 0
+    socketDefIgnorePercent: 0
+    bonusStat: 0
+    bonusAmount: 0
+    bonusStat2: 0
+    bonusAmount2: 0
+    effect: 9
+    effectStat: 0
+    effectAmount: 25
+    weight: 3.5
+    weightCapacity: 12
+    discSlotCount: 0
+    legSkillType: 3
+    legSkillCooldown: 3
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 0
+    legMassPercent: 0
+    legVisualType: 1
+    coreMaxLevelBonus: 0
+  - partId: 500012
+    partName: "\uB85C\uCF13 \uCD94\uC9C4\uAE30"
+    slot: 3
+    grade: 0
+    isDefaultStarter: 0
+    iconName: 
+    restrictsWeaponType: 0
+    allowedWeaponType: 0
+    socketAttackSpeedPercent: 0
+    socketDamageFlat: 0
+    socketDamagePercent: 0
+    socketCritChancePercent: 0
+    socketSplashPercent: 0
+    socketDefIgnorePercent: 0
+    bonusStat: 0
+    bonusAmount: 0
+    bonusStat2: 0
+    bonusAmount2: 0
+    effect: 9
+    effectStat: 0
+    effectAmount: 10
+    weight: 3.5
+    weightCapacity: 12
+    discSlotCount: 0
+    legSkillType: 0
+    legSkillCooldown: 0
+    legHpLossSpeedPenalty: 0
+    legSpeedRampPassive: 1
+    legMassPercent: 0
+    legVisualType: 2
     coreMaxLevelBonus: 0
   weaponMeta:
   - weaponId: 300101

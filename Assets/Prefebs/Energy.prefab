@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 5096930834017635267}
   - component: {fileID: 4167653977765177856}
   - component: {fileID: 3652832320489006946}
+  - component: {fileID: 3768707971368388334}
   m_Layer: 0
   m_Name: Energy
   m_TagString: Untagged
@@ -83,7 +84,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 2
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: c665931ee60a15f42805ddf3e750629e, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 32c106043bbb7dd47b6fa71e4ddd9288, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -139,5 +140,19 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 3.2
+  m_Radius: 0.32
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &3768707971368388334
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1813554706274653350}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e69becae76833534e9296e105390cdcf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectileSpriteAnimator
+  resourceFolder: LaserPistolBullet
+  fps: 12

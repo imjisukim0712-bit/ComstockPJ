@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>거미 다리 리깅 프로토타입</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; overflow: hidden;
+    background: #15171a; color: #e8e8e8;
+    font-family: "Malgun Gothic", sans-serif;
+  }
+  #ui {
+    position: fixed; top: 12px; left: 12px;
+    background: rgba(20,20,24,0.85);
+    border: 1px solid #444; border-radius: 8px;
+    padding: 12px 14px; font-size: 13px;
+    width: 264px; z-index: 10;
+  }
+  #ui h1 { font-size: 14px; margin: 0 0 8px; color: #ffb347; }
+  #ui .row { display: flex; align-items: center; margin: 6px 0; gap: 6px; }
+  #ui .row label { flex: 0 0 104px; color: #cfd2d6; }
+  #ui .row input[type=range] { flex: 1; }
+  #ui .row span { flex: 0 0 42px; text-align: right; color: #ffb347; font-variant-numeric: tabular-nums; }
+  #ui .hint { margin-top: 9px; color: #8a8f96; line-height: 1.55; }
+  #ui .keys {
+    display: inline-block; background: #2a2d33; border: 1px solid #555;
+    border-radius: 4px; padding: 1px 6px; margin: 0 1px; color: #e8e8e8;
+  }
+  #ui .chk { margin-top: 8px; color: #cfd2d6; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div id="ui">
+  <h1>거미 다리 리깅 프로토타입</h1>
+
+  <div class="row">
+    <label>전체 크기</label>
+    <input id="assetScale" type="range" min="0.14" max="0.46" step="0.01" value="0.26">
+    <span id="assetScaleVal">0.26</span>
+  </div>
+  <div class="row">
+    <label>다리 벌림</label>
+    <input id="spread" type="range" min="0.60" max="1.45" step="0.01" value="1.00">
+    <span id="spreadVal">1.00</span>
+  </div>
+  <div class="row">
+    <label>발 꺾임(깊이)</label>
+    <input id="drop" type="range" min="0.60" max="1.50" step="0.01" value="1.00">
+    <span id="dropVal">1.00</span>
+  </div>
+  <div class="row">
+    <label>스텝 임계값</label>
+    <input id="stepThresh" type="range" min="10" max="110" step="1" value="34">
+    <span id="stepThreshVal">34</span>
+  </div>
+  <div class="row">
+    <label>스텝 속도</label>
+    <input id="stepSpeed" type="range" min="4" max="30" step="1" value="13">
+    <span id="stepSpeedVal">13</span>
+  </div>
+  <div class="row">
+    <label>발 들림</label>
+    <input id="liftHeight" type="range" min="0" max="46" step="1" value="18">
+    <span id="liftHeightVal">18</span>
+  </div>
+  <div class="row">
+    <label>이동속도</label>
+    <input id="moveSpeed" type="range" min="60" max="600" step="10" value="240">
+    <span id="moveSpeedVal">240</span>
+  </div>
+
+  <div class="chk">
+    <label><input id="showBones" type="checkbox"> 관절 뼈대 표시(검증용)</label>
+  </div>
+
+  <div class="hint">
+    <span class="keys">W</span><span class="keys">A</span><span class="keys">S</span><span class="keys">D</span>
+    / 방향키로 이동.<br><br>
+    관절 규칙: <b>무릎은 항상 위로 아치</b>를 그리고 발톱이 지면으로 내려옵니다.
+    <b>대각선 짝</b>(뒷왼+앞오 / 뒷오+앞왼)이 번갈아 움직이는 거미 걸음이며, 몸은
+    회전하지 않고 좌우로만 뒤집힙니다.
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+// ---------- 리소스 ----------
+const IMG = {};
+const IMG_SOURCES = {
+  body: "parts/body.png",
+  upperLeg: "parts/upper_leg.png",
+  lowerLeg: "parts/lower_leg.png",
+};
+let imagesReady = 0;
+const imageCount = Object.keys(IMG_SOURCES).length;
+for (const key in IMG_SOURCES) {
+  const img = new Image();
+  img.onload = () => { imagesReady++; };
+  img.src = IMG_SOURCES[key];
+  IMG[key] = img;
+}
+
+// ---------- 파츠 앵커 (원본 PNG를 픽셀 단위로 실측한 값) ----------
+// body.png(827x509): 4개 코너 고관절 링 중심을 오렌지 픽셀 무게중심으로 측정 →
+// TL(85.7,90.2) TR(741.2,92.6) BL(90.2,424.0) BR(717.9,426.1). 손그림이라 좌우가 살짝
+// 어긋나 있어 크기 비교 후 좌우 대칭으로 정리했다.
+const BODY_SRC = { w: 827, h: 509 };
+const BODY_CENTER = { x: BODY_SRC.w / 2, y: BODY_SRC.h / 2 };
+
+// upper_leg.png(405x213): 고관절 볼 중심(52.5,83.5) → 무릎 오렌지 링 중심(281.3,125.1)
+const UPPER_SRC = { hip: { x: 52.5, y: 83.5 }, knee: { x: 281.3, y: 125.1 } };
+// lower_leg.png(458x210): 무릎 볼 중심(52.5,76.0) → 발톱 끝(444,195)
+const LOWER_SRC = { knee: { x: 52.5, y: 76.0 }, foot: { x: 444, y: 195 } };
+
+const L1_SRC = Math.hypot(UPPER_SRC.knee.x - UPPER_SRC.hip.x, UPPER_SRC.knee.y - UPPER_SRC.hip.y);
+const L2_SRC = Math.hypot(LOWER_SRC.foot.x - LOWER_SRC.knee.x, LOWER_SRC.foot.y - LOWER_SRC.knee.y);
+const REACH_SRC = L1_SRC + L2_SRC;
+
+// 다리 4짝. sx/sy는 body.png 원본 픽셀 기준 고관절 오프셋(몸통 중심 기준).
+// 원본 아트에서 아래쪽(앞) 고관절 링이 위쪽보다 약 15% 크게 그려져 있다(원근) →
+// 앞다리를 살짝 크게 그려 그 원근을 살린다.
+// spreadBase / dropBase = 발이 고관절에서 "바깥으로 얼마나" / "아래로 얼마나" 떨어지는지
+// (다리 최대 도달거리 R에 대한 비율). 이 둘을 분리한 것이 핵심이다 - 예전처럼 코드 길이
+// 하나로만 정하면 발이 수평으로 멀리 나가 마지막 분절(발톱)이 눕고, 땅에 붙어 기어가는
+// 느낌이 된다. drop을 키우면 발톱이 아래로 깊게 꺾여 제대로 짚는 모양이 나온다.
+// 뒷다리는 멀리 있어 얕게, 앞다리는 가까워 깊게 짚는다(컨셉 아트의 원근과 같은 방향).
+const LEG_DEFS = [
+  { key: "RL", sx: -327.75, sy: -163.10, row: "rear",  legScale: 0.94, spreadBase: 0.56, dropBase: 0.30 },
+  { key: "RR", sx: +327.75, sy: -163.10, row: "rear",  legScale: 0.94, spreadBase: 0.56, dropBase: 0.30 },
+  { key: "FL", sx: -313.85, sy: +170.55, row: "front", legScale: 1.06, spreadBase: 0.50, dropBase: 0.52 },
+  { key: "FR", sx: +313.85, sy: +170.55, row: "front", legScale: 1.06, spreadBase: 0.50, dropBase: 0.52 },
+];
+
+// 대각선 걸음 짝(거미/사족 보행의 정석): 뒷왼+앞오 / 뒷오+앞왼
+const GAIT_GROUPS = [["RL", "FR"], ["RR", "FL"]];
+
+// ---------- 파라미터 ----------
+const params = {
+  assetScale: 0.26,
+  spread: 1.00,
+  drop: 1.00,
+  stepThresh: 34,
+  stepSpeed: 13,
+  liftHeight: 18,
+  moveSpeed: 240,
+};
+let showBones = false;
+
+// ---------- 몸체 ----------
+const body = {
+  x: window.innerWidth / 2,
+  y: window.innerHeight / 2,
+  facingSign: 1, // +1 기본 / -1 좌우 반전. 절대 회전하지 않는다(실제 게임의 flipX 규칙).
+};
+
+let legs = [];
+let bodyDraw = { w: 0, h: 0 };
+let clampMargin = 0;
+let activeGroup = -1; // 지금 스텝 중인 대각선 짝. -1이면 네 발 모두 착지 상태
+
+function rebuild() {
+  const s = params.assetScale;
+  bodyDraw = { w: BODY_SRC.w * s, h: BODY_SRC.h * s };
+
+  const prev = {};
+  legs.forEach(l => { prev[l.key] = { x: l.foot.x, y: l.foot.y }; });
+
+  legs = LEG_DEFS.map(def => {
+    const ls = s * def.legScale;
+    const l1 = L1_SRC * ls;
+    const l2 = L2_SRC * ls;
+    const reach = REACH_SRC * ls;
+
+    const hipLocal = { x: def.sx * s, y: def.sy * s };
+    const side = Math.sign(def.sx);
+
+    // 발 위치를 "바깥으로 dx / 아래로 dy"로 직접 정한다. 2관절 IK가 풀릴 수 있는
+    // 범위([|l1-l2|, l1+l2])를 벗어나면 무릎이 완전히 펴지거나 접혀 자세가 깨지므로,
+    // 방향은 유지하면서 거리만 안전한 범위로 당겨 넣는다.
+    let dx = reach * def.spreadBase * params.spread;
+    let dy = reach * def.dropBase * params.drop;
+    const chord = Math.hypot(dx, dy);
+    const minChord = Math.abs(l1 - l2) * 1.06;
+    const maxChord = (l1 + l2) * 0.985;
+    const clamped = Math.min(maxChord, Math.max(minChord, chord));
+    if (chord > 0.001 && Math.abs(clamped - chord) > 0.001) {
+      const k = clamped / chord;
+      dx *= k; dy *= k;
+    }
+
+    const restLocal = { x: hipLocal.x + side * dx, y: hipLocal.y + dy };
+
+    const reuse = prev[def.key];
+    return {
+      key: def.key, row: def.row, side, l1, l2, legScale: def.legScale,
+      hipLocal, restLocal,
+      hipWorld: { x: 0, y: 0 },
+      idealWorld: { x: 0, y: 0 },
+      foot: reuse ? reuse : { x: body.x + restLocal.x, y: body.y + restLocal.y },
+      stepping: false, stepT: 0,
+      stepFrom: { x: 0, y: 0 }, stepTo: { x: 0, y: 0 },
+    };
+  });
+
+  const maxOut = Math.max(...legs.map(l => Math.abs(l.restLocal.x)));
+  clampMargin = maxOut + bodyDraw.w * 0.1;
+  activeGroup = -1;
+}
+
+function bindSlider(id, key) {
+  const el = document.getElementById(id);
+  const out = document.getElementById(id + "Val");
+  const apply = () => {
+    params[key] = parseFloat(el.value);
+    out.textContent = params[key];
+    if (key === "assetScale" || key === "spread" || key === "drop") rebuild();
+  };
+  el.addEventListener("input", apply);
+  apply();
+}
+bindSlider("assetScale", "assetScale");
+bindSlider("spread", "spread");
+bindSlider("drop", "drop");
+bindSlider("stepThresh", "stepThresh");
+bindSlider("stepSpeed", "stepSpeed");
+bindSlider("liftHeight", "liftHeight");
+bindSlider("moveSpeed", "moveSpeed");
+document.getElementById("showBones").addEventListener("change", e => { showBones = e.target.checked; });
+rebuild();
+
+// ---------- 입력 ----------
+const keys = new Set();
+window.addEventListener("keydown", e => keys.add(e.key.toLowerCase()));
+window.addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
+
+function readMoveInput() {
+  let x = 0, y = 0;
+  if (keys.has("a") || keys.has("arrowleft")) x -= 1;
+  if (keys.has("d") || keys.has("arrowright")) x += 1;
+  if (keys.has("w") || keys.has("arrowup")) y -= 1;
+  if (keys.has("s") || keys.has("arrowdown")) y += 1;
+  const m = Math.hypot(x, y);
+  return m > 0 ? { x: x / m, y: y / m } : { x: 0, y: 0 };
+}
+
+function legByKey(k) { return legs.find(l => l.key === k); }
+
+/// 좌우 반전 시 관절이 튀지 않게 하는 처리.
+///
+/// facingSign이 바뀌면 고관절이 몸 반대쪽으로 순간이동하는데, 발은 세계좌표에 심겨
+/// 있으므로 그대로 두면 네 다리가 전부 몸을 가로질러 건너가야 하는 거대한 오차가 생겨
+/// 관절이 크게 튄다. 좌/우 짝(RL↔RR, FL↔FR)은 반전 후 서로의 자리에 정확히 놓이므로,
+/// 발 상태(심긴 위치 + 진행 중인 스텝)를 짝끼리 맞바꿔 주면 화면에 그려지는 다리 모양이
+/// 반전 전과 완전히 동일해진다 - 실제로 뒤집히는 것은 몸통 스프라이트뿐이다.
+function swapFootStatesOnFlip() {
+  const swap = (ka, kb) => {
+    const a = legByKey(ka), b = legByKey(kb);
+    [a.foot, b.foot] = [b.foot, a.foot];
+    [a.stepping, b.stepping] = [b.stepping, a.stepping];
+    [a.stepT, b.stepT] = [b.stepT, a.stepT];
+    [a.stepFrom, b.stepFrom] = [b.stepFrom, a.stepFrom];
+    [a.stepTo, b.stepTo] = [b.stepTo, a.stepTo];
+  };
+  swap("RL", "RR");
+  swap("FL", "FR");
+  // 진행 중이던 스텝이 반대쪽 짝으로 옮겨갔으므로 활성 짝도 함께 바꿔준다
+  if (activeGroup !== -1) activeGroup = 1 - activeGroup;
+}
+
+// ---------- 업데이트 ----------
+function update(dt) {
+  const input = readMoveInput();
+  body.x += input.x * params.moveSpeed * dt;
+  body.y += input.y * params.moveSpeed * dt;
+  body.x = Math.max(clampMargin, Math.min(canvas.width - clampMargin, body.x));
+  body.y = Math.max(clampMargin, Math.min(canvas.height - clampMargin, body.y));
+
+  // 좌우 이동에서만 반전. 상하 이동은 반전과 무관하다(실제 게임 규칙과 동일).
+  if (Math.abs(input.x) > 0.15) {
+    const next = Math.sign(input.x);
+    if (next !== body.facingSign) {
+      body.facingSign = next;
+      swapFootStatesOnFlip();
+    }
+  }
+
+  const speed = Math.hypot(input.x, input.y);
+  const moveDir = speed > 0.01 ? input : { x: body.facingSign, y: 0 };
+
+  legs.forEach(leg => {
+    leg.hipWorld.x = body.x + body.facingSign * leg.hipLocal.x;
+    leg.hipWorld.y = body.y + leg.hipLocal.y;
+    leg.idealWorld.x = body.x + body.facingSign * leg.restLocal.x;
+    leg.idealWorld.y = body.y + leg.restLocal.y;
+  });
+
+  // 대각선 짝 단위로만 스텝한다. 한 짝이 공중에 있는 동안 다른 짝은 반드시 지면에
+  // 붙어 있으므로(정적 안정성) 몸이 미끄러지지 않고 "사삭" 걷는 느낌이 난다.
+  if (activeGroup === -1) {
+    let best = -1, bestErr = 0;
+    GAIT_GROUPS.forEach((group, gi) => {
+      let err = 0;
+      group.forEach(k => {
+        const leg = legByKey(k);
+        err = Math.max(err, Math.hypot(leg.foot.x - leg.idealWorld.x, leg.foot.y - leg.idealWorld.y));
+      });
+      if (err > bestErr) { bestErr = err; best = gi; }
+    });
+
+    if (best >= 0 && bestErr > params.stepThresh) {
+      activeGroup = best;
+      const overstep = params.stepThresh * 0.8;
+      GAIT_GROUPS[best].forEach(k => {
+        const leg = legByKey(k);
+        leg.stepping = true;
+        leg.stepT = 0;
+        leg.stepFrom = { x: leg.foot.x, y: leg.foot.y };
+        leg.stepTo = {
+          x: leg.idealWorld.x + moveDir.x * overstep,
+          y: leg.idealWorld.y + moveDir.y * overstep,
+        };
+      });
+    }
+  }
+
+  legs.forEach(leg => {
+    if (!leg.stepping) return;
+    leg.stepT += dt * params.stepSpeed;
+    if (leg.stepT >= 1) {
+      leg.stepT = 1;
+      leg.foot.x = leg.stepTo.x;
+      leg.foot.y = leg.stepTo.y;
+      leg.stepping = false;
+    } else {
+      const t = leg.stepT;
+      const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      leg.foot.x = leg.stepFrom.x + (leg.stepTo.x - leg.stepFrom.x) * ease;
+      leg.foot.y = leg.stepFrom.y + (leg.stepTo.y - leg.stepFrom.y) * ease;
+    }
+  });
+
+  if (activeGroup !== -1 && GAIT_GROUPS[activeGroup].every(k => !legByKey(k).stepping)) {
+    activeGroup = -1;
+  }
+}
+
+// ---------- 2관절 IK ----------
+// 무릎이 부풀 수 있는 두 해 중 "화면상 더 위(y가 작은)" 쪽을 항상 고른다.
+// 이게 거미 다리의 정체성이다 - 고관절에서 위로 솟았다가 발톱이 지면으로 내려온다.
+function solveIKArchUp(hip, foot, l1, l2) {
+  const dx = foot.x - hip.x, dy = foot.y - hip.y;
+  const d = Math.hypot(dx, dy) || 0.001;
+  const maxR = l1 + l2 - 0.001;
+  const minR = Math.abs(l1 - l2) + 0.001;
+  const dc = Math.min(maxR, Math.max(minR, d));
+  const ux = dx / d, uy = dy / d;
+  const footC = { x: hip.x + ux * dc, y: hip.y + uy * dc };
+
+  const base = Math.atan2(dy, dx);
+  let cosA = (l1 * l1 + dc * dc - l2 * l2) / (2 * l1 * dc);
+  cosA = Math.max(-1, Math.min(1, cosA));
+  const a = Math.acos(cosA);
+
+  const kA = { x: hip.x + Math.cos(base + a) * l1, y: hip.y + Math.sin(base + a) * l1 };
+  const kB = { x: hip.x + Math.cos(base - a) * l1, y: hip.y + Math.sin(base - a) * l1 };
+  return { knee: (kA.y <= kB.y) ? kA : kB, foot: footC };
+}
+
+// 앵커(피벗) 기준으로 스프라이트를 회전·미러링해 그린다.
+function drawPivoted(img, srcAnchor, srcOther, wAnchor, wOther, scale, mirror) {
+  const lv = {
+    x: (mirror ? -1 : 1) * (srcOther.x - srcAnchor.x),
+    y: (srcOther.y - srcAnchor.y),
+  };
+  const localAngle = Math.atan2(lv.y, lv.x);
+  const worldAngle = Math.atan2(wOther.y - wAnchor.y, wOther.x - wAnchor.x);
+
+  ctx.save();
+  ctx.translate(wAnchor.x, wAnchor.y);
+  ctx.rotate(worldAngle - localAngle);
+  ctx.scale(mirror ? -scale : scale, scale);
+  ctx.translate(-srcAnchor.x, -srcAnchor.y);
+  ctx.drawImage(img, 0, 0);
+  ctx.restore();
+}
+
+function drawLeg(leg) {
+  const mirror = leg.hipWorld.x < body.x;
+  const s = params.assetScale * leg.legScale;
+
+  const lift = leg.stepping ? Math.sin(Math.PI * Math.min(1, leg.stepT)) * params.liftHeight : 0;
+  // IK는 "들린 발" 위치로 풀어야 분절이 어긋나지 않는다. 그림자는 지면 위치에 그린다.
+  const target = { x: leg.foot.x, y: leg.foot.y - lift };
+  const { knee, foot } = solveIKArchUp(leg.hipWorld, target, leg.l1, leg.l2);
+
+  ctx.beginPath();
+  ctx.ellipse(leg.foot.x, leg.foot.y, 8 * leg.legScale, 3.8 * leg.legScale, 0, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(0,0,0," + (lift > 0 ? 0.22 : 0.34) + ")";
+  ctx.fill();
+
+  // 정강이+발톱 먼저 → 허벅지가 무릎 이음새를 덮는다(허벅지 끝의 오렌지 링이 무릎 캡 역할)
+  drawPivoted(IMG.lowerLeg, LOWER_SRC.knee, LOWER_SRC.foot, knee, foot, s, mirror);
+  drawPivoted(IMG.upperLeg, UPPER_SRC.hip, UPPER_SRC.knee, leg.hipWorld, knee, s, mirror);
+
+  if (showBones) {
+    ctx.beginPath();
+    ctx.moveTo(leg.hipWorld.x, leg.hipWorld.y);
+    ctx.lineTo(knee.x, knee.y);
+    ctx.lineTo(foot.x, foot.y);
+    ctx.strokeStyle = "#00e5ff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    [[leg.hipWorld, "#ff4d6d"], [knee, "#ffd400"], [foot, "#00ff95"]].forEach(([p, col]) => {
+      ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = col; ctx.fill();
+    });
+    ctx.beginPath();
+    ctx.arc(leg.idealWorld.x, leg.idealWorld.y, 5, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,0.55)";
+    ctx.lineWidth = 1.5; ctx.stroke();
+  }
+}
+
+function draw() {
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  ctx.strokeStyle = "rgba(255,255,255,0.04)";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < w; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+  for (let y = 0; y < h; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+
+  if (imagesReady < imageCount) {
+    ctx.fillStyle = "#8a8f96";
+    ctx.font = "16px sans-serif";
+    ctx.fillText("리소스 로딩 중...", w / 2 - 60, h / 2);
+    return;
+  }
+
+  // 컨셉 아트의 깊이감: 뒷다리는 몸통 뒤, 앞다리는 몸통 앞에 그린다.
+  legs.filter(l => l.row === "rear").forEach(drawLeg);
+
+  ctx.save();
+  ctx.translate(body.x, body.y);
+  ctx.scale(body.facingSign, 1);
+  ctx.drawImage(IMG.body, -bodyDraw.w / 2, -bodyDraw.h / 2, bodyDraw.w, bodyDraw.h);
+  ctx.restore();
+
+  legs.filter(l => l.row === "front").forEach(drawLeg);
+}
+
+let lastT = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - lastT) / 1000);
+  lastT = now;
+  update(dt);
+  draw();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

@@ -95,6 +95,9 @@ public class EnemyUnit : MonoBehaviour
         modding_manager_cache = null;
         max_body_radius = 0.5f; // 이전 판에 있던 보스 크기가 남아 검색 반경이 과도해지지 않도록
         MonsterAnimationLibrary.ResetCache(); // 씬 재로드로 Resources가 언로드됐을 수 있다
+        GroggyStarsEffect.ResetCache();
+        MuzzleFlashEffect.ResetCache();
+        ProjectileSpriteAnimator.ResetCache();
     }
 
     // 처치 시 보상이 나올 확률(사용자 지정). 부품 상자 확률만 PartsCatalog 에셋에 있고

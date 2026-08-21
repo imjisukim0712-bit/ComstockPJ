@@ -410,7 +410,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1.15
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Pellet
     weapon_lfwpimg: LeftCombatShotgun
     weapon_rgwpimg: RightCombatShotgun
   - weapon_id: 300202
@@ -435,7 +435,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1.15
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Pellet
     weapon_lfwpimg: LeftCombatShotgun
     weapon_rgwpimg: RightCombatShotgun
   - weapon_id: 300203
@@ -460,7 +460,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1.15
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Pellet
     weapon_lfwpimg: LeftCombatShotgun
     weapon_rgwpimg: RightCombatShotgun
   - weapon_id: 300204
@@ -485,7 +485,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1.15
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Pellet
     weapon_lfwpimg: LeftCombatShotgun
     weapon_rgwpimg: RightCombatShotgun
   - weapon_id: 300205
@@ -510,7 +510,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1.15
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Pellet
     weapon_lfwpimg: LeftCombatShotgun
     weapon_rgwpimg: RightCombatShotgun
   - weapon_id: 300301
@@ -785,7 +785,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1.15
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Rocket
     weapon_lfwpimg: LeftRocketLauncher
     weapon_rgwpimg: RightRocketLauncher
   - weapon_id: 300502
@@ -810,7 +810,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1.15
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Rocket
     weapon_lfwpimg: LeftRocketLauncher
     weapon_rgwpimg: RightRocketLauncher
   - weapon_id: 300503
@@ -835,7 +835,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1.15
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Rocket
     weapon_lfwpimg: LeftRocketLauncher
     weapon_rgwpimg: RightRocketLauncher
   - weapon_id: 300504
@@ -860,7 +860,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1.15
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Rocket
     weapon_lfwpimg: LeftRocketLauncher
     weapon_rgwpimg: RightRocketLauncher
   - weapon_id: 300505
@@ -885,7 +885,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1.15
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Rocket
     weapon_lfwpimg: LeftRocketLauncher
     weapon_rgwpimg: RightRocketLauncher
   - weapon_id: 300601
@@ -910,7 +910,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Pellet
     weapon_lfwpimg: LeftSawedOff
     weapon_rgwpimg: RightSawedOff
   - weapon_id: 300602
@@ -935,7 +935,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Pellet
     weapon_lfwpimg: LeftSawedOff
     weapon_rgwpimg: RightSawedOff
   - weapon_id: 300603
@@ -960,7 +960,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Pellet
     weapon_lfwpimg: LeftSawedOff
     weapon_rgwpimg: RightSawedOff
   - weapon_id: 300604
@@ -985,7 +985,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Pellet
     weapon_lfwpimg: LeftSawedOff
     weapon_rgwpimg: RightSawedOff
   - weapon_id: 300605
@@ -1010,7 +1010,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Pellet
     weapon_lfwpimg: LeftSawedOff
     weapon_rgwpimg: RightSawedOff
   - weapon_id: 300701
@@ -1410,7 +1410,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Pellet
     weapon_lfwpimg: LeftGrenadeLauncher
     weapon_rgwpimg: RightGrenadeLauncher
   - weapon_id: 301002
@@ -1435,7 +1435,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Pellet
     weapon_lfwpimg: LeftGrenadeLauncher
     weapon_rgwpimg: RightGrenadeLauncher
   - weapon_id: 301003
@@ -1460,7 +1460,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Pellet
     weapon_lfwpimg: LeftGrenadeLauncher
     weapon_rgwpimg: RightGrenadeLauncher
   - weapon_id: 301004
@@ -1485,7 +1485,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Pellet
     weapon_lfwpimg: LeftGrenadeLauncher
     weapon_rgwpimg: RightGrenadeLauncher
   - weapon_id: 301005
@@ -1510,7 +1510,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: Pellet
     weapon_lfwpimg: LeftGrenadeLauncher
     weapon_rgwpimg: RightGrenadeLauncher
   - weapon_id: 301101

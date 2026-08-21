@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "spider-leg-prototype",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8743", "--directory", "Prototype"],
+      "port": 8743
+    }
+  ]
+}

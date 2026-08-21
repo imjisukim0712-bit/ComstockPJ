@@ -32,5 +32,12 @@ public enum PartEffect
     PerDiscStat,
 
     /// <summary>장착한 "교향곡" 계열 디스크 1개당 공격력이 effectAmount만큼 오른다(교향곡 모음집).</summary>
-    PerSymphonyDiscAtk
+    PerSymphonyDiscAtk,
+
+    /// <summary>이동속도가 effectAmount% 증가한다(다리 기획서 Ver02). 방어력 %증가(DefPercentBonus)와
+    /// 같은 자리에서, 가산·파생이 모두 끝난 값에 곱해진다.</summary>
+    MoveSpeedPercentBonus,
+
+    /// <summary>질량이 effectAmount% 만큼 변한다(거미 다리: -50). 위와 같은 방식으로 곱해진다.</summary>
+    MassPercentBonus
 }

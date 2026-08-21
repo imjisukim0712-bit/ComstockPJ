@@ -170,8 +170,16 @@ public class PlayerShootManager : MonoBehaviour
     [SerializeField] private float max_detect_range = 6.1f;
 
     [Header("빔 연출용 스프라이트")]
-    [Tooltip("빔 무기(weapon_firemode=Beam)가 늘려서 사용할 Resources 폴더의 스프라이트 이름")]
-    [SerializeField] private string beam_sprite_name = "Energy";
+    [Tooltip("빔 무기(weapon_firemode=Beam)가 늘려서 사용할 Resources 폴더 이름(그 안의 스프라이트를 " +
+             "전부 불러와 파일명 오름차순으로 순환 재생한다 - 프레임이 1장뿐이면 정지 이미지처럼 보인다)")]
+    [SerializeField] private string beam_sprite_name = "PlasmaCannonBeam";
+
+    [Header("총구 화염 이펙트 (밸런스/크기 미확정 임시값)")]
+    [Tooltip("총구 화염 이펙트의 가로 크기(월드 유닛). 근접무기를 제외한 모든 소켓 발사 시 재생된다")]
+    [SerializeField] private float muzzle_flash_target_width = 1.2f;
+
+    [Tooltip("총구 화염 이펙트의 정렬 순서(다른 스프라이트보다 위에 그려지도록 충분히 크게)")]
+    [SerializeField] private int muzzle_flash_sorting_order = 20;
 
     [Header("구르기(대시) 중 무기 자세")]
     [Tooltip("구르는 동안 무기 리그 포인트를 옮길 위치(Player 로컬 기준, 머리 위)")]
@@ -957,6 +965,12 @@ public class PlayerShootManager : MonoBehaviour
         // 발사 동작이 지속되는 시간. 빔만 0보다 크고 나머지는 즉발이다.
         float attack_duration = 0f;
 
+        // 총구 화염 이펙트 - 근접무기는 총구가 없으므로 제외(2026-08-21).
+        if (weapon.weapon_firemode != WeaponFireMode.MeleeSwing)
+        {
+            MuzzleFlashEffect.Play(fire_origin, aim_direction, muzzle_flash_target_width, muzzle_flash_sorting_order);
+        }
+
         switch (weapon.weapon_firemode)
         {
             case WeaponFireMode.Beam:
@@ -1257,16 +1271,37 @@ public class PlayerShootManager : MonoBehaviour
 
     private float CurrentAttackSpeedMultiplier() => Time.time < temp_attack_speed_expire_time ? temp_attack_speed_multiplier : 1f;
 
+    // beam_sprite_name(Resources 폴더) → 프레임 배열. 폴더 단위 캐시(2026-08-21, 플라즈마캐논
+    // 애니메이션 이펙트 적용과 함께 단일 스프라이트 조회에서 LoadAll로 바뀌었다).
+    private readonly Dictionary<string, Sprite[]> beam_frames_by_folder = new Dictionary<string, Sprite[]>();
+
+    private Sprite[] ResolveBeamFrames(string folder_name)
+    {
+        if (string.IsNullOrWhiteSpace(folder_name)) return System.Array.Empty<Sprite>();
+        folder_name = folder_name.Trim();
+
+        if (beam_frames_by_folder.TryGetValue(folder_name, out Sprite[] cached)) return cached;
+
+        Sprite[] loaded = Resources.LoadAll<Sprite>(folder_name);
+        System.Array.Sort(loaded, (a, b) => string.CompareOrdinal(a.name, b.name));
+        beam_frames_by_folder[folder_name] = loaded;
+
+        if (loaded.Length == 0)
+            Debug.LogWarning($"빔 연출 스프라이트를 Resources/{folder_name}에서 찾을 수 없습니다.");
+
+        return loaded;
+    }
+
     /// <summary>지속시간 동안 직선 범위를 태우는 빔을 만든다(플라즈마 캐논).</summary>
     private void FireBeam(WeaponData weapon, Vector3 origin, Vector3 direction, float total_damage, int slot_index, bool isCrit)
     {
-        Sprite visual = ResolveWeaponSprite(beam_sprite_name, weapon);
+        Sprite[] visual_frames = ResolveBeamFrames(beam_sprite_name);
 
         // 에너지 소켓의 "방어력 무시 +4~16%p"가 무기 자체 방어력 무시에 더해진다(2026-08-20).
         float def_ignore = Mathf.Clamp01(weapon.weapon_defignore
                                          + GetSocketModifiers(slot_index, weapon).DefIgnorePercent * 0.01f);
 
-        BeamProjectile.Fire(visual, origin, direction, GetTravelRange(weapon, slot_index), weapon.ProjectileSize,
+        BeamProjectile.Fire(visual_frames, origin, direction, GetTravelRange(weapon, slot_index), weapon.ProjectileSize,
                             total_damage, weapon.weapon_duration, def_ignore, weapon.weapon_knockback,
                             weapon.weapon_id, isCrit);
     }

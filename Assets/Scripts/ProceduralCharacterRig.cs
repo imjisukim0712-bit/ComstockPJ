@@ -37,6 +37,15 @@ public class ProceduralCharacterRig : MonoBehaviour
     private static Sprite expectedShinSprite;
     private static Sprite expectedFootSprite;
 
+    // 2026-08-21 다리 기획서 Ver02 비주얼 - 캐터필러/로켓 추진기는 관절 리깅이 필요 없는
+    // "이미 완성된 애니메이션 프레임"이라(사용자 확인) IK 없이 그대로 재생만 한다. 프레임은
+    // 한 번만 로드해 공유한다(Resources/Parts/Tread, Resources/Parts/Rocket).
+    private static Sprite[] treadBackFrames;
+    private static Sprite[] treadFrontFrames;
+    private static Sprite[] rocketBaseFrames;
+    private static Sprite[] rocketNozzleFrames;
+    private static Sprite[] rocketFlameFrames;
+
     [Header("스프라이트 (비워두면 Resources/Parts에서 자동 로드)")]
     [SerializeField] private Sprite bodySprite;
     [SerializeField] private Sprite thighSprite;
@@ -198,6 +207,123 @@ public class ProceduralCharacterRig : MonoBehaviour
     private bool rollActive;
     private float rollSpinDegrees;
 
+    // 2026-08-21 다리 기획서 Ver02 - 거미 다리의 "폴짝 뛰기"는 구르기와 같은 숨김+아치 연출을
+    // 쓰지만 몸통이 360도로 돌면 안 된다(회전 없이 위아래로만 튄다). 예전엔 위로 튀는 아치의
+    // 진행도(progress01)를 rollSpinDegrees 각도에서 그대로 역산했어서 회전 없이는 아치도 만들
+    // 수 없었다 - 이 필드로 아치 진행도를 회전과 분리한다. -1(기본값)이면 예전처럼 회전에서
+    // 역산한다(구르기 그대로 하위호환).
+    private float rollHopProgressOverride = -1f;
+
+    // 다리 비주얼 종류(기획서 Ver02) - PlayerRobotController가 장착 다리 파츠를 읽어
+    // SetLegVisual()로 알려준다. Biped(기본값)면 이 파일의 원래 걸음걸이 리그가 그대로 쓰인다.
+    private LegVisualMode legVisualMode = LegVisualMode.Biped;
+    private Transform treadRoot;
+    private Transform rocketRoot;
+    private Transform spiderRoot;
+    private FrameCycler treadBack;
+    private FrameCycler treadFront;
+    private FrameCycler rocketBase;
+    private FrameCycler rocketNozzle;
+    private FrameCycler rocketFlame;
+    private float treadDistancePhase; // 이동 거리 기반(트랙이 실제로 굴러가는 느낌)
+    private float rocketIdlePhase;    // 시간 기반(정지해 있어도 호버링+화염이 돈다)
+
+    // 거미 다리(관절 IK 4개) - Assets/Prototype/SpiderLegRig.html에서 사용자와 함께 검증한
+    // 알고리즘(고관절 고정, 2관절 IK, "무릎은 항상 몸통 중심에서 더 먼 쪽으로", 대각선 짝
+    // 반응형 걸음)을 그대로 옮겨왔다. 앵커 좌표는 그 프로토타입에서 실측한 값과 같다.
+    private static Sprite spiderUpperSprite;
+    private static Sprite spiderLowerSprite;
+    private static Sprite spiderTorsoSprite;
+    private readonly SpiderLeg[] spiderLegs = new SpiderLeg[4];
+    private float spiderThighLength;
+    private float spiderShinLength;
+
+    private class SpiderLeg
+    {
+        public Transform hip;
+        public Transform knee;
+        public Vector2 hipLocalPos;   // 고정(보행 중에도 움직이지 않는다 - 발만 움직인다)
+        public Vector2 idealLocalPos; // 대기 자세 발 목표(몸통 기준 로컬)
+
+        // 발은 <b>월드 좌표</b>로 들고 있어야 한다 - 몸이 걸어가는 동안 발은 "그 자리에 심겨"
+        // 있다가 목표에서 너무 멀어지면 그제서야 다음 자리로 옮긴다. 로컬(몸통 기준) 좌표로
+        // 들고 있으면 몸이 움직여도 발이 항상 몸을 그대로 따라가 버려서(오차가 절대 생기지
+        // 않는다) 반응형 걸음이 전혀 트리거되지 않는다 - 실제로 처음 구현에서 겪은 버그다.
+        public Vector3 footWorldPos;
+        public bool stepping;
+        public float stepT;
+        public Vector3 stepFromWorld;
+        public Vector3 stepToWorld;
+        public int pairIndex; // 대각선 짝(0/1) - 반대 짝이 스텝 중이면 기다린다
+    }
+
+    [Header("다리 비주얼 - 캐터필러/로켓 (2026-08-21 다리 기획서 Ver02)")]
+    [Tooltip("트랙 1칸(프레임)이 넘어가는 데 필요한 이동 거리(유닛). 작을수록 트랙이 빨리 돈다")]
+    [SerializeField] private float treadUnitsPerFrame = 0.35f;
+    [Tooltip("로켓 호버링/화염 애니메이션 재생 속도(초당 프레임)")]
+    [SerializeField] private float rocketFps = 8f;
+    [Tooltip("캐터필러 장착 시 머리(몸통) 위치를 다리 그림에 맞춰 위/아래로 미세 조정한다" +
+             "(음수 = 아래로). 다리(트레드) 위치는 건드리지 않고 머리만 움직인다")]
+    [SerializeField] private float treadBodyYOffset = 0f;
+    [Tooltip("로켓 추진기 장착 시 머리(몸통) 위치를 다리 그림에 맞춰 위/아래로 미세 조정한다" +
+             "(음수 = 아래로). 다리(로켓) 위치는 건드리지 않고 머리만 움직인다")]
+    [SerializeField] private float rocketBodyYOffset = -0.1f;
+
+    [Header("다리 비주얼 - 거미 (2026-08-21 다리 기획서 Ver02, 실제 IK 리깅)")]
+    [Tooltip("거미 다리 파츠(upper_leg/lower_leg) 전체 크기 배율. 원본 이미지가 몸통(250px)보다 " +
+             "훨씬 큰 캔버스(허벅지 405px/정강이 458px)로 그려져 있어 별도 배율이 필요하다")]
+    [SerializeField] private float spiderLegScale = 0.34f;
+    [Tooltip("좌우 고관절 간격의 절반(유닛). 2족 다리의 hipSeparation보다 넓게 잡아야 4다리가 " +
+             "겹치지 않는다")]
+    [SerializeField] private float spiderHipSpreadX = 0.62f;
+    [Tooltip("앞/뒤 다리 쌍의 세로 스태거(유닛) - 2족 다리의 Leg_Front/Leg_Back 관례와 같은 " +
+             "이유로 깊이감을 준다")]
+    [SerializeField] private float spiderHipFrontBackY = 0.18f;
+    [Tooltip("대기 시 발이 고관절에서 바깥으로 얼마나 뻗는지(다리 최대 도달거리에 대한 비율)")]
+    [SerializeField] private float spiderStanceSpreadRatio = 0.62f;
+    [Tooltip("대기 시 발이 고관절에서 얼마나 아래(지면)로 내려가는지(다리 최대 도달거리에 대한 비율)")]
+    [SerializeField] private float spiderStanceDropRatio = 0.5f;
+    [Tooltip("발이 목표 지점에서 이 거리(유닛) 이상 벌어지면 그 다리가 스텝을 시작한다")]
+    [SerializeField] private float spiderStepThreshold = 0.16f;
+    [Tooltip("스텝 진행 속도(1/스텝 시간) - 클수록 빠르게 사삭거린다")]
+    [SerializeField] private float spiderStepSpeed = 11f;
+    [Tooltip("스텝 목표에 이동 방향으로 살짝 더 뻗는 오버슈트(유닛)")]
+    [SerializeField] private float spiderStepOvershoot = 0.1f;
+    [Tooltip("스텝 중 발이 들리는 높이(유닛)")]
+    [SerializeField] private float spiderFootLiftHeight = 0.05f;
+    [Tooltip("거미 다리 장착 시 머리(몸통) 위치를 다리에 맞춰 위/아래로 미세 조정한다")]
+    [SerializeField] private float spiderBodyYOffset = 0f;
+    [Tooltip("거미 다리 밑판(body.png, 호버 패드 하우징) 크기 배율. 원본이 몸통(250px)보다 " +
+             "훨씬 큰 캔버스(827px)라 별도 배율이 필요하다")]
+    [SerializeField] private float spiderTorsoScale = 0.2f;
+    [Tooltip("거미 다리 밑판의 세로 위치 미세 조정")]
+    [SerializeField] private float spiderTorsoYOffset = 0f;
+
+    /// <summary>이미지 6장을 순서대로 돌리기만 하는 프레임 재생기(관절 없음).</summary>
+    private class FrameCycler
+    {
+        public SpriteRenderer renderer;
+        public Sprite[] frames;
+
+        public void ShowFrame(float phase01)
+        {
+            if (renderer == null || frames == null || frames.Length == 0) return;
+            int idx = Mathf.Clamp(Mathf.FloorToInt(Mathf.Repeat(phase01, 1f) * frames.Length), 0, frames.Length - 1);
+            renderer.sprite = frames[idx];
+        }
+    }
+
+    /// <summary>
+    /// 장착된 다리 파츠에 맞는 비주얼로 바꾼다. PlayerRobotController가 장비가 바뀔 때(정비 화면
+    /// 등)마다 호출한다 - SetRoll()처럼 즉시 반영되고, 다음 Update()에서 실제로 그려진다.
+    /// </summary>
+    public void SetLegVisual(LegVisualMode mode)
+    {
+        if (legVisualMode == mode) return;
+        legVisualMode = mode;
+        if (built) EnsureAltVisualBuilt();
+    }
+
     /// <summary>보행에 쓰이는 현재 속도(유닛/초).</summary>
     public float CurrentSpeed { get; private set; }
 
@@ -276,10 +402,11 @@ public class ProceduralCharacterRig : MonoBehaviour
     /// 진행)를 몸통 회전에 그대로 적용하고 다리는 숨긴다. active=false가 되는 순간 다리를 되살리고
     /// 평소 보행 로직으로 되돌아간다.
     /// </summary>
-    public void SetRoll(bool active, float spinDegrees)
+    public void SetRoll(bool active, float spinDegrees, float hopProgressOverride = -1f)
     {
         rollActive = active;
         rollSpinDegrees = spinDegrees;
+        rollHopProgressOverride = hopProgressOverride;
     }
 
     /// <summary>PlayerRobotController처럼 3D 벡터를 쓰는 쪽을 위한 편의 오버로드.</summary>
@@ -369,8 +496,346 @@ public class ProceduralCharacterRig : MonoBehaviour
         legs[1] = BuildLeg("Leg_Back", bodySortingOrder - 10, hipSeparation * 0.5f - frontLegPullBack, 0f, backLegTint,
                            thighHip, thighTilt, shinKnee, shinTilt, footAnkle);
 
+        // 리그를 다시 조립하면 rigRoot가 통째로 새로 생기므로 트레드/로켓/거미 자식도 다시 붙여야 한다.
+        treadRoot = null;
+        rocketRoot = null;
+        spiderRoot = null;
+        for (int i = 0; i < spiderLegs.Length; i++) spiderLegs[i] = null;
+        EnsureAltVisualBuilt();
+
         built = true;
         Apply(0f, Vector2.zero);   // 첫 프레임부터 올바른 자세로 서 있게
+    }
+
+    /// <summary>
+    /// 캐터필러/로켓 비주얼(관절 없이 프레임만 재생)을 필요할 때 만든다. legVisualMode가 Biped가
+    /// 아니면 그 종류의 자식을 만들어 두고, 나머지는 비활성화한다. 매번 새로 만들지 않고
+    /// 한 번 만든 뒤 SetActive만 토글한다(자주 안 바뀌는 값이지만 정비 화면에서 바뀔 수 있다).
+    /// </summary>
+    private void EnsureAltVisualBuilt()
+    {
+        if (rigRoot == null) return; // Build() 도중(리그 자체가 아직 없음)
+
+        if (legVisualMode == LegVisualMode.Tread && treadRoot == null) treadRoot = BuildTreadVisual();
+        if (legVisualMode == LegVisualMode.Rocket && rocketRoot == null) rocketRoot = BuildRocketVisual();
+        if (legVisualMode == LegVisualMode.Spider && spiderRoot == null) spiderRoot = BuildSpiderVisual();
+
+        if (treadRoot != null) treadRoot.gameObject.SetActive(legVisualMode == LegVisualMode.Tread);
+        if (rocketRoot != null) rocketRoot.gameObject.SetActive(legVisualMode == LegVisualMode.Rocket);
+        if (spiderRoot != null) spiderRoot.gameObject.SetActive(legVisualMode == LegVisualMode.Spider);
+
+        bool hideLegs = legVisualMode != LegVisualMode.Biped;
+        if (legsGroup != null && legsGroup.gameObject.activeSelf == hideLegs) legsGroup.gameObject.SetActive(!hideLegs);
+    }
+
+    /// <summary>
+    /// 캐터필러(트레일다리) - 뒤/앞 트랙 2장을 몸통 밑 중앙에 겹쳐 그린다. 원본 PNG가 몸통(250px)과
+    /// 같은 캔버스 규격이라(사용자가 이 리그 기준으로 그렸다) 위치·스케일 보정 없이 rigRoot
+    /// 밑에 몸통과 같은 자리(standHipY)에 놓기만 하면 비례가 맞는다.
+    /// </summary>
+    private Transform BuildTreadVisual()
+    {
+        LoadTreadFrames();
+
+        Transform root = new GameObject("TreadVisual").transform;
+        root.SetParent(rigRoot, false);
+        root.localPosition = new Vector3(0f, standHipY, 0f);
+
+        // 뒤 트랙은 몸통보다 뒤(낮은 sortingOrder), 앞 트랙은 몸통보다 앞(높은 sortingOrder)에 그려
+        // 몸통을 사이에 두고 트랙이 앞뒤로 감싸는 것처럼 보인다.
+        treadBack = new FrameCycler { renderer = CreateFrameRenderer(root, "Back", bodySortingOrder - 1), frames = treadBackFrames };
+        treadFront = new FrameCycler { renderer = CreateFrameRenderer(root, "Front", bodySortingOrder + 1), frames = treadFrontFrames };
+        // Update()가 아직 한 번도 안 돌았어도(예: 정비 화면처럼 timeScale=0인 상태에서 장비를
+        // 바꾸는 경우) sprite가 null인 첫 프레임이 보이지 않도록 즉시 0번 프레임을 채운다.
+        treadBack.ShowFrame(0f);
+        treadFront.ShowFrame(0f);
+        return root;
+    }
+
+    /// <summary>
+    /// 로켓 추진기 - 화염(맨 뒤) → 베이스(호버링 바디) → 노즐(맨 앞) 순으로 겹쳐 그린다.
+    /// 세 레이어가 같은 프레임 인덱스를 공유해야 원본이 의도한 모양이 나온다(사용자가 이미
+    /// 완성해서 넘겨준 애니메이션을 그대로 재생하는 것뿐이라 리깅이 필요 없다).
+    /// </summary>
+    private Transform BuildRocketVisual()
+    {
+        LoadRocketFrames();
+
+        Transform root = new GameObject("RocketVisual").transform;
+        root.SetParent(rigRoot, false);
+        root.localPosition = new Vector3(0f, standHipY, 0f);
+
+        rocketFlame = new FrameCycler { renderer = CreateFrameRenderer(root, "Flame", bodySortingOrder - 2), frames = rocketFlameFrames };
+        rocketBase = new FrameCycler { renderer = CreateFrameRenderer(root, "Base", bodySortingOrder - 1), frames = rocketBaseFrames };
+        rocketNozzle = new FrameCycler { renderer = CreateFrameRenderer(root, "Nozzle", bodySortingOrder + 1), frames = rocketNozzleFrames };
+        rocketFlame.ShowFrame(0f);
+        rocketBase.ShowFrame(0f);
+        rocketNozzle.ShowFrame(0f);
+        return root;
+    }
+
+    private SpriteRenderer CreateFrameRenderer(Transform parent, string name, int sortingOrder)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        sr.sortingLayerName = sortingLayerName;
+        sr.sortingOrder = sortingOrder;
+        return sr;
+    }
+
+    private static Sprite LoadFrame(string path)
+    {
+        Sprite s = Resources.Load<Sprite>(path);
+        if (s == null) Debug.LogWarning($"ProceduralCharacterRig: 프레임 스프라이트를 찾을 수 없습니다 - Resources/{path}");
+        return s;
+    }
+
+    private static void LoadTreadFrames()
+    {
+        if (treadBackFrames != null && treadFrontFrames != null) return;
+        treadBackFrames = new Sprite[6];
+        treadFrontFrames = new Sprite[6];
+        for (int i = 0; i < 6; i++)
+        {
+            treadBackFrames[i] = LoadFrame($"{ResourceFolder}Tread/b_f000{i}");
+            treadFrontFrames[i] = LoadFrame($"{ResourceFolder}Tread/f_f000{i}");
+        }
+    }
+
+    private static void LoadRocketFrames()
+    {
+        if (rocketBaseFrames != null && rocketNozzleFrames != null && rocketFlameFrames != null) return;
+        rocketBaseFrames = new Sprite[6];
+        rocketNozzleFrames = new Sprite[6];
+        rocketFlameFrames = new Sprite[6];
+        for (int i = 0; i < 6; i++)
+        {
+            rocketBaseFrames[i] = LoadFrame($"{ResourceFolder}Rocket/{i}");
+            rocketNozzleFrames[i] = LoadFrame($"{ResourceFolder}Rocket/{i}b");
+            rocketFlameFrames[i] = LoadFrame($"{ResourceFolder}Rocket/{i}fx");
+        }
+    }
+
+    /// <summary>
+    /// 거미 다리(4개 실제 IK 다리) 조립. 앵커 좌표는 Prototype/SpiderLegRig.html에서 픽셀 단위로
+    /// 실측하고 사용자와 함께 검증한 값을 그대로 쓴다 - upper_leg.png(405x213): 고관절 볼
+    /// 중심(52.5,83.5)→무릎 오렌지 링 중심(281.3,125.1). lower_leg.png(458x210): 무릎 볼
+    /// 중심(52.5,76.0)→발톱 끝(444,195). 원본 측정은 PIL(위가 0)이라 Unity 정규화 앵커
+    /// (아래가 0)로 쓰려면 y를 뒤집어야 한다(1 - pixelY/height) - AnchorToLocal/TiltToDown은
+    /// 2족 다리와 동일한 헬퍼를 그대로 재사용한다.
+    /// </summary>
+    private Transform BuildSpiderVisual()
+    {
+        if (spiderUpperSprite == null) spiderUpperSprite = Resources.Load<Sprite>(ResourceFolder + "Spider/upper_leg");
+        if (spiderLowerSprite == null) spiderLowerSprite = Resources.Load<Sprite>(ResourceFolder + "Spider/lower_leg");
+        if (spiderTorsoSprite == null) spiderTorsoSprite = Resources.Load<Sprite>(ResourceFolder + "Spider/body");
+        if (spiderUpperSprite == null || spiderLowerSprite == null)
+        {
+            Debug.LogError("ProceduralCharacterRig: 거미 다리 스프라이트를 찾을 수 없습니다 - " +
+                           "Resources/Parts/Spider/upper_leg, lower_leg");
+            return null;
+        }
+
+        Vector2 hipAnchorN = new Vector2(52.5f / 405f, 1f - 83.5f / 213f);
+        Vector2 kneeAnchorUpperN = new Vector2(281.3f / 405f, 1f - 125.1f / 213f);
+        Vector2 kneeAnchorLowerN = new Vector2(52.5f / 458f, 1f - 76f / 210f);
+        Vector2 footAnchorN = new Vector2(444f / 458f, 1f - 195f / 210f);
+
+        Vector2 hipLocalOnSprite = AnchorToLocal(spiderUpperSprite, hipAnchorN);
+        Vector2 kneeLocalOnUpper = AnchorToLocal(spiderUpperSprite, kneeAnchorUpperN);
+        Vector2 kneeLocalOnLower = AnchorToLocal(spiderLowerSprite, kneeAnchorLowerN);
+        Vector2 footLocalOnLower = AnchorToLocal(spiderLowerSprite, footAnchorN);
+
+        spiderThighLength = Vector2.Distance(hipLocalOnSprite, kneeLocalOnUpper) * spiderLegScale;
+        spiderShinLength = Vector2.Distance(kneeLocalOnLower, footLocalOnLower) * spiderLegScale;
+
+        float thighTilt = TiltToDown(kneeLocalOnUpper - hipLocalOnSprite);
+        float shinTilt = TiltToDown(footLocalOnLower - kneeLocalOnLower);
+
+        Transform root = new GameObject("SpiderVisual").transform;
+        root.SetParent(rigRoot, false);
+        root.localScale = new Vector3(facingSign, 1f, 1f);
+
+        // 몸통(다리 밑판) - 사용자 지적(2026-08-21): "거미다리 밑에 몸통은 왜 없앴니 그것도
+        // 포함시켜야지". 거미 다리 파츠 세트에 원래 포함된 body.png(호버 패드 하우징)를
+        // 다리와 머리 사이에 끼운다. 이 그림 자체에 작은 원통 손잡이(장식용 스텀프)가 top-center에
+        // 있지만 실제 로봇 머리보다 훨씬 작고 얼굴이 없어서, 머리를 그 위(=더 앞, 높은
+        // sortingOrder)에 그리면 자연스럽게 가려진다 - 별도로 잘라낼 필요가 없었다.
+        if (spiderTorsoSprite != null)
+        {
+            GameObject torsoGo = new GameObject("Torso");
+            torsoGo.transform.SetParent(root, false);
+            torsoGo.transform.localPosition = new Vector3(0f, standHipY + spiderTorsoYOffset, 0f);
+            torsoGo.transform.localScale = new Vector3(spiderTorsoScale, spiderTorsoScale, 1f);
+            SpriteRenderer torsoRenderer = torsoGo.AddComponent<SpriteRenderer>();
+            torsoRenderer.sprite = spiderTorsoSprite;
+            torsoRenderer.sortingLayerName = sortingLayerName;
+            torsoRenderer.sortingOrder = bodySortingOrder - 1; // 머리보다 뒤, 다리(-3/-4)보다는 앞
+        }
+
+        // 4개 고관절(좌/우 x 앞/뒤). standHipY를 기준으로 살짝 위/아래로 스태거해 깊이감을 준다 -
+        // 2족 다리의 Leg_Front/Leg_Back 관례와 같은 이유다. 고관절 자체는 보행 중에도 고정이고
+        // (숨쉬기/보행 bob이 없다), 발만 반응형으로 움직인다.
+        Vector2[] hipOffsets =
+        {
+            new Vector2(-spiderHipSpreadX, standHipY + spiderHipFrontBackY), // 앞-좌
+            new Vector2( spiderHipSpreadX, standHipY + spiderHipFrontBackY), // 앞-우
+            new Vector2(-spiderHipSpreadX, standHipY - spiderHipFrontBackY), // 뒤-좌
+            new Vector2( spiderHipSpreadX, standHipY - spiderHipFrontBackY), // 뒤-우
+        };
+        // 대각선 짝(거미/사족 보행의 정석): 앞좌+뒤우 = 짝0, 앞우+뒤좌 = 짝1
+        int[] pairOf = { 0, 1, 1, 0 };
+
+        float maxReach = spiderThighLength + spiderShinLength;
+
+        for (int i = 0; i < 4; i++)
+        {
+            var leg = new SpiderLeg { hipLocalPos = hipOffsets[i], pairIndex = pairOf[i] };
+
+            float side = Mathf.Sign(hipOffsets[i].x);
+            Vector2 idealOffset = new Vector2(side * maxReach * spiderStanceSpreadRatio, -maxReach * spiderStanceDropRatio);
+            leg.idealLocalPos = leg.hipLocalPos + idealOffset;
+
+            leg.hip = new GameObject("Hip_" + i).transform;
+            leg.hip.SetParent(root, false);
+            leg.hip.localPosition = new Vector3(leg.hipLocalPos.x, leg.hipLocalPos.y, 0f);
+            AttachVisual(leg.hip, "Thigh", spiderUpperSprite, hipLocalOnSprite, thighTilt,
+                        bodySortingOrder - 3, Color.white, false, spiderLegScale);
+
+            leg.knee = new GameObject("Knee_" + i).transform;
+            leg.knee.SetParent(leg.hip, false);
+            leg.knee.localPosition = new Vector3(0f, -spiderThighLength, 0f);
+            AttachVisual(leg.knee, "Shin", spiderLowerSprite, kneeLocalOnLower, shinTilt,
+                        bodySortingOrder - 4, Color.white, false, spiderLegScale);
+
+            // 발을 대기 자세 목표 위치에 "심는다" - 월드 좌표로 저장(위 필드 설명 참고).
+            leg.footWorldPos = root.TransformPoint(new Vector3(leg.idealLocalPos.x, leg.idealLocalPos.y, 0f));
+
+            spiderLegs[i] = leg;
+            SolveSpiderLeg(leg, leg.idealLocalPos); // 첫 프레임부터 올바른 자세로
+        }
+
+        return root;
+    }
+
+    /// <summary>
+    /// 거미 다리 2관절 IK. hip은 고정, foot을 목표로 코사인 법칙으로 무릎을 구한다. 무릎이 부풀 수
+    /// 있는 두 해 중 <b>몸통 중심(x=0)에서 더 먼 쪽</b>을 매 프레임 직접 비교해서 고른다 - 좌/우로만
+    /// 고정하면 코너에 따라 무릎이 몸 쪽으로 말려 "관절이 거꾸로 붙은" 것처럼 보인다(프로토타입
+    /// 검증 과정에서 실제로 겪은 버그). footLocal은 호출자가 이미 로컬 공간으로 변환해 건네준
+    /// 발 목표다(들려 있는 동안은 살짝 위로 보정된 값이 들어온다).
+    /// </summary>
+    private void SolveSpiderLeg(SpiderLeg leg, Vector2 footLocal)
+    {
+        Vector2 hip = leg.hipLocalPos;
+        Vector2 delta = footLocal - hip;
+
+        float maxReach = spiderThighLength + spiderShinLength - 0.001f;
+        float minReach = Mathf.Abs(spiderThighLength - spiderShinLength) + 0.001f;
+        float dist = Mathf.Clamp(delta.magnitude, minReach, maxReach);
+        Vector2 dir = delta.sqrMagnitude > 0.0001f ? delta.normalized : Vector2.down;
+        Vector2 clampedTarget = hip + dir * dist;
+
+        float baseAngle = Mathf.Atan2(dir.y, dir.x);
+        float cosA = (spiderThighLength * spiderThighLength + dist * dist - spiderShinLength * spiderShinLength)
+                    / (2f * spiderThighLength * dist);
+        float a = Mathf.Acos(Mathf.Clamp(cosA, -1f, 1f));
+
+        float angleA = baseAngle + a;
+        float angleB = baseAngle - a;
+        Vector2 kneeA = hip + new Vector2(Mathf.Cos(angleA), Mathf.Sin(angleA)) * spiderThighLength;
+        Vector2 kneeB = hip + new Vector2(Mathf.Cos(angleB), Mathf.Sin(angleB)) * spiderThighLength;
+
+        bool useA = Mathf.Abs(kneeA.x) >= Mathf.Abs(kneeB.x);
+        Vector2 knee = useA ? kneeA : kneeB;
+        float thighAngle = useA ? angleA : angleB;
+
+        Vector2 toTarget = clampedTarget - knee;
+        float shinAngle = Mathf.Atan2(toTarget.y, toTarget.x);
+
+        float thighZ = thighAngle * Mathf.Rad2Deg + 90f;
+        float shinZ = shinAngle * Mathf.Rad2Deg + 90f;
+
+        leg.hip.localRotation = Quaternion.Euler(0f, 0f, thighZ);
+        leg.knee.localRotation = Quaternion.Euler(0f, 0f, shinZ - thighZ);
+    }
+
+    /// <summary>
+    /// 대각선 짝 반응형 걸음(Prototype/SpiderLegRig.html에서 검증한 방식) - 발이 목표 지점에서
+    /// spiderStepThreshold 이상 벌어지면 그 다리가 스텝을 시작하되, <b>반대 짝이 이미 스텝
+    /// 중이면 기다린다</b>. 항상 두 다리는 지면에 붙어 있어 미끄러지지 않고, 오차가 큰 다리부터
+    /// 우선권을 준다.
+    ///
+    /// 발은 월드 좌표(footWorldPos)로 저장한다 - 몸통 기준 로컬 좌표로 들고 있으면 몸이 움직여도
+    /// 발이 몸을 그대로 따라가 버려 오차가 절대 안 생긴다(반응형 걸음이 트리거되지 않는 버그).
+    /// 매 프레임 현재 로컬 좌표(footLocalNow)를 새로 구해서 그걸로 오차를 재고 IK를 푼다.
+    /// </summary>
+    private void UpdateSpiderVisual(float dt, Vector2 velocity)
+    {
+        // 이동 방향은 월드 벡터라, 로컬(=몸통 기준, facingSign 반전이 걸려 있는) 공간으로
+        // 옮겨야 스텝 오버슈트 방향이 실제 화면 이동 방향과 맞는다.
+        Vector2 moveDirLocal = Vector2.zero;
+        if (velocity.sqrMagnitude > 1f)
+        {
+            Vector3 localDir = spiderRoot.InverseTransformDirection(new Vector3(velocity.x, velocity.y, 0f));
+            moveDirLocal = ((Vector2)localDir).normalized;
+        }
+
+        var footLocalNow = new Vector2[spiderLegs.Length];
+        for (int i = 0; i < spiderLegs.Length; i++)
+            footLocalNow[i] = spiderRoot.InverseTransformPoint(spiderLegs[i].footWorldPos);
+
+        bool[] pairBusy = { false, false };
+        foreach (SpiderLeg leg in spiderLegs) if (leg.stepping) pairBusy[leg.pairIndex] = true;
+
+        int[] order = { 0, 1, 2, 3 };
+        System.Array.Sort(order, (x, y) =>
+            Vector2.Distance(footLocalNow[y], spiderLegs[y].idealLocalPos)
+                .CompareTo(Vector2.Distance(footLocalNow[x], spiderLegs[x].idealLocalPos)));
+
+        foreach (int i in order)
+        {
+            SpiderLeg leg = spiderLegs[i];
+            if (leg.stepping) continue;
+            float err = Vector2.Distance(footLocalNow[i], leg.idealLocalPos);
+            if (err <= spiderStepThreshold) continue;
+            if (pairBusy[1 - leg.pairIndex]) continue; // 반대 짝이 스텝 중이면 기다린다(대각선 교대)
+
+            leg.stepping = true;
+            leg.stepT = 0f;
+            leg.stepFromWorld = leg.footWorldPos;
+            Vector2 stepToLocal = leg.idealLocalPos + moveDirLocal * spiderStepOvershoot;
+            leg.stepToWorld = spiderRoot.TransformPoint(new Vector3(stepToLocal.x, stepToLocal.y, 0f));
+            pairBusy[leg.pairIndex] = true;
+        }
+
+        foreach (SpiderLeg leg in spiderLegs)
+        {
+            if (!leg.stepping) continue;
+
+            leg.stepT += dt * spiderStepSpeed;
+            if (leg.stepT >= 1f)
+            {
+                leg.stepT = 1f;
+                leg.footWorldPos = leg.stepToWorld;
+                leg.stepping = false;
+            }
+            else
+            {
+                float t = leg.stepT;
+                float ease = t < 0.5f ? 2f * t * t : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
+                leg.footWorldPos = Vector3.Lerp(leg.stepFromWorld, leg.stepToWorld, ease);
+            }
+        }
+
+        for (int i = 0; i < spiderLegs.Length; i++)
+        {
+            SpiderLeg leg = spiderLegs[i];
+            Vector2 local = spiderRoot.InverseTransformPoint(leg.footWorldPos);
+            float lift = leg.stepping ? Mathf.Sin(Mathf.PI * Mathf.Min(1f, leg.stepT)) * spiderFootLiftHeight : 0f;
+            SolveSpiderLeg(leg, new Vector2(local.x, local.y + lift)); // IK만 살짝 들어올려서 푼다(실제 심긴 위치는 안 바뀜)
+        }
     }
 
     /// <summary>몸통의 flipX와 앵커 위치를 facingSign에 맞춰 갱신한다. flipX는 픽셀만
@@ -558,7 +1023,6 @@ public class ProceduralCharacterRig : MonoBehaviour
             ApplyRollPose();
             return;
         }
-        if (!legsGroup.gameObject.activeSelf) legsGroup.gameObject.SetActive(true); // 구르기 종료 시 다리 복구
 
         float dt = Time.deltaTime;
         Vector2 velocity = velocitySource != null
@@ -576,7 +1040,32 @@ public class ProceduralCharacterRig : MonoBehaviour
             facingSign = newFacing;
             ApplyBodyFacing();
             legsGroup.localScale = new Vector3(facingSign, 1f, 1f);
+            if (treadRoot != null) treadRoot.localScale = new Vector3(facingSign, 1f, 1f);
+            if (rocketRoot != null) rocketRoot.localScale = new Vector3(facingSign, 1f, 1f);
+            if (spiderRoot != null) spiderRoot.localScale = new Vector3(facingSign, 1f, 1f);
         }
+
+        if (legVisualMode != LegVisualMode.Biped)
+        {
+            // 다리 기획서 Ver02 - 캐터필러/로켓/거미는 걸음걸이가 아니라 프레임 애니메이션(또는
+            // 독립 IK)이라 보행 위상(phase)은 아예 진행시키지 않는다. 예전엔 Apply()를 그대로
+            // 불러 걷기용 숨쉬기(breath) bob까지 몸통에 남아 있었는데, 다리 쪽은 그 bob을 전혀
+            // 안 따라가므로 숨 쉴 때마다 머리가 다리에서 살짝 떴다 붙었다 하는 것처럼 보였다
+            // (사용자 리포트: "몸통에서 머리가 공중부양"). 이제 몸통을 완전히 고정된 자세로 두고
+            // (아래 오프셋만 반영) bob/breath/lean/sway를 전부 끈다 - 다리와 항상 딱 붙어 있다.
+            standHipY = ankleToSole + boneReach * hipHeightRatio; // 인스펙터 실시간 조정 대응(Apply()와 동일한 이유)
+            float bodyYOffset = legVisualMode == LegVisualMode.Tread ? treadBodyYOffset
+                               : legVisualMode == LegVisualMode.Rocket ? rocketBodyYOffset
+                               : legVisualMode == LegVisualMode.Spider ? spiderBodyYOffset : 0f;
+            bodyPivot.localPosition = new Vector3(0f, standHipY + bodyYOffset, 0f);
+            bodyPivot.localRotation = Quaternion.identity;
+            bodyVisual.localScale = Vector3.one;
+
+            UpdateAltVisual(dt, velocity);
+            return;
+        }
+
+        if (!legsGroup.gameObject.activeSelf) legsGroup.gameObject.SetActive(true); // 구르기 종료 시 다리 복구
 
         // 보행 강도와 위상
         float targetBlend = Mathf.Clamp01(CurrentSpeed / Mathf.Max(0.01f, fullGaitSpeed));
@@ -586,6 +1075,31 @@ public class ProceduralCharacterRig : MonoBehaviour
         phase = Mathf.Repeat(phase + frequency * dt, 1f);
 
         Apply(dt, velocity);
+    }
+
+    /// <summary>
+    /// 캐터필러 트랙은 실제로 이동한 거리에 비례해 굴러가고(멈추면 트랙도 멈춘다), 로켓의
+    /// 호버링+화염은 이동과 무관하게 항상 재생된다(정지해 있어도 떠 있는 로켓이니까).
+    /// </summary>
+    private void UpdateAltVisual(float dt, Vector2 velocity)
+    {
+        if (legVisualMode == LegVisualMode.Tread && treadBack != null)
+        {
+            treadDistancePhase += CurrentSpeed * dt / Mathf.Max(0.01f, treadUnitsPerFrame) / 6f;
+            treadBack.ShowFrame(treadDistancePhase);
+            treadFront.ShowFrame(treadDistancePhase);
+        }
+        else if (legVisualMode == LegVisualMode.Rocket && rocketBase != null)
+        {
+            rocketIdlePhase += rocketFps * dt / 6f;
+            rocketBase.ShowFrame(rocketIdlePhase);
+            rocketNozzle.ShowFrame(rocketIdlePhase);
+            rocketFlame.ShowFrame(rocketIdlePhase);
+        }
+        else if (legVisualMode == LegVisualMode.Spider && spiderLegs[0] != null)
+        {
+            UpdateSpiderVisual(dt, velocity);
+        }
     }
 
     // 다른 컴포넌트의 Update/코루틴이 sprite를 건드린 뒤에도 실제 렌더 직전에 한 번 더 확정한다.
@@ -601,9 +1115,14 @@ public class ProceduralCharacterRig : MonoBehaviour
     /// </summary>
     private void ApplyRollPose()
     {
+        // 지금 4종 다리는 Roll/Hop(구르기 계열)을 쓰는 다리(기본/거미)와 Tread/Rocket 비주얼을
+        // 쓰는 다리(캐터필러/로켓)가 서로 겹치지 않는다(legVisualType이 항상 Biped 또는
+        // Spider다) - 그래서 여기서는 legsGroup만 신경 쓰면 된다.
         if (legsGroup.gameObject.activeSelf) legsGroup.gameObject.SetActive(false);
 
-        float progress01 = Mathf.Repeat(Mathf.Abs(rollSpinDegrees), 360f) / 360f;
+        float progress01 = rollHopProgressOverride >= 0f
+            ? rollHopProgressOverride
+            : Mathf.Repeat(Mathf.Abs(rollSpinDegrees), 360f) / 360f;
         float hop = Mathf.Sin(progress01 * Mathf.PI) * legLength * 0.25f;
 
         bodyPivot.localPosition = new Vector3(0f, standHipY + hop, 0f);

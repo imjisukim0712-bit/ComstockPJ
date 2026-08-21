@@ -42,15 +42,42 @@ public class PlayerRobotController : MonoBehaviour
     /// HitFlash와 같은 방식으로 Awake에서 자동으로 붙는다.</summary>
     public DiscEffectRuntime DiscEffects { get; private set; }
 
-    [Header("구르기 (Space) - 전부 밸런스 미확정 임시값")]
-    [Tooltip("한 번 구를 때 이동하는 거리(유닛)")]
+    [Header("구르기/폴짝 뛰기 (Space) - 전부 밸런스 미확정 임시값")]
+    [Tooltip("한 번 구를 때 이동하는 거리(유닛). 구르기(기본 다리)와 폴짝 뛰기(거미 다리)가 공유한다 - " +
+             "다리 기획서 Ver02가 이 둘의 이동거리를 구분하지 않는다")]
     // 2026-08-12 사용자 지적 "PC 구르기 거리가 너무 김" - 이 값(5)은 2026-08-10 이미지 1/2 축소
     // 이전(몸이 지금의 2배였을 때) 튜닝된 값이라 몸 크기 대비 과도해졌다. 5 → 2.5.
     [SerializeField] private float dashDistance = 2.5f;
-    [Tooltip("구르기가 지속되는 시간(초). 이 시간 동안 무적이다")]
+    [Tooltip("구르기/폴짝 뛰기가 지속되는 시간(초). 이 시간 동안 무적이다")]
     [SerializeField] private float dashDuration = 0.28f;
-    [Tooltip("구르기 재사용 대기시간(초)")]
+    [Tooltip("장착된 다리 파츠를 찾을 수 없을 때만 쓰는 재사용 대기시간(초) - 평소엔 장착된 다리의 " +
+             "legSkillCooldown을 쓴다")]
     [SerializeField] private float dashCooldown = 1.2f;
+
+    [Header("다리 기획서 Ver02 - 캐터필러(순간 부스트) / 로켓 추진기(가속 패시브)")]
+    [Tooltip("순간 부스트 중 이동속도 배율")]
+    [SerializeField] private float boostSpeedMultiplier = 2f;
+    [Tooltip("순간 부스트로 낼 수 있는 최대 이동속도(명세의 \"최대 이동속도 값: 3\")")]
+    [SerializeField] private float boostSpeedCap = 3f;
+    [Tooltip("부스트 지속시간(초) - 이 동안 이동속도가 배가 된다")]
+    [SerializeField] private float boostDuration = 1f;
+    [Tooltip("부스트가 끝난 뒤 이동속도가 떨어져 있는 시간(초)")]
+    [SerializeField] private float boostPenaltyDuration = 0.5f;
+    [Tooltip("부스트 후딜레이 동안의 이동속도 배율(명세 \"기존 이동속도 2배 하락\"을 " +
+             "0.5배로 해석했다 - 문자 그대로 2배를 빼면 음수/역주행이 되어버린다)")]
+    [SerializeField] private float boostPenaltySpeedMultiplier = 0.5f;
+
+    [Tooltip("로켓 추진기 - 같은 방향으로 이만큼(초) 이동하면 가속이 시작된다")]
+    [SerializeField] private float rocketRampThreshold = 2f;
+    [Tooltip("로켓 추진기 - 가속이 시작된 뒤 최대 추가 이동속도(+2)까지 걸리는 시간(초)")]
+    [SerializeField] private float rocketRampToMaxDuration = 2f;
+    [Tooltip("로켓 추진기 - 최대 추가 이동속도")]
+    [SerializeField] private float rocketRampMaxBonus = 2f;
+
+    [Tooltip("거미 다리 - 최대 체력 대비 이 비율(25%)을 잃을 때마다 이동속도 패널티 한 단계가 쌓인다")]
+    [SerializeField] private float spiderHpLossStep = 0.25f;
+    [Tooltip("거미 다리 - 위 단계 하나당 이동속도 하락률(5%)")]
+    [SerializeField] private float spiderHpLossSpeedPenaltyPercent = 5f;
 
     [Header("적 밀어내기")]
     [Tooltip("이동 중 몸이 겹친 적을 밀어내는 속도(내 이동 속도에 대한 배율).\n" +
@@ -106,6 +133,23 @@ public class PlayerRobotController : MonoBehaviour
     private Vector3 dashDirection;
     private float dashTimeLeft;
     private float dashCooldownLeft;
+
+    // ── 다리 기획서 Ver02 - 장착된 다리 파츠에서 읽어온 스킬 정보(장비가 바뀔 때만 갱신) ──
+    private LegSkillType legSkillType = LegSkillType.Roll;
+    private float legSkillCooldownValue;
+    private bool legHasHpLossSpeedPenalty;
+    private bool legHasSpeedRampPassive;
+
+    // 캐터필러 "순간 부스트" - 구르기와 달리 위치를 옮기지 않고 이동속도만 바꾸므로
+    // IsDashing/dashDirection과 완전히 분리된 상태를 쓴다(무적도 없다 - 명세에 없음).
+    private float boostTimeLeft;
+    private float boostPenaltyTimeLeft;
+    private float boostCooldownLeft;
+
+    // 로켓 추진기 "가속 패시브" - 매 프레임 이동 입력 방향을 직전 프레임과 비교해 유지 시간을 잰다.
+    private float rampSameDirTime;
+    private float rampBonus;
+    private Vector3 rampDirection;
 
     // ── 디스크 기획서(2026-08-12) 관련 상태 ──────────────────────────
     // 시간제 임시 스탯 보너스(광분 바이러스/교향곡:파도/공명의 소리/마지막 발악). RunState의
@@ -281,6 +325,40 @@ public class PlayerRobotController : MonoBehaviour
         // 머리 해금 3건(가드맨=방어력 10 / 메테우스=공격력 20 / 해피 픽셀=행운 20)이 "달성한
         // 최고치"를 조건으로 쓴다. 스탯이 다시 계산되는 이 자리가 유일한 갱신 지점이다.
         UnlockTracker.ReportStats(Def, Atk, Luck);  // 해금 조건은 정수 기준이라 안에서 내림 처리한다
+
+        RefreshLegSkillInfo();
+    }
+
+    /// <summary>
+    /// 장착된 다리(Leg) 파츠에서 스킬 정보를 읽어와 캐시한다. RunState가 바뀔 때마다
+    /// (=ApplyAggregatedStats가 호출될 때마다, 즉 정비 화면에서 다리를 바꿀 때) 갱신되므로
+    /// 매 프레임 ModdingManager를 조회할 필요가 없다.
+    ///
+    /// 다리를 찾을 수 없으면(ModdingManager 미배치 등) 기존 동작(구르기)으로 안전하게 폴백한다.
+    /// </summary>
+    private void RefreshLegSkillInfo()
+    {
+        ModdingManager modding = ModdingManager.Instance;
+        if (modding != null && modding.TryGetEquippedPart(PartSlot.Leg, out PartData leg))
+        {
+            legSkillType = leg.legSkillType;
+            legSkillCooldownValue = leg.legSkillCooldown > 0f ? leg.legSkillCooldown : dashCooldown;
+            legHasHpLossSpeedPenalty = leg.legHpLossSpeedPenalty;
+            legHasSpeedRampPassive = leg.legSpeedRampPassive;
+            if (proceduralRig != null) proceduralRig.SetLegVisual(leg.legVisualType);
+        }
+        else
+        {
+            legSkillType = LegSkillType.Roll;
+            legSkillCooldownValue = dashCooldown;
+            legHasHpLossSpeedPenalty = false;
+            legHasSpeedRampPassive = false;
+            if (proceduralRig != null) proceduralRig.SetLegVisual(LegVisualMode.Biped);
+        }
+
+        // 다리가 바뀌는 순간 이전 다리의 진행 중이던 스킬 상태가 다음 프레임까지 남지 않게 한다.
+        if (legSkillType != LegSkillType.Boost) { boostTimeLeft = 0f; boostPenaltyTimeLeft = 0f; }
+        if (!legHasSpeedRampPassive) { rampSameDirTime = 0f; rampBonus = 0f; }
     }
 
     /// <summary>
@@ -432,6 +510,7 @@ public class PlayerRobotController : MonoBehaviour
         if (Keyboard.current == null) return; // 키보드 미인식 등 예외 방지
 
         UpdateDashTimers();
+        UpdateBoostTimers();
 
         float h = 0f;
         float v = 0f;
@@ -447,9 +526,48 @@ public class PlayerRobotController : MonoBehaviour
 
         if (moveInput.sqrMagnitude > 0.0001f) lastMoveDirection = moveInput;
 
-        if (Keyboard.current.spaceKey.wasPressedThisFrame) TryStartDash();
+        UpdateRocketRamp();
+
+        if (Keyboard.current.spaceKey.wasPressedThisFrame) TryUseLegSkill();
 
         UpdateAnimation(h);
+    }
+
+    /// <summary>
+    /// 로켓 추진기 패시브 - 같은 방향으로 rocketRampThreshold(2)초 이상 이동하면 그 뒤로
+    /// rocketRampToMaxDuration(2)초에 걸쳐 이동속도가 최대 rocketRampMaxBonus(+2)까지 가속한다.
+    /// 방향이 바뀌거나(키보드 입력이라 방향은 8방향 중 하나로 딱딱 끊긴다 - 근사 비교 없이
+    /// 그대로 비교해도 된다) 멈추면 즉시 리셋된다(명세: "초기 이동속도 값으로 변경 후 다시 가속").
+    /// </summary>
+    private void UpdateRocketRamp()
+    {
+        if (!legHasSpeedRampPassive)
+        {
+            rampSameDirTime = 0f;
+            rampBonus = 0f;
+            return;
+        }
+
+        if (moveInput.sqrMagnitude < 0.0001f)
+        {
+            rampSameDirTime = 0f;
+            rampBonus = 0f;
+            return;
+        }
+
+        if ((moveInput - rampDirection).sqrMagnitude > 0.0001f)
+        {
+            rampDirection = moveInput;
+            rampSameDirTime = 0f;
+            rampBonus = 0f;
+        }
+
+        rampSameDirTime += Time.deltaTime;
+
+        float over = Mathf.Max(0f, rampSameDirTime - rocketRampThreshold);
+        rampBonus = rocketRampToMaxDuration > 0f
+            ? Mathf.Min(rocketRampMaxBonus, over / rocketRampToMaxDuration * rocketRampMaxBonus)
+            : (over > 0f ? rocketRampMaxBonus : 0f);
     }
 
     // 구르기 지속시간/쿨다운을 흘려보낸다. 지속시간이 끝나면 무적도 함께 풀린다.
@@ -469,21 +587,55 @@ public class PlayerRobotController : MonoBehaviour
 
         dashTimeLeft -= Time.deltaTime;
 
-        // 굴러가는 방향(dashDirection.x)에 맞춰 회전 방향을 정한다 - 실제 바퀴처럼 오른쪽으로
-        // 구르면 시계방향(-), 왼쪽으로 구르면 반시계방향(+)으로 돌아야 진행 방향과 맞아 보인다.
-        // 순수 수직 이동(x=0에 가까움)은 기존처럼 시계방향을 기본값으로 쓴다.
-        float spinSign = dashDirection.x < -0.0001f ? 1f : -1f;
-
         float progress01 = dashDuration > 0f ? 1f - Mathf.Clamp01(dashTimeLeft / dashDuration) : 1f;
-        DashSpinDegrees = spinSign * progress01 * 360f;
-        if (proceduralRig != null) proceduralRig.SetRoll(true, DashSpinDegrees);
+
+        if (legSkillType == LegSkillType.Hop)
+        {
+            // 거미 다리 "폴짝 뛰기" - 회전 없이(0도로 고정) 위아래로만 튄다. 회전과 분리된
+            // hopProgressOverride를 직접 넘겨야 몸이 뜨는 아치가 그려진다(ProceduralCharacterRig
+            // 참고 - 원래는 아치 진행도를 회전각에서 역산해서 회전 없이는 아치도 없었다).
+            DashSpinDegrees = 0f;
+            if (proceduralRig != null) proceduralRig.SetRoll(true, 0f, progress01);
+        }
+        else
+        {
+            // 구르기(기본 다리) - 굴러가는 방향(dashDirection.x)에 맞춰 회전 방향을 정한다.
+            // 실제 바퀴처럼 오른쪽으로 구르면 시계방향(-), 왼쪽으로 구르면 반시계방향(+)으로
+            // 돌아야 진행 방향과 맞아 보인다. 순수 수직 이동(x=0에 가까움)은 시계방향을 기본값으로 쓴다.
+            float spinSign = dashDirection.x < -0.0001f ? 1f : -1f;
+            DashSpinDegrees = spinSign * progress01 * 360f;
+            if (proceduralRig != null) proceduralRig.SetRoll(true, DashSpinDegrees);
+        }
 
         if (dashTimeLeft <= 0f) IsDashing = false;
     }
 
     /// <summary>
-    /// 기획서의 "Space → 구르기". 이동 입력 방향으로(제자리면 마지막으로 향하던 방향으로)
-    /// 짧고 빠르게 이동하며, 구르는 동안은 무적이다.
+    /// Space 입력을 장착된 다리의 액티브 스킬로 연결한다(다리 기획서 Ver02) - 구르기/폴짝 뛰기는
+    /// 같은 "위치 이동 + 무적" 메커니즘을 공유하고(회전 유무만 다르다), 순간 부스트는 완전히
+    /// 다른 메커니즘(위치는 그대로, 이동속도만 바뀐다)이라 별도 경로로 보낸다. 로켓 추진기는
+    /// 액티브 스킬이 없어 아무 일도 일어나지 않는다.
+    /// </summary>
+    private void TryUseLegSkill()
+    {
+        switch (legSkillType)
+        {
+            case LegSkillType.Roll:
+            case LegSkillType.Hop:
+                TryStartDash();
+                break;
+            case LegSkillType.Boost:
+                TryStartBoost();
+                break;
+            case LegSkillType.None:
+            default:
+                break; // 로켓 추진기 - 액티브 스킬 없음
+        }
+    }
+
+    /// <summary>
+    /// 구르기/폴짝 뛰기 공용 구현. 이동 입력 방향으로(제자리면 마지막으로 향하던 방향으로)
+    /// 짧고 빠르게 이동하며, 이동하는 동안은 무적이다(IsDashing이 TakeDamage의 무적 판정을 켠다).
     /// </summary>
     private void TryStartDash()
     {
@@ -495,7 +647,67 @@ public class PlayerRobotController : MonoBehaviour
         dashTimeLeft = dashDuration;
 
         // 팬봇은 쿨다운 배율이 0이라 곧바로 다시 구를 수 있다("무제한 액티브 스킬").
-        dashCooldownLeft = dashCooldown * HeadEffects.RollCooldownMultiplier;
+        dashCooldownLeft = legSkillCooldownValue * HeadEffects.RollCooldownMultiplier;
+    }
+
+    /// <summary>
+    /// 캐터필러 "순간 부스트". 위치는 옮기지 않고(WASD 조작을 그대로 유지) 짧게 이동속도만
+    /// 올렸다가, 끝난 뒤 잠깐 이동속도가 떨어지는 후딜레이가 있다. 명세에 무적 언급이 없어
+    /// IsDashing/무적 판정을 켜지 않는다 - 구르기/폴짝 뛰기와 이 지점이 가장 다르다.
+    /// </summary>
+    private void TryStartBoost()
+    {
+        if (boostCooldownLeft > 0f || boostTimeLeft > 0f || boostPenaltyTimeLeft > 0f) return;
+
+        boostTimeLeft = boostDuration;
+        boostCooldownLeft = boostDuration + boostPenaltyDuration + Mathf.Max(0f, boostCooldownExtra());
+        UnlockTracker.ReportSkillUsed();
+    }
+
+    // 쿨타임(3초)은 "부스트 다시 쓸 수 있기까지의 시간"이라 부스트/후딜레이가 이미 차지하는
+    // 시간을 빼야 실제 대기시간이 legSkillCooldownValue(3초)와 맞는다.
+    private float boostCooldownExtra() => legSkillCooldownValue - boostDuration - boostPenaltyDuration;
+
+    /// <summary>부스트/후딜레이/쿨다운 타이머를 흘려보낸다.</summary>
+    private void UpdateBoostTimers()
+    {
+        if (boostCooldownLeft > 0f) boostCooldownLeft -= Time.deltaTime;
+
+        if (boostTimeLeft > 0f)
+        {
+            boostTimeLeft -= Time.deltaTime;
+            if (boostTimeLeft <= 0f) { boostTimeLeft = 0f; boostPenaltyTimeLeft = boostPenaltyDuration; }
+        }
+        else if (boostPenaltyTimeLeft > 0f)
+        {
+            boostPenaltyTimeLeft -= Time.deltaTime;
+            if (boostPenaltyTimeLeft < 0f) boostPenaltyTimeLeft = 0f;
+        }
+    }
+
+    /// <summary>부스트/후딜레이 상태에 따라 기준 이동속도를 보정한다. 둘 다 아니면 그대로 반환.</summary>
+    private float ApplyBoostToSpeed(float baseSpeed)
+    {
+        if (boostTimeLeft > 0f) return Mathf.Min(baseSpeed * boostSpeedMultiplier, boostSpeedCap);
+        if (boostPenaltyTimeLeft > 0f) return baseSpeed * boostPenaltySpeedMultiplier;
+        return baseSpeed;
+    }
+
+    /// <summary>
+    /// 거미 다리 - 잃은 체력이 spiderHpLossStep(25%)을 넘을 때마다 이동속도가
+    /// spiderHpLossSpeedPenaltyPercent(5%)씩 누적으로 깎인다. RobotStats.Compute는 현재 체력을
+    /// 모르므로(스탯을 만드는 쪽이다) PartEffect.DefWhenLowHp와 같은 이유로 여기서 직접 곱한다.
+    /// </summary>
+    private float ApplySpiderHpLossPenalty(float baseSpeed)
+    {
+        if (!legHasHpLossSpeedPenalty || MaxHp <= 0f || spiderHpLossStep <= 0f) return baseSpeed;
+
+        float lostRatio = 1f - Mathf.Clamp01(CurrentHp / MaxHp);
+        int steps = Mathf.FloorToInt(lostRatio / spiderHpLossStep);
+        if (steps <= 0) return baseSpeed;
+
+        float penaltyPercent = Mathf.Min(100f, steps * spiderHpLossSpeedPenaltyPercent);
+        return Mathf.Max(0f, baseSpeed * (1f - penaltyPercent * 0.01f));
     }
 
     /// <summary>
@@ -509,6 +721,13 @@ public class PlayerRobotController : MonoBehaviour
         DashSpinDegrees = 0f;
         if (proceduralRig != null) proceduralRig.SetRoll(false, 0f);
         moveInput = Vector3.zero;
+
+        // 다리 기획서 Ver02 - 필드 초기화 중에 부스트/가속 상태가 남아 정비 화면 이후 첫 이동이
+        // 갑자기 빨라지거나 느려지지 않게 한다.
+        boostTimeLeft = 0f;
+        boostPenaltyTimeLeft = 0f;
+        rampSameDirTime = 0f;
+        rampBonus = 0f;
 
         if (rb != null)
         {
@@ -570,6 +789,15 @@ public class PlayerRobotController : MonoBehaviour
             // 디스크 기획서(2026-08-12) - 광분 바이러스/마지막 발악(시간제) + 위장(조건부, 매 프레임 갱신)의
             // 이동속도 보너스를 함께 반영한다.
             float effective_move_speed = MoveSpeed + GetTempStatBonus(StatType.MoveSpeed) + conditionalMoveSpeedBonus;
+
+            // 다리 기획서 Ver02 - 거미 다리(체력 손실 패널티) → 로켓 추진기(가속 패시브) →
+            // 캐터필러(부스트) 순으로 적용한다. 세 효과는 서로 다른 다리에서만 켜지므로
+            // (RefreshLegSkillInfo가 장착된 다리 하나에서만 값을 읽어온다) 실제로는 항상 최대
+            // 하나만 0이 아니다 - 순서 자체보다는 "빠짐없이 다 반영되는가"가 중요하다.
+            effective_move_speed = ApplySpiderHpLossPenalty(effective_move_speed);
+            effective_move_speed += rampBonus;
+            effective_move_speed = ApplyBoostToSpeed(effective_move_speed);
+
             rb.linearVelocity = moveInput * effective_move_speed + knockbackVelocity; // MovePosition 대신 이걸로 교체
         }
 
