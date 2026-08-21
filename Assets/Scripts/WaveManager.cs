@@ -211,8 +211,10 @@ public class WaveManager : MonoBehaviour
     /// 이 웨이브가 보스 웨이브인지. 첫 보스는 <see cref="finalWaveNumber"/>(20)에 등장하고,
     /// 엔드리스 모드(2026-08-19 Phase C)에서는 그 뒤로 <c>finalWaveNumber - 1</c>웨이브
     /// (19웨이브)마다 반복된다 - 웨이브 20 → 39 → 58 → ... (기획 확정값).
+    /// public인 이유: GameFlowManager의 웨이브 전환 배너(2026-08-21)가 "BOSS INCOMING" 문구를
+    /// 틀 웨이브인지 판단할 때 이 판정을 그대로 재사용한다(중복 구현 방지).
     /// </summary>
-    private bool IsBossWave(int wave)
+    public bool IsBossWave(int wave)
     {
         if (wave < finalWaveNumber) return false;
         if (wave == finalWaveNumber) return true;

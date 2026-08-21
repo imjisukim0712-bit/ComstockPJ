@@ -67,8 +67,13 @@ public class EnemySpawner : MonoBehaviour
     // spawn_pool_buffer와 <b>같은 인덱스</b>로 짝지어지는 추첨 비중(가중 추첨용).
     private readonly List<float> spawn_weight_buffer = new List<float>();
 
-    /// <summary>WaveManager가 웨이브 시작 시 호출해 상위 몬스터 해금 여부를 갱신한다.</summary>
-    public void SetCurrentWave(int wave) => currentWave = wave;
+    /// <summary>WaveManager가 웨이브 시작 시 호출해 상위 몬스터 해금 여부를 갱신한다.
+    /// 리더 개체수 상한도 웨이브 단위라 여기서 함께 초기화한다.</summary>
+    public void SetCurrentWave(int wave)
+    {
+        currentWave = wave;
+        leaders_spawned_this_wave = 0;
+    }
 
     /// <summary>현재 웨이브의 몬스터 체력·공격력 배율. HUD/검증용으로도 조회할 수 있게 공개한다.</summary>
     public float CurrentStatMultiplier => Mathf.Pow(1f + Mathf.Max(0f, statIncreasePerWave), Mathf.Max(0, currentWave - 1));
@@ -101,14 +106,17 @@ public class EnemySpawner : MonoBehaviour
              "무한정 쌓이지는 않는다(60초 웨이브 기준 최대 20마리)")]
     [SerializeField] private float trickleSpawnInterval = 3f;
 
-    [Header("리더 무리 (좀비 기획서 Ver04 p.20/p.22)")]
-    [Tooltip("리더와 함께 스폰할 팔로워 몬스터ID(기본: 일반 좀비). 어떤 몬스터ID가 '리더'인지는 " +
-             "몬스터ID→행동 컴포넌트 매핑(MonsterComponentTypes)에서 LeaderUnit으로 등록된 것을 기준으로 자동 판별한다")]
-    [SerializeField] private int leaderPackMonsterId = 200001;
-    [Tooltip("리더 한 마리당 함께 스폰할 팔로워 수")]
-    [SerializeField] private int leaderPackSize = 3;
-    [Tooltip("팔로워가 리더 주위에 흩어져 스폰되는 반경(월드 유닛)")]
-    [SerializeField] private float leaderPackSpawnRadius = 2.5f;
+    [Header("리더 개체수 제한 (2026-08-21 사용자 지정 - 무리 동반 기믹 삭제와 함께 도입)")]
+    [Tooltip("이 웨이브 번호보다 낮은 웨이브에서는 리더 등장 수를 아래 상한으로 제한한다. " +
+             "이 웨이브(기본 20 = 보스 웨이브) 이상부터는 제한 없이 가중 추첨을 그대로 따른다")]
+    [SerializeField] private int leaderCapWaveThreshold = 20;
+    [Tooltip("leaderCapWaveThreshold 미만 웨이브에서 한 웨이브에 등장 가능한 리더의 최대 수")]
+    [SerializeField] private int leaderMaxPerWave = 3;
+
+    // 리더가 상한에 걸려 못 나올 때 그 스폰 슬롯이 통째로 사라지지 않도록, 같은 자리에서
+    // 리더를 뺀 후보로 즉시 다시 뽑는다 - 결과적으로 "리더 대신 다른 좀비가 더 많이 나온다"
+    // (사용자 지정: "다른 좀비들을 더 많이 스폰하는 걸로 난이도 조절해").
+    private int leaders_spawned_this_wave;
 
     private Dictionary<int, GameObject> prefabMap;
     private readonly List<EnemyUnit> alive_enemies = new List<EnemyUnit>();
@@ -216,13 +224,19 @@ public class EnemySpawner : MonoBehaviour
                 if (maxAliveEnemies > 0 && alive_enemies.Count >= maxAliveEnemies) break;
 
                 int monsterId = PickWeightedMonsterId();
+
+                // 리더가 웨이브당 상한에 걸리면 그 슬롯을 비우지 않고 리더를 뺀 나머지 후보로
+                // 즉시 다시 뽑는다(= 리더 대신 다른 좀비가 그 자리를 채운다).
+                if (IsLeaderMonsterId(monsterId) && !CanSpawnMoreLeadersThisWave())
+                    monsterId = PickWeightedMonsterId(excludeLeader: true);
+
                 Vector3 position = GetRandomSpawnPosition();
 
                 EnemyUnit unit = SpawnMonster(monsterId, position);
                 if (unit == null) continue;
 
                 alive_enemies.Add(unit);
-                if (unit is LeaderUnit leader) SpawnLeaderPack(leader, position);
+                if (unit is LeaderUnit) leaders_spawned_this_wave++;
             }
         }
     }
@@ -231,10 +245,9 @@ public class EnemySpawner : MonoBehaviour
     /// 동시 생존 상한에 막혀 정규 스폰이 멈춘 동안에도 <b>trickleSpawnInterval초마다 1마리</b>는
     /// 계속 내보내 전투가 끊기지 않게 한다(2026-08-19 사용자 지정).
     ///
-    /// <b>상한을 무시하는 유일한 정규 경로</b>다(리더의 팔로워 스폰과 같은 예외). 그래서 여기서는
-    /// 가중 추첨을 쓰지 않고 <see cref="spawnMonsterIds"/>(기본 좀비)에서만 고른다 - 상위 몬스터가
-    /// 뽑히면 차저·부머가 상한 위로 쌓이고, 특히 리더가 뽑히면 팔로워 3마리까지 함께 상한을
-    /// 우회해 한 번에 4마리가 추가되기 때문이다.
+    /// <b>상한을 무시하는 유일한 정규 경로</b>다. 그래서 여기서는 가중 추첨을 쓰지 않고
+    /// <see cref="spawnMonsterIds"/>(기본 좀비)에서만 고른다 - 상위 몬스터가 뽑히면 차저·부머가
+    /// 상한 위로 계속 쌓이기 때문이다.
     /// </summary>
     private IEnumerator TrickleSpawnLoop()
     {
@@ -263,19 +276,29 @@ public class EnemySpawner : MonoBehaviour
     /// 가중 추첨으로 몬스터ID 하나를 고른다. 모든 비중이 0이면 균등 추첨으로 폴백한다
     /// (인스펙터에서 실수로 전부 0을 넣어도 스폰이 멈추지 않도록).
     /// </summary>
-    private int PickWeightedMonsterId()
+    /// <param name="excludeLeader">true면 후보에서 리더를 빼고 다시 뽑는다(리더 웨이브당
+    /// 상한에 걸렸을 때 그 자리를 다른 몬스터로 채우기 위한 재추첨용).</param>
+    private int PickWeightedMonsterId(bool excludeLeader = false)
     {
         float total = 0f;
-        for (int i = 0; i < spawn_weight_buffer.Count; i++) total += spawn_weight_buffer[i];
+        for (int i = 0; i < spawn_weight_buffer.Count; i++)
+        {
+            if (excludeLeader && IsLeaderMonsterId(spawn_pool_buffer[i])) continue;
+            total += spawn_weight_buffer[i];
+        }
 
         if (total <= 0f)
         {
+            // excludeLeader가 폴백 후보까지 다 걸러내는 극단적인 경우(인스펙터 설정 오류)에는
+            // 제외 없이 원래 폴백(균등 추첨)으로 되돌아간다 - 스폰 자체가 멈추지 않게.
             return spawn_pool_buffer[UnityEngine.Random.Range(0, spawn_pool_buffer.Count)];
         }
 
         float roll = UnityEngine.Random.value * total;
         for (int i = 0; i < spawn_pool_buffer.Count; i++)
         {
+            if (excludeLeader && IsLeaderMonsterId(spawn_pool_buffer[i])) continue;
+
             roll -= spawn_weight_buffer[i];
             if (roll <= 0f) return spawn_pool_buffer[i];
         }
@@ -284,30 +307,14 @@ public class EnemySpawner : MonoBehaviour
         return spawn_pool_buffer[spawn_pool_buffer.Count - 1];
     }
 
-    /// <summary>
-    /// 리더가 스폰되면 곧바로 무리(팔로워)를 함께 스폰해 등록한다(좀비 기획서 Ver04 p.20 "다른
-    /// 좀비 무리를 이끌고 다니는 우두머리" / p.22 "무리가 전멸하면 리더는 도주").
-    /// 팔로워는 maxAliveEnemies 제한을 우회한다 - 리더 등장 자체가 하나의 "이벤트"라
-    /// 무리가 쪼개져서 나오면 리더 혼자 덩그러니 나오는 것보다 부자연스럽기 때문이다.
-    /// </summary>
-    private void SpawnLeaderPack(LeaderUnit leader, Vector3 center)
-    {
-        var followers = new List<EnemyUnit>();
+    /// <summary>몬스터ID→행동 컴포넌트 매핑에서 LeaderUnit으로 등록된 ID인지 판별한다
+    /// (하드코딩된 200006 대신 이 표를 단일 출처로 삼는다).</summary>
+    private static bool IsLeaderMonsterId(int monsterId) =>
+        MonsterComponentTypes.TryGetValue(monsterId, out Type type) && type == typeof(LeaderUnit);
 
-        for (int i = 0; i < leaderPackSize; i++)
-        {
-            Vector2 offset = UnityEngine.Random.insideUnitCircle * leaderPackSpawnRadius;
-            Vector3 position = center + new Vector3(offset.x, offset.y, 0f);
-
-            EnemyUnit follower = SpawnMonster(leaderPackMonsterId, position);
-            if (follower == null) continue;
-
-            followers.Add(follower);
-            alive_enemies.Add(follower);
-        }
-
-        leader.SetPack(followers);
-    }
+    /// <summary>leaderCapWaveThreshold 미만 웨이브에서는 leaderMaxPerWave 마리까지만 허용한다.</summary>
+    private bool CanSpawnMoreLeadersThisWave() =>
+        currentWave >= leaderCapWaveThreshold || leaders_spawned_this_wave < leaderMaxPerWave;
 
     /// <summary>
     /// 카메라 가시 영역(사각형)의 바깥 테두리 위 무작위 지점을 고른다.

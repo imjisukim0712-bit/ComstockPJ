@@ -15,6 +15,11 @@ using UnityEngine;
 /// 돌아간다. 심지에 불이 붙는 계기(큰 피해 / 사거리 안 도달)는 그대로이며, 이미 심지가 붙은
 /// 뒤에 같은 계기가 다시 와도(예: 공격 쿨다운이 돌아 재시도) <see cref="fuseStarted"/> 가드가
 /// 막아 폭발 코루틴이 중복 실행되지 않는다.
+///
+/// <b>2026-08-21 사용자 제공 폭발 애니메이션 적용</b> - 실제로 터지는 순간(<see cref="Explode"/>)
+/// <see cref="DisruptorExplosionEffect"/>가 8프레임 애니메이션을 한 번 재생한다. 그 전까지는
+/// 폭발 시각 효과가 전혀 없었다. 다른 폭발형 무기(로켓런처 등)의 스플래시 연출과는 완전히
+/// 별개의 애셋/코드다.
 /// </summary>
 public class DisruptorUnit : EnemyUnit
 {
@@ -101,6 +106,11 @@ public class DisruptorUnit : EnemyUnit
 
     private void Explode()
     {
+        // 2026-08-21 사용자 제공 폭발 애니메이션(Resources/DisruptorExplosion) - 다른 폭발형
+        // 무기(로켓런처 등)의 스플래시 연출과는 별개로 디스럭터 자폭에만 적용한다.
+        int sorting_order = body_sprite != null ? body_sprite.sortingOrder + 10 : 20;
+        DisruptorExplosionEffect.Play(transform.position, explosionRadius, sorting_order);
+
         Collider[] hits = Physics.OverlapSphere(transform.position, explosionRadius);
         foreach (Collider hit in hits)
         {

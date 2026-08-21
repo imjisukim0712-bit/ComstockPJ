@@ -8,13 +8,22 @@ using UnityEngine.UI;
 /// 2026-08-18 사용자 요청으로 정비 화면과 상점 화면이 같은 규칙을 쓰게 되면서 뽑아냈다.
 ///  - 보유·장착 중인 아이템은 <b>아이콘만</b> 보여준다(아이콘 뒤에 별도 사각형을 깔지 않는다 -
 ///    칸 자체가 배경이다).
-///  - <b>일반 등급이 아니면 칸을 등급색으로</b> 칠한다(<see cref="ItemGradeExtensions.ToCellColor"/>).
-///  - 칸은 "테두리 아트(흰색 고정) + 안쪽 상태색" 두 겹이다. 한 겹으로 하면 테두리 스프라이트가
-///    거의 검정이라 색을 곱하는 순간 등급색·강조색이 전부 검게 죽는다(2026-08-13에 겪은 함정).
+///  - <b>일반 등급이 아니면 등급색으로 강조</b>한다(<see cref="ItemGradeExtensions.ToCellColor"/>).
+///  - 칸은 "테두리 아트(흰색 고정, <see cref="FrameSpriteName"/>) + 색 테두리 링(AccentRing)"
+///    두 겹뿐이다. 캡션·아이콘은 <b>그 위에 바로</b> 그린다 - 사이에 별도로 채색한 사각형을
+///    끼워 넣지 않는다(2026-08-21, 사용자 지적: "기존 UI 리소스 위에 회색 사각형을
+///    덮어버리면 안 된다" - 정비 화면 "머리" 칸 스크린샷. 처음엔 안쪽 사각형의 색만
+///    옅게 죽였는데, 그것도 "사각형이 하나 더 있다"는 문제 자체는 그대로였다).
+///    등급/강조색은 테두리 아트에 직접 곱하면 안 보이므로(2026-08-13에 겪은 함정 - 스프라이트가
+///    거의 검정이라 색을 곱하는 순간 죽는다) 전용 흰색 실루엣 링(<see cref="UiIconLibrary.Frame"/>)을
+///    테두리 위에 덧그리는 방식으로만 표현한다.
 /// </summary>
 public static class ItemCellUI
 {
     private const string FrameSpriteName = "UI/Black_ui03";
+
+    /// <summary>테두리 아트를 못 찾았을 때만 쓰는 대체 배경색(정상적인 경우엔 안 쓰인다).</summary>
+    private static readonly Color CellBaseColor = new Color(0.10f, 0.10f, 0.12f, 1f);
 
     /// <summary>
     /// 칸 안 글씨의 자동 크기 조절 설정. Canvas가 ConstantPixelSize라 해상도에 따라 고정 픽셀
@@ -31,7 +40,16 @@ public static class ItemCellUI
         text.overflowMode = TextOverflowModes.Ellipsis;
     }
 
-    /// <summary>칸의 공통 뼈대(테두리 아트 + 안쪽 상태색 + 클릭 버튼). 돌려주는 것은 <b>안쪽</b> 이미지다.</summary>
+    /// <summary>
+    /// 칸의 공통 뼈대(테두리 아트 + 색 테두리 링 + 클릭 버튼). 돌려주는 것은 배경 이미지
+    /// (프레임) 그 자체다 - 캡션·아이콘은 이 위에 바로 그려진다.
+    ///
+    /// 등급/강조색(<paramref name="color"/>)은 <see cref="FrameSpriteName"/>(거의 검정이라
+    /// 색을 곱해도 안 보인다 - 2026-08-13에 겪은 함정)에 직접 입히지 않고, <see cref="UiIconLibrary.Frame"/>
+    /// (흰색 실루엣 전용 링)으로 만든 별도 "AccentRing" 레이어에만 입힌다. 이 링은 테두리
+    /// 자리에 겹쳐 그려질 뿐 안쪽 면을 덮지 않으므로, 캡션·아이콘은 항상 프레임 위에 직접
+    /// 놓인다(2026-08-21, 사용자 지적: 캡션 밑에 별도로 채색한 사각형을 깔면 안 된다).
+    /// </summary>
     public static Image CreateShell(RectTransform parent, string name, Color color,
                                     System.Action onClick, out GameObject cell)
     {
@@ -48,29 +66,31 @@ public static class ItemCellUI
         }
         else
         {
-            frame.color = color; // 아트를 못 찾으면 단색 칸으로 동작
+            frame.color = CellBaseColor; // 아트를 못 찾았을 때만 단색 배경으로 대체
         }
 
-        var stateGo = new GameObject("State", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        stateGo.transform.SetParent(cell.transform, false);
-        var stateRect = (RectTransform)stateGo.transform;
-        stateRect.anchorMin = new Vector2(0.07f, 0.07f);
-        stateRect.anchorMax = new Vector2(0.93f, 0.93f);
-        stateRect.offsetMin = Vector2.zero;
-        stateRect.offsetMax = Vector2.zero;
+        var ringGo = new GameObject("AccentRing", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        ringGo.transform.SetParent(cell.transform, false);
+        var ringRect = (RectTransform)ringGo.transform;
+        ringRect.anchorMin = Vector2.zero;
+        ringRect.anchorMax = Vector2.one;
+        ringRect.offsetMin = Vector2.zero;
+        ringRect.offsetMax = Vector2.zero;
 
-        Image image = stateGo.GetComponent<Image>();
-        image.color = color;
-        image.raycastTarget = false; // 클릭은 바깥 칸(프레임)이 받는다
+        Image ring = ringGo.GetComponent<Image>();
+        ring.sprite = UiIconLibrary.Frame();
+        ring.type = Image.Type.Sliced;
+        ring.color = color;
+        ring.raycastTarget = false;
 
         if (onClick != null)
         {
             Button button = cell.AddComponent<Button>();
-            button.targetGraphic = image;
+            button.targetGraphic = frame; // 클릭 피드백도 프레임 자체가 받는다(별도 레이어 없음)
             button.onClick.AddListener(() => onClick());
         }
 
-        return image;
+        return frame;
     }
 
     /// <summary>아이콘 칸 하나를 만든다.</summary>
@@ -79,7 +99,7 @@ public static class ItemCellUI
     public static Image CreateIconCell(RectTransform parent, string name, Sprite icon, Color color,
                                        string caption, bool iconBright, System.Action onClick)
     {
-        Image state = CreateShell(parent, name, color, onClick, out GameObject cell);
+        Image background = CreateShell(parent, name, color, onClick, out GameObject cell);
 
         bool hasCaption = !string.IsNullOrEmpty(caption);
 
@@ -118,7 +138,7 @@ public static class ItemCellUI
             img.color = iconBright ? Color.white : new Color(1f, 1f, 1f, 0.28f);
         }
 
-        return state;
+        return background;
     }
 
     /// <summary>

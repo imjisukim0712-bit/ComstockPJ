@@ -188,7 +188,9 @@ public class EnemyUnit : MonoBehaviour
         if (hit_flash != null) hit_flash.Play();
     }
 
-    private void OnDestroy()
+    // virtual - BossUnit이 이 위에 오버라이드해서 남아있는 텔레그래프 이펙트를 정리한다
+    // (2026-08-21, 코루틴이 끝나기 전에 보스가 파괴되면 이펙트가 영원히 남는 버그 수정).
+    protected virtual void OnDestroy()
     {
         Alive.Remove(this);
     }
@@ -854,6 +856,15 @@ public class EnemyUnit : MonoBehaviour
         DamageNumberUI.ShowDealt(popup_pos, dmg, isCrit);
 
         if (CurrentHp <= 0f) Die();
+    }
+
+    /// <summary>외부(리더의 회복 능력 등)에서 체력을 채운다. MaxHp를 넘지 않고, 죽은 유닛에는 적용하지 않는다.</summary>
+    public void Heal(float amount)
+    {
+        if (IsDead || amount <= 0f) return;
+
+        CurrentHp = Mathf.Min(MaxHp, CurrentHp + amount);
+        UpdateHealthBar();
     }
 
     // ── 체력바 ──────────────────────────────────────────────────

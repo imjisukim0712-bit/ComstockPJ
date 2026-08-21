@@ -11,6 +11,13 @@ using UnityEngine;
 /// <see cref="MonsterAnimationLibrary.BossFolder"/>(Resources/BossMove)에 있고 제자리에서도
 /// 계속 재생된다(<see cref="ResolveMoveClip"/>).
 /// 광역 공격 범위 표시는 아직 전용 이펙트 에셋이 없어 런타임에 생성한 원형 스프라이트를 쓴다.
+///
+/// <b>텔레그래프 원은 보스의 자식이 아니라 독립 GameObject다</b>(위치를 세계 좌표로 직접
+/// 잡기 위해). 그래서 <see cref="PerformAoeAttack"/> 코루틴이 끝까지 돌아야만 스스로 지워지는데,
+/// 웨이브가 끝나면 <c>EnemySpawner.DespawnAllAliveEnemies()</c>가 <see cref="EnemyUnit.Die"/>를
+/// 거치지 않고 보스를 그대로 <c>Destroy()</c>해버려 코루틴이 중간에 끊길 수 있다 - 이때 이미
+/// 만들어진 원이 임자를 잃고 화면(정비 화면 뒤)에 영원히 남아있던 버그가 있었다(2026-08-21).
+/// <see cref="OnDestroy"/>에서 남은 원을 확실히 정리해 고쳤다.
 /// </summary>
 public class BossUnit : EnemyUnit
 {
@@ -37,6 +44,7 @@ public class BossUnit : EnemyUnit
 
     private float next_aoe_time;
     private bool telegraph_active;
+    private GameObject active_telegraph;
 
     /// <summary>
     /// 보스 스탯은 데이터테이블 밖에서 WaveManager가 <c>monster_id = -1</c>로 만들어 넘기므로
@@ -83,10 +91,12 @@ public class BossUnit : EnemyUnit
         target.z = 0f;
 
         GameObject telegraph = CreateTelegraphVisual(target);
+        active_telegraph = telegraph;
 
         yield return new WaitForSeconds(aoeTelegraphDuration);
 
         if (telegraph != null) Destroy(telegraph);
+        active_telegraph = null;
 
         if (!IsDead && !GameOverManager.IsGameOver)
         {
@@ -158,5 +168,15 @@ public class BossUnit : EnemyUnit
         base.Die();
 
         if (!was_already_dead) OnDefeated?.Invoke();
+    }
+
+    /// <summary>
+    /// 텔레그래프 코루틴이 끝까지 돌지 못하고 보스가 먼저 파괴돼도(웨이브 종료 시
+    /// DespawnAllAliveEnemies() 등) 떠 있던 원이 남지 않도록 확실히 지운다.
+    /// </summary>
+    protected override void OnDestroy()
+    {
+        base.OnDestroy();
+        if (active_telegraph != null) Destroy(active_telegraph);
     }
 }

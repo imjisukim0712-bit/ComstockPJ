@@ -159,6 +159,16 @@ public class HitFlash : MonoBehaviour
     {
         if (!flashing) return;
 
+        // 정비 화면 진입으로 timeScale이 0이 되면 flash_time_left가 줄지 않아 하얗게 물든
+        // 채로 얼어붙는다(주로 플레이어 - 적은 대부분 웨이브 종료와 함께 파괴된다). 다른
+        // 런타임 생성 이펙트(DamageNumberUI 등)와 같은 관례로 즉시 꺼서 정리한다(2026-08-21).
+        if (GameFlowManager.IsIntermission)
+        {
+            flashing = false;
+            SetFlashAmount(0f);
+            return;
+        }
+
         flash_time_left -= Time.deltaTime;
         if (flash_time_left > 0f) return;
 

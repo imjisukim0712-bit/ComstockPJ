@@ -147,6 +147,16 @@ public class DamageNumberUI : MonoBehaviour
 
     private void Update()
     {
+        // 정비 화면으로 넘어가면 Time.timeScale이 0이 되어 elapsed가 더 이상 늘지 않는다 -
+        // 그러면 이 팝업이 Lifetime에 영영 못 미쳐 정비/상점 화면 위에 얼어붙은 채 계속
+        // 남아있었다(2026-08-21 사용자 리포트). PlayerHitFeedback과 같은 관례로, 런타임
+        // 생성 오브젝트는 스스로 IsIntermission을 체크해 즉시 정리한다.
+        if (GameFlowManager.IsIntermission)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         elapsed += Time.deltaTime;
         if (elapsed >= Lifetime)
         {

@@ -103,18 +103,31 @@ public class GameFlowManager : MonoBehaviour
     // 엔드리스 모드 점수 정산 팝업(2026-08-19 Phase C). 같은 Canvas에 코드로 붙인다.
     private ScoreSummaryPopup scoreSummaryPopup;
 
+    // 웨이브 시작 전환 배너("WAVE 08" / "BOSS INCOMING", 2026-08-21). 같은 Canvas에 코드로 붙인다.
+    private WaveTransitionBannerUI waveTransitionBanner;
+
+    [Header("웨이브 전환 배너 (2026-08-21 UI 기획서)")]
+    [Tooltip("웨이브 시작 배너가 떠 있는 동안 게임을 정지시킬 시간(초, 실시간 - Time.timeScale과 무관)")]
+    [SerializeField] private float waveTransitionBannerDuration = 1.2f;
+
     private void Awake()
     {
         if (aiCoreUpgradePanel != null) aiCoreUpgradePanel.SetActive(false);
         EnsureAiCoreExtraButtons();
         EnsurePauseMenu();
+
+        // 웨이브 1은 WaveManager.Start()에서 바로 시작되므로(GameDataManager가 Awake에서
+        // 이미 동기 로드를 끝내둔 상태) Start()에서 구독하면 두 스크립트의 Start() 실행 순서에
+        // 따라 첫 배너를 놓칠 수 있다. Awake는 모든 스크립트에서 Start()보다 항상 먼저 실행되므로
+        // 여기서 구독해야 웨이브 1도 확실히 배너가 뜬다.
+        if (waveManager != null) waveManager.OnWaveStarted += HandleWaveStarted;
     }
 
     /// <summary>일시정지 메뉴와 우상단 설정 아이콘이 없으면 만들어 붙인다. AiCoreExtraButtons와
     /// 같은 이유로 Awake에서 한 번, 필요하면 그 이후에도 다시 확인할 수 있게 열어 둔다.</summary>
     private void EnsurePauseMenu()
     {
-        if (pauseMenu != null && settingsIcon != null && scoreSummaryPopup != null) return;
+        if (pauseMenu != null && settingsIcon != null && scoreSummaryPopup != null && waveTransitionBanner != null) return;
 
         Canvas canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null) return;
@@ -126,6 +139,8 @@ public class GameFlowManager : MonoBehaviour
         // 먼저 붙이면 딤 배경에 가려진다(아이콘 쪽에서 메뉴가 열리면 스스로 숨기기도 한다).
         if (settingsIcon == null) settingsIcon = SettingsIconUI.EnsureAttached(canvasRect);
         if (scoreSummaryPopup == null) scoreSummaryPopup = ScoreSummaryPopup.EnsureAttached(canvasRect);
+        // 배너는 맨 마지막에 붙여야 위 팝업들보다도 위에 그려진다(웨이브 시작 배너가 가려지면 안 됨).
+        if (waveTransitionBanner == null) waveTransitionBanner = WaveTransitionBannerUI.EnsureAttached(canvasRect);
     }
 
     /// <summary>
@@ -160,6 +175,7 @@ public class GameFlowManager : MonoBehaviour
     private void OnDestroy()
     {
         if (waveManager != null) waveManager.OnWaveEnded -= HandleWaveEnded;
+        if (waveManager != null) waveManager.OnWaveStarted -= HandleWaveStarted;
         if (moddingPanel != null) moddingPanel.OnProceedRequested -= HandleModdingProceedRequested;
         if (shopPanel != null) shopPanel.OnNextWaveRequested -= HandleNextWaveRequested;
         GameWinManager.OnGameWon -= HandleGameWon;
@@ -172,6 +188,33 @@ public class GameFlowManager : MonoBehaviour
         if (GameOverManager.IsGameOver) return;
 
         EnterPostWaveIntermission(waveNumber);
+    }
+
+    /// <summary>
+    /// 웨이브가 시작될 때마다(1웨이브 포함) 짧게 정지하며 "WAVE 08" 배너를 띄운다
+    /// (`UI 기획서.pdf` "웨이브 전환 / 보스 등장 알림", 2026-08-21). 마지막 웨이브(보스 웨이브)면
+    /// 배너가 경고 색/문구("BOSS INCOMING")로 바뀐다.
+    /// </summary>
+    private void HandleWaveStarted(int waveNumber)
+    {
+        EnsurePauseMenu(); // waveTransitionBanner가 아직 없으면 여기서 만든다
+        if (waveTransitionBanner == null) return;
+
+        StartCoroutine(PlayWaveTransitionBannerRoutine(waveNumber));
+    }
+
+    private IEnumerator PlayWaveTransitionBannerRoutine(int waveNumber)
+    {
+        bool isBossWave = waveManager != null && waveManager.IsBossWave(waveNumber);
+
+        Time.timeScale = 0f;
+        waveTransitionBanner.Show(waveNumber, isBossWave);
+
+        // Time.timeScale이 0이므로 실시간(unscaled) 대기를 써야 실제로 시간이 흐른다.
+        yield return new WaitForSecondsRealtime(waveTransitionBannerDuration);
+
+        waveTransitionBanner.Hide();
+        Time.timeScale = 1f; // 웨이브가 시작된 직후(=전투 중)이므로 항상 1로 복귀해도 안전하다
     }
 
     /// <summary>

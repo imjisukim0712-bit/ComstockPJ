@@ -583,7 +583,12 @@ public class ModdingPanelUI : MonoBehaviour
         }
         bg.raycastTarget = false;
 
-        CreateDetailLabel(detailPanel, "Title", "파츠 설명", 0.06f, 0.945f, 0.94f, 0.995f, TextAlignmentOptions.Center, 28f);
+        // 2026-08-21 사용자 지적 - 위쪽 여백이 거의 없어(0.995 = 패널 맨 위 경계에 거의 붙음)
+        // "설"/"명"처럼 위로 튀어나오는 한글 자모가 패널 테두리에 닿아 보였다. yMin은 그대로
+        // 둬서 바로 아래 SelectedIcon(~0.935까지)과는 여전히 안 겹치게 하고, yMax만 낮춰
+        // (0.995→0.98) 위쪽 여백을 만들었다. 글자 최대 크기도 28→20으로 낮춰 좁아진 세로
+        // 폭 안에서도 테두리에 닿지 않을 여유를 더 뒀다.
+        CreateDetailLabel(detailPanel, "Title", "파츠 설명", 0.06f, 0.945f, 0.94f, 0.98f, TextAlignmentOptions.Center, 20f);
 
         detailSelectedIcon = CreateDetailIcon(detailPanel, "SelectedIcon", 0.30f, 0.775f, 0.70f, 0.935f);
         detailSelectedText = CreateDetailLabel(detailPanel, "SelectedText", string.Empty,

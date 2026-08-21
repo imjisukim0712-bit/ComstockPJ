@@ -3361,9 +3361,8 @@ MonoBehaviour:
   fallbackSpawnRadius: 12
   maxAliveEnemies: 18
   trickleSpawnInterval: 3
-  leaderPackMonsterId: 200001
-  leaderPackSize: 3
-  leaderPackSpawnRadius: 2.5
+  leaderCapWaveThreshold: 20
+  leaderMaxPerWave: 3
 --- !u!4 &379423241
 Transform:
   m_ObjectHideFlags: 0
@@ -9918,7 +9917,7 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 338028237}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.03, y: 0.93}
+  m_AnchorMin: {x: 0.14, y: 0.93}
   m_AnchorMax: {x: 0.97, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
@@ -12535,7 +12534,6 @@ MonoBehaviour:
   hpValueText: {fileID: 1017142081}
   hpSlider: {fileID: 1588510594}
   gameOverObject: {fileID: 173322686}
-  victoryObject: {fileID: 856877114}
   waveText: {fileID: 1091859539}
   goldText: {fileID: 1172434652}
   waveTimeText: {fileID: 2125207337}
@@ -15224,6 +15222,7 @@ MonoBehaviour:
   - {fileID: 1808371058}
   - {fileID: 462372024}
   - {fileID: 1215217996}
+  waveTransitionBannerDuration: 1.2
 --- !u!114 &1656057950
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17489,7 +17488,7 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1531051625}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.02, y: 0.92}
+  m_AnchorMin: {x: 0.14, y: 0.92}
   m_AnchorMax: {x: 0.98, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
