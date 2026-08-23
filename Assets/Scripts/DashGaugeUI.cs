@@ -68,6 +68,14 @@ public class DashGaugeUI : MonoBehaviour
         root.anchorMax = Vector2.zero;
         root.pivot = new Vector2(0.5f, 0.5f);
 
+        // <b>캔버스의 맨 첫 자식으로 내린다</b>(2026-08-23 버그 수정). uGUI는 형제 순서가 곧
+        // 그리기 순서라, 코드로 만들어 붙이면 항상 <b>맨 뒤 = 맨 위</b>가 된다 - 그래서 이 게이지가
+        // 설정창·일시정지 메뉴·점수 정산 팝업처럼 나중에 열리는 패널들 위로 뚫고 올라왔다.
+        // 첫 자식으로 내리면 캔버스 안의 다른 UI가 전부 이 위에 그려지므로, 앞으로 어떤 패널이
+        // 추가돼도 같은 문제가 재발하지 않는다(개별 패널마다 숨김 조건을 늘리는 것보다 안전하다).
+        // 캔버스가 Screen Space - Overlay라 첫 자식이어도 게임 월드보다는 항상 위에 그려진다.
+        root.SetAsFirstSibling();
+
         // 배경/채움/글자는 전부 이 자식 하나에 묶는다 - 숨길 때 root가 아니라 이 오브젝트만
         // 꺼야 한다(아래 LateUpdate 주석 참고).
         var visualGo = new GameObject("Visual", typeof(RectTransform));
@@ -126,8 +134,13 @@ public class DashGaugeUI : MonoBehaviour
         // 사라져 있던 버그의 원인). 이제 root는 항상 켜 둔 채, 배경/채움/글자를 묶은 자식
         // <see cref="visual"/>만 껐다 켠다 - root의 LateUpdate는 항상 돌아가야 스스로 다시
         // 보여줄 수 있다.
+        // 일시정지(= 설정창을 여는 경로)는 IsIntermission이 아니라서 따로 확인한다 -
+        // 멈춰 있는 화면 뒤에 게이지가 남아 있을 이유가 없다(그리기 순서는 위 SetAsFirstSibling이
+        // 이미 보장하므로, 이건 정확성을 위한 추가 조건이다).
+        bool paused = PauseMenuUI.Instance != null && PauseMenuUI.Instance.IsOpen;
+
         bool scene_visible = !GameFlowManager.IsIntermission && !GameOverManager.IsGameOver
-                       && !GameWinManager.IsGameWon && !player.IsDead;
+                       && !GameWinManager.IsGameWon && !player.IsDead && !paused;
 
         if (cam == null) cam = Camera.main;
 

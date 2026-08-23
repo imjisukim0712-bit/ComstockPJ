@@ -436,7 +436,14 @@ public class ShopPanelUI : MonoBehaviour
                     : $"WAVE {RunState.WaveNumber:00}";
         }
 
-        if (goldText != null) goldText.text = RunState.Gold.ToString();
+        if (goldText != null)
+        {
+            goldText.text = RunState.Gold.ToString();
+            // 골드 아이콘이 숫자를 덮지 않도록 글자 왼쪽 여백을 줄 너비에 비례해 다시 잡는다
+            // (씬에는 아이콘이 정규화 앵커, 여백이 절대 픽셀로 섞여 있어 FHD보다 큰
+            // 해상도에서 겹쳤다 - 2026-08-23 버그 수정, IconTextRowLayout 주석 참고).
+            IconTextRowLayout.FitTextAfterLeadingIcon(goldText);
+        }
 
         if (refreshText != null && shopManager != null)
         {
