@@ -25,6 +25,12 @@ public class WaveTransitionBannerUI : MonoBehaviour
     private GameObject ribbon;
     private TextMeshProUGUI normalLabel;
 
+    // 2026-08-23 사용자 제공 "보스등장알림" 아트(Resources/BossIncomingBanner.png, 1024x288).
+    // 문구("⚠ BOSS INCOMING ⚠")가 그림에 이미 그려져 있어서, 이 에셋이 있으면 카드 배경·리본·
+    // 텍스트를 전부 끄고 그림 한 장만 비율 그대로 띄운다(없으면 예전 텍스트 배너로 폴백).
+    private Image bossBannerImage;
+    private TextMeshProUGUI ribbonLabel;
+
     /// <summary>Canvas 밑에 이미 있으면 그걸 돌려주고, 없으면 새로 만들어 붙인다.</summary>
     public static WaveTransitionBannerUI EnsureAttached(RectTransform canvasRoot)
     {
@@ -86,9 +92,25 @@ public class WaveTransitionBannerUI : MonoBehaviour
         ribbonImage.color = BossRibbonColor;
         ribbonImage.raycastTarget = false;
 
-        TextMeshProUGUI ribbonLabel = CreateText((RectTransform)ribbon.transform, "Label",
+        ribbonLabel = CreateText((RectTransform)ribbon.transform, "Label",
             new Vector2(0.05f, 0.08f), new Vector2(0.95f, 0.92f));
         ribbonLabel.text = "⚠ BOSS INCOMING ⚠";
+
+        // 보스 등장 알림 전용 아트. 문구가 그림 안에 있으므로 카드 전체를 이 그림으로 대체한다.
+        Sprite bossBanner = Resources.Load<Sprite>("BossIncomingBanner");
+        if (bossBanner != null)
+        {
+            var bannerGo = new GameObject("BossIncomingArt", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            bannerGo.transform.SetParent(root, false);
+            Stretch((RectTransform)bannerGo.transform);
+
+            bossBannerImage = bannerGo.GetComponent<Image>();
+            bossBannerImage.sprite = bossBanner;
+            bossBannerImage.type = Image.Type.Simple;
+            bossBannerImage.preserveAspect = true; // 원본 비율(1024x288)을 유지한다
+            bossBannerImage.raycastTarget = false;
+            bannerGo.SetActive(false);
+        }
 
         ribbon.SetActive(false);
         root.gameObject.SetActive(false);
@@ -99,9 +121,13 @@ public class WaveTransitionBannerUI : MonoBehaviour
     {
         if (root == null) return;
 
+        bool useBossArt = isBossWave && bossBannerImage != null;
+
         background.color = isBossWave ? BossBg : NormalBg;
-        ribbon.SetActive(isBossWave);
+        background.enabled = !useBossArt;                       // 아트가 있으면 카드 배경도 감춘다
+        ribbon.SetActive(isBossWave && !useBossArt);
         normalLabel.gameObject.SetActive(!isBossWave);
+        if (bossBannerImage != null) bossBannerImage.gameObject.SetActive(useBossArt);
         if (!isBossWave) normalLabel.text = $"WAVE {waveNumber:00}";
 
         root.gameObject.SetActive(true);

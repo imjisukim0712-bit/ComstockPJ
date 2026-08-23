@@ -6,11 +6,11 @@ using UnityEngine;
 /// 호출한다.
 ///
 /// <b>다른 폭발형 무기(로켓런처 등)의 스플래시 연출과는 완전히 별개다</b>(사용자 지정: "다른
-/// 폭발형 무기 등은 제외") - 그쪽은 <see cref="Projectile.ComputeBlastVisualScale"/>이 만드는
-/// 원형 스프라이트를 그대로 쓰고, 이 클래스를 공유하지 않는다.
+/// 폭발형 무기 등은 제외") - 그쪽은 <see cref="ExplosionEffect"/>를 쓰고, 이 클래스를
+/// 공유하지 않는다.
 ///
 /// 스프라이트 크기는 하드코딩하지 않고 실제 스프라이트에서 읽어 폭발 반경과 맞춘다
-/// (Projectile.ComputeBlastVisualScale과 같은 계산 방식 - 프레임 크기가 바뀌어도 저절로 맞는다).
+/// (<see cref="ExplosionEffect"/>와 같은 계산 방식 - 프레임 크기가 바뀌어도 저절로 맞는다).
 /// </summary>
 public class DisruptorExplosionEffect : MonoBehaviour
 {

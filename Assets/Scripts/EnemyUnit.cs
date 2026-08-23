@@ -55,7 +55,9 @@ public class EnemyUnit : MonoBehaviour
     public float CurrentHp { get; private set; }
     public float Atk { get; private set; }
     public float Def { get; private set; }
-    public float MoveSpeed { get; private set; }
+    // set이 protected인 이유: BossUnit이 페이즈 2('폭주') 전환에서 이동속도를 올린다
+    // (2026-08-23). 그 외에는 Init/ApplyWaveStatMultiplier 말고 건드리지 않는다.
+    public float MoveSpeed { get; protected set; }
     public float AttackRange { get; private set; } // monster_range: 공격 사거리
     public float AtSp { get; private set; }         // monster_atsp: 공격속도 - 공격 쿨다운에 사용
     public float Mass { get; private set; } = ReferenceMass;       // monster_mass - 넉백 저항(기획서 p.22)
@@ -80,6 +82,13 @@ public class EnemyUnit : MonoBehaviour
     [SerializeField] private float healthBarMargin = 0.15f;
 
     private SpriteRenderer body_sprite_renderer;
+
+    /// <summary>차저처럼 예비 동작 중 전용 프레임을 직접 재생해야 하는 서브클래스를 위한 접근자
+    /// (2026-08-23, <see cref="ChargerUnit"/> 참고). 필드 자체를 protected로 열면 기존
+    /// 소유권 규칙(IsAttacking 동안에만 PerformAttackMotion이, 그 외엔 UpdateWalkAnimation이
+    /// 소유)이 깨지기 쉬워 읽기 전용 프로퍼티로만 노출한다.</summary>
+    protected SpriteRenderer BodySpriteRenderer => body_sprite_renderer;
+
     private Transform health_bar_root;
     private Transform health_bar_fill;
     private float health_bar_width;
@@ -98,6 +107,15 @@ public class EnemyUnit : MonoBehaviour
         GroggyStarsEffect.ResetCache();
         MuzzleFlashEffect.ResetCache();
         ProjectileSpriteAnimator.ResetCache();
+        ChargeWarningEffect.ResetCache();
+        ExplosionEffect.ResetCache();
+        ZombieHitEffect.ResetCache();
+        RollDustEffect.ResetCache();
+        LevelUpEffect.ResetCache();
+        EnemyProjectile.ResetCache();
+        ChargerUnit.ResetStaticCaches();
+        BossFrameEffect.ResetCache();
+        BossUnit.ResetStaticCaches();
     }
 
     // 처치 시 보상이 나올 확률(사용자 지정). 부품 상자 확률만 PartsCatalog 에셋에 있고
@@ -852,6 +870,15 @@ public class EnemyUnit : MonoBehaviour
         CurrentHp -= dmg;
         UpdateHealthBar();
         PlayHitFlash();
+
+        // 2026-08-23 사용자 제공 좀비 피격 이펙트(8프레임) - 몸 전체가 물드는 HitFlash와
+        // 별개로 몸통 중앙에 스파크 스프라이트를 한 번 더 재생한다. 크기는 본인 스프라이트
+        // 폭에 비례시켜 좀비/차저/보스 등 규격이 달라도 자동으로 맞는다.
+        if (body_sprite_renderer != null)
+        {
+            ZombieHitEffect.Play(transform.position, body_sprite_renderer.bounds.size.x * 0.5f,
+                body_sprite_renderer.sortingOrder + 3);
+        }
 
         // 2026-08-20 사용자 요청 - 맞은 자리 위로 데미지 숫자를 잠깐 띄운다. 체력바가 이미
         // 몸통 위 정확한 높이에 자리를 잡아뒀으므로 그 위치를 그대로 재사용한다.

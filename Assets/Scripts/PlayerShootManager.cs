@@ -197,6 +197,15 @@ public class PlayerShootManager : MonoBehaviour
     private readonly Dictionary<int, bool> socket_is_left_by_slot = new Dictionary<int, bool>();
     private readonly Dictionary<int, Vector3> roll_home_local_position = new Dictionary<int, Vector3>();
     private bool was_rolling;
+
+    // 2026-08-23 캐터필러/로켓 캔버스 정합 - 리그가 머리를 원본 아트 조립 위치로 내리면
+    // (ProceduralCharacterRig.HeadCanvasWorldOffsetY 참고) 귀 옆에 붙는 무기 소켓도 같은 만큼
+    // 내려와야 한다. 소켓(RigingPoint)은 리그 밖 Player 직속이라 리그가 못 옮기므로 여기서
+    // 처리한다. 매 프레임 위치를 덮어쓰면 근접무기 찌르기 연출(pivot을 직접 움직인다)과
+    // 충돌하므로, 오프셋 "값이 바뀐 프레임"에만 roll_home 기준으로 다시 놓는다(다리 교체는
+    // 정비 화면=게임 정지 중에만 일어나서 연출과 겹칠 일이 없다).
+    private ProceduralCharacterRig player_rig;
+    private float applied_head_offset_world = 0f;
     private readonly Dictionary<int, WeaponData> weapon_data_by_slot = new Dictionary<int, WeaponData>();
     private readonly Dictionary<int, WeaponRuntimeState> runtime_state_by_slot = new Dictionary<int, WeaponRuntimeState>();
 
@@ -227,6 +236,7 @@ public class PlayerShootManager : MonoBehaviour
         // ShootManager는 Player와 별개 오브젝트라 GetComponent가 아니라 태그로 찾는다.
         GameObject player_obj = GameObject.FindGameObjectWithTag("Player");
         if (player_obj != null) player_stats = player_obj.GetComponent<PlayerRobotController>();
+        if (player_obj != null) player_rig = player_obj.GetComponentInChildren<ProceduralCharacterRig>();
         if (player_stats == null)
         {
             Debug.LogWarning("PlayerRobotController를 찾을 수 없습니다. 로봇 공격력/치명타 보정 없이 무기 기본 수치로만 발사합니다.");
@@ -670,7 +680,10 @@ public class PlayerShootManager : MonoBehaviour
         {
             RestoreRollHomePositions();
             was_rolling = false;
+            applied_head_offset_world = 0f; // home으로 돌아갔으니 다음 프레임에 정합 오프셋을 다시 얹는다
         }
+
+        ApplyHeadCanvasOffsetIfChanged();
 
         // 2026-08-12 "무기 소켓 개별화" - 소켓 개수는 더 이상 씬에 리깅된 개수(weapon_slots.Count)
         // 그대로가 아니라, 머리(로봇) 파츠가 정한 개수와 실제 리깅된 개수 중 작은 값이다.
@@ -711,6 +724,28 @@ public class PlayerShootManager : MonoBehaviour
         {
             Transform pivot = weapon_slots[i].rig_point != null ? weapon_slots[i].rig_point : weapon_slots[i].muzzle_point;
             if (pivot != null && roll_home_local_position.TryGetValue(i, out Vector3 home)) pivot.localPosition = home;
+        }
+    }
+
+    /// <summary>
+    /// 캐터필러/로켓 장착으로 머리가 원본 아트 조립 위치까지 내려가면(캔버스 정합) 무기 소켓도
+    /// 같은 만큼 내려 귀 옆 높이를 유지한다. 씬의 소켓 좌표(roll_home)를 기준으로 월드 오프셋을
+    /// 소켓 부모의 lossyScale로 로컬 환산해 얹는다. 오프셋이 실제로 바뀐 프레임에만 순회한다.
+    /// </summary>
+    private void ApplyHeadCanvasOffsetIfChanged()
+    {
+        float target = player_rig != null ? player_rig.HeadCanvasWorldOffsetY : 0f;
+        if (Mathf.Approximately(target, applied_head_offset_world)) return;
+        applied_head_offset_world = target;
+
+        for (int i = 0; i < weapon_slots.Count; i++)
+        {
+            Transform pivot = weapon_slots[i].rig_point != null ? weapon_slots[i].rig_point : weapon_slots[i].muzzle_point;
+            if (pivot == null || !roll_home_local_position.TryGetValue(i, out Vector3 home)) continue;
+
+            float parent_scale_y = pivot.parent != null ? pivot.parent.lossyScale.y : 1f;
+            float local_offset = parent_scale_y != 0f ? target / parent_scale_y : 0f;
+            pivot.localPosition = home + new Vector3(0f, local_offset, 0f);
         }
     }
 

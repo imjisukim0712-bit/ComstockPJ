@@ -54,6 +54,11 @@ public class PlayerRobotController : MonoBehaviour
              "legSkillCooldown을 쓴다")]
     [SerializeField] private float dashCooldown = 1.2f;
 
+    [Tooltip("2026-08-23 사용자 제공 구르기 땅먼지 이펙트(RollDustEffect)의 폭(월드 유닛)")]
+    [SerializeField] private float rollDustWidth = 1.8f;
+    [Tooltip("땅먼지 이펙트의 렌더 순서 - 좀비(1)보다는 위, 로봇 몸통(13)보다는 아래로 둔다")]
+    [SerializeField] private int rollDustSortingOrder = 2;
+
     [Header("다리 기획서 Ver02 - 캐터필러(순간 부스트) / 로켓 추진기(가속 패시브)")]
     [Tooltip("순간 부스트 중 이동속도 배율")]
     [SerializeField] private float boostSpeedMultiplier = 2f;
@@ -645,6 +650,8 @@ public class PlayerRobotController : MonoBehaviour
         IsDashing = true;
         UnlockTracker.ReportSkillUsed(); // 팬봇(스킬 100회) / 은하수(기본 외 다리 + 스킬)
         dashTimeLeft = dashDuration;
+
+        RollDustEffect.Play(transform.position, -dashDirection, rollDustWidth, rollDustSortingOrder);
 
         // 팬봇은 쿨다운 배율이 0이라 곧바로 다시 구를 수 있다("무제한 액티브 스킬").
         dashCooldownLeft = legSkillCooldownValue * HeadEffects.RollCooldownMultiplier;

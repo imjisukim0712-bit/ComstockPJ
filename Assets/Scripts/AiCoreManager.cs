@@ -42,6 +42,9 @@ public class AiCoreManager : MonoBehaviour
     [Tooltip("같은 카드 화면에서 리롤을 반복할 때마다 추가로 붙는 골드")]
     [SerializeField] private int rerollCostIncrement = 5;
 
+    [Tooltip("2026-08-23 사용자 제공 레벨업 이펙트(LevelUpEffect)의 폭(월드 유닛)")]
+    [SerializeField] private float levelUpEffectWidth = 2.5f;
+
     private void OnEnable() => RunState.OnChanged += HandleRunStateChanged;
     private void OnDisable() => RunState.OnChanged -= HandleRunStateChanged;
 
@@ -53,6 +56,7 @@ public class AiCoreManager : MonoBehaviour
 
         if (RunState.CoreLevel >= maxLevel) return;
 
+        int level_before = RunState.CoreLevel;
         int required = RequiredExpForNextLevel();
         while (RunState.CoreExp >= required && RunState.CoreLevel < maxLevel)
         {
@@ -62,6 +66,20 @@ public class AiCoreManager : MonoBehaviour
             UnlockTracker.ReportLevelUp(); // 미니 픽시(누적 레벨 150)
             required = RequiredExpForNextLevel();
         }
+
+        // 한 프레임에 여러 레벨이 오르더라도(대량 경험치 보상 등) 이펙트는 한 번만 재생한다.
+        if (RunState.CoreLevel > level_before) PlayLevelUpEffect();
+    }
+
+    /// <summary>플레이어 위치에 레벨업 이펙트를 한 번 재생한다. 태그로 찾는 이유는 이
+    /// 매니저가 플레이어가 아닌 별도 GameObject에 배치돼 있어 직접 참조가 없기 때문이다.</summary>
+    private void PlayLevelUpEffect()
+    {
+        GameObject player_go = GameObject.FindGameObjectWithTag("Player");
+        if (player_go == null) return;
+
+        SpriteRenderer body = player_go.GetComponentInChildren<SpriteRenderer>();
+        LevelUpEffect.Play(player_go.transform.position, levelUpEffectWidth, body != null ? body.sortingOrder + 5 : 15);
     }
 
     private int RequiredExpForNextLevel()

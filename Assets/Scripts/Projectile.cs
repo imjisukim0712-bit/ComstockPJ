@@ -89,7 +89,7 @@ public class Projectile : MonoBehaviour
         // 작아 보이던 원인이다.
         //
         // 이 프로젝트의 다른 모든 시각 요소(MuzzleFlashEffect, DisruptorExplosionEffect,
-        // BeamProjectile 비주얼, 아래 ComputeBlastVisualScale, 손에 든 무기 이미지)는 전부
+        // ExplosionEffect, BeamProjectile 비주얼, 손에 든 무기 이미지)는 전부
         // "실제 스프라이트 bounds를 읽어 원하는 월드 크기로 역산"하는데, 날아가는 투사체
         // 본체만 이 패턴에서 빠져 있었다. 이제 스케일 1로 고정해 리소스가 만들어진 크기를
         // 그대로 쓴다(PPU 100이므로 60px 이미지는 0.6유닛). 프리팹의 SphereCollider 반지름
@@ -163,10 +163,16 @@ public class Projectile : MonoBehaviour
             ApplyHit(enemy);
         }
 
-        // 터진 범위를 눈으로 확인할 수 있도록 잠깐 폭발 반경만큼 키워서 보여준 뒤 제거
+        // 2026-08-23 사용자 제공 전용 폭발 애니메이션(ExplosionEffect) 적용 - 그 전까지는
+        // 날아온 투사체 자신의 스프라이트를 폭발 반경만큼 확대해서 보여줬다(아래
+        // ComputeBlastVisualScale 참고 - 이제 이 계산은 새 이펙트가 자체적으로 한다).
         if (spec.BlastVisualDuration > 0f)
         {
-            transform.localScale = Vector3.one * ComputeBlastVisualScale();
+            SpriteRenderer sprite_renderer = GetComponentInChildren<SpriteRenderer>();
+            int sorting_order = sprite_renderer != null ? sprite_renderer.sortingOrder + 10 : 10;
+            ExplosionEffect.Play(transform.position, spec.SplashRadius, sorting_order);
+
+            if (sprite_renderer != null) sprite_renderer.enabled = false; // 투사체 자신은 감춘다
 
             Collider own_collider = GetComponent<Collider>();
             if (own_collider != null) own_collider.enabled = false; // 연출 중 추가 트리거 방지
@@ -177,42 +183,6 @@ public class Projectile : MonoBehaviour
         {
             Destroy(gameObject);
         }
-    }
-
-    /// <summary>
-    /// 폭발 연출 스프라이트를 <b>실제 데미지 반경(SplashRadius)과 정확히 같은 크기</b>로 보이게
-    /// 하는 localScale을 구한다.
-    ///
-    /// 예전에는 그냥 <c>localScale = SplashRadius</c>를 넣었는데, 이건 "스프라이트가 스케일 1에서
-    /// 반지름 1유닛"일 때만 맞는 식이다. 실제 투사체 스프라이트(Bullets.png)는 640x640px에
-    /// PPU 100이라 스케일 1에서 <b>반지름 3.2유닛</b>이다. 그래서 로켓런처(폭발 2.4)의 연출이
-    /// 반지름 3.2 x 2.4 = 7.68유닛(면적 약 10배)으로 그려져, 눈에 보이는 폭발 범위가 실제
-    /// 판정 범위보다 훨씬 넓어 보였다(2026-08-12 사용자 리포트로 수정).
-    ///
-    /// 스프라이트 크기는 하드코딩하지 않고 매번 실제 스프라이트에서 읽는다 - 투사체 프리팹은
-    /// 무기 데이터(weapon_tanhwan)마다 다를 수 있어서(Bullets/Energy…) 프리팹이 바뀌어도
-    /// 저절로 맞는다. 회전한 상태에서도 정확하도록 월드 bounds(회전하면 AABB가 커진다)가 아니라
-    /// 스프라이트 자체의 로컬 bounds를 쓴다.
-    /// </summary>
-    private float ComputeBlastVisualScale()
-    {
-        float fallback = Mathf.Max(0.1f, spec.SplashRadius);
-
-        SpriteRenderer sprite_renderer = GetComponentInChildren<SpriteRenderer>();
-        if (sprite_renderer == null || sprite_renderer.sprite == null) return fallback;
-
-        Vector3 extents = sprite_renderer.sprite.bounds.extents; // 스케일 1 기준 로컬 반지름
-        float unit_radius = Mathf.Max(extents.x, extents.y);
-        if (unit_radius <= 0.0001f) return fallback;
-
-        // 스프라이트가 자식에 있고 자체 스케일을 가진 경우까지 보정(루트에 있으면 1배)
-        float root_scale = Mathf.Abs(transform.lossyScale.x);
-        if (root_scale > 0.0001f)
-        {
-            unit_radius *= Mathf.Abs(sprite_renderer.transform.lossyScale.x) / root_scale;
-        }
-
-        return Mathf.Max(0.01f, spec.SplashRadius / unit_radius);
     }
 
     /// <summary>데미지 + 넉백을 한 번에 적용한다. 넉백 방향은 투사체 진행 방향이다.</summary>

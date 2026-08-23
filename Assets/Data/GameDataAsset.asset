@@ -535,7 +535,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1.15
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: PrecisionBullet
     weapon_lfwpimg: LeftAMR
     weapon_rgwpimg: RightAMR
   - weapon_id: 300302
@@ -560,7 +560,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1.15
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: PrecisionBullet
     weapon_lfwpimg: LeftAMR
     weapon_rgwpimg: RightAMR
   - weapon_id: 300303
@@ -585,7 +585,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1.15
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: PrecisionBullet
     weapon_lfwpimg: LeftAMR
     weapon_rgwpimg: RightAMR
   - weapon_id: 300304
@@ -610,7 +610,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1.15
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: PrecisionBullet
     weapon_lfwpimg: LeftAMR
     weapon_rgwpimg: RightAMR
   - weapon_id: 300305
@@ -635,7 +635,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1.15
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: PrecisionBullet
     weapon_lfwpimg: LeftAMR
     weapon_rgwpimg: RightAMR
   - weapon_id: 300401
@@ -1160,7 +1160,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: PrecisionBullet
     weapon_lfwpimg: LeftDMR
     weapon_rgwpimg: RightDMR
   - weapon_id: 300802
@@ -1185,7 +1185,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: PrecisionBullet
     weapon_lfwpimg: LeftDMR
     weapon_rgwpimg: RightDMR
   - weapon_id: 300803
@@ -1210,7 +1210,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: PrecisionBullet
     weapon_lfwpimg: LeftDMR
     weapon_rgwpimg: RightDMR
   - weapon_id: 300804
@@ -1235,7 +1235,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: PrecisionBullet
     weapon_lfwpimg: LeftDMR
     weapon_rgwpimg: RightDMR
   - weapon_id: 300805
@@ -1260,7 +1260,7 @@ MonoBehaviour:
     weapon_firemode: 0
     weapon_imgscale: 1
     weapon_imgangle: 0
-    weapon_tanhwan: Bullets
+    weapon_tanhwan: PrecisionBullet
     weapon_lfwpimg: LeftDMR
     weapon_rgwpimg: RightDMR
   - weapon_id: 300901

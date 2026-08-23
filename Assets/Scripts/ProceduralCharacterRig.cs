@@ -262,12 +262,13 @@ public class ProceduralCharacterRig : MonoBehaviour
     [SerializeField] private float treadUnitsPerFrame = 0.35f;
     [Tooltip("로켓 호버링/화염 애니메이션 재생 속도(초당 프레임)")]
     [SerializeField] private float rocketFps = 8f;
-    [Tooltip("캐터필러 장착 시 머리(몸통) 위치를 다리 그림에 맞춰 위/아래로 미세 조정한다" +
-             "(음수 = 아래로). 다리(트레드) 위치는 건드리지 않고 머리만 움직인다")]
+    [Tooltip("캐터필러 장착 시 머리(몸통) 위치 미세 조정(음수 = 아래로). 다리(트레드) 위치는 " +
+             "건드리지 않고 머리만 움직인다. 리그 로컬 단위이며 월드로는 x0.5" +
+             "(rigScale 0.55 x 리그 lossyScale 0.909)다")]
     [SerializeField] private float treadBodyYOffset = 0f;
-    [Tooltip("로켓 추진기 장착 시 머리(몸통) 위치를 다리 그림에 맞춰 위/아래로 미세 조정한다" +
-             "(음수 = 아래로). 다리(로켓) 위치는 건드리지 않고 머리만 움직인다")]
-    [SerializeField] private float rocketBodyYOffset = -0.1f;
+    [Tooltip("로켓 추진기 장착 시 머리(몸통) 위치 미세 조정(음수 = 아래로). 다리(로켓) 위치는 " +
+             "건드리지 않고 머리만 움직인다")]
+    [SerializeField] private float rocketBodyYOffset = 0f;
 
     [Header("다리 비주얼 - 거미 (2026-08-21 다리 기획서 Ver02, 실제 IK 리깅)")]
     [Tooltip("거미 다리 파츠(upper_leg/lower_leg) 전체 크기 배율. 원본 이미지가 몸통(250px)보다 " +
@@ -526,6 +527,98 @@ public class ProceduralCharacterRig : MonoBehaviour
 
         bool hideLegs = legVisualMode != LegVisualMode.Biped;
         if (legsGroup != null && legsGroup.gameObject.activeSelf == hideLegs) legsGroup.gameObject.SetActive(!hideLegs);
+
+        ApplyAltVisualFacing();
+    }
+
+    // 머리 밑단 타원을 다리 유닛의 "윗면 개구부 타원 앞림"에 앉히기 위한 시트 정렬 상수
+    // (원본 250px 캔버스 픽셀 실측, 2026-08-23):
+    //  - 머리(Body.png) 밑단 외곽선 곡선의 중심 y = 195
+    //  - 캐터필러 하우징(b_f0000) 윗면 개구부 앞림 y = 150  →  완전 정합에서 45px 올림
+    //  - 로켓 허브(0.png, 0번 프레임) 윗면 개구부 앞림 y = 162.5  →  32.5px 올림
+    // 로켓 허브는 프레임마다 최대 10px 오르내리는 호버링 애니메이션이지만, 개구부 타원 높이
+    // (37px)보다 작아 밑단이 개구부 안에서 노는 정도로 흡수된다(0번 프레임 기준으로 고정).
+    private const float TreadHeadSeatRaise = 0.45f;   // = 45px / PPU 100 (리그 로컬 단위)
+    private const float RocketHeadSeatRaise = 0.325f; // = 32.5px / PPU 100
+
+    // 좌우(x) 시트 정렬(사용자 확정: "몸통과 다리의 몸통 보조부분이 일자로 딱 맞아야해").
+    // 원본 250px 캔버스 가로 실측(행 스캔): 머리 몸통 벽 [70,189] → 중심 129.5,
+    // 캐터필러 컵 [78,184] → 중심 131, 로켓 허브 [70,180] → 중심 125.
+    // 컵/허브 중심이 머리 몸통 중심에 오도록 다리 루트를 (머리중심 - 다리중심)/100 만큼 민다.
+    private const float TreadSeatXOffset = -0.015f;  // (129.5 - 131) / 100
+    private const float RocketSeatXOffset = 0.045f;  // (129.5 - 125) / 100
+
+    /// <summary>
+    /// 대체 다리(캐터필러/로켓/거미) 비주얼의 좌우 반전과 x 시트 오프셋을 <b>머리와 동기화</b>한다.
+    ///
+    /// 머리 스프라이트는 facingSign &gt; 0일 때 뒤집히는데(ApplyBodyFacing의 flipX 조건),
+    /// 예전 코드는 다리 루트에 facingSign을 그대로 스케일로 넣어 <b>부호 관례가 정반대</b>였다 -
+    /// 머리가 뒤집히는 순간 다리는 안 뒤집혀서(또는 그 반대) 캔버스에 조립된 좌우 관계가
+    /// 깨지고, 컵/허브가 머리 옆으로 미끄러져 보였다(사용자 리포트: "좌우 어긋남").
+    /// 게다가 캐터필러/로켓 루트는 생성 시점에 반전을 아예 적용하지 않아 첫 방향 전환 전까지
+    /// 항상 원본 방향이었다. 이제 머리와 같은 조건으로 함께 뒤집고, x 시트 오프셋도 반전에
+    /// 맞춰 부호를 뒤집는다(반전은 rigRoot 원점 기준이라 localPosition은 스스로 안 뒤집힌다).
+    /// </summary>
+    private void ApplyAltVisualFacing()
+    {
+        float mirror = facingSign > 0f ? -1f : 1f; // bodyRenderer.flipX와 같은 조건
+        if (treadRoot != null)
+        {
+            treadRoot.localScale = new Vector3(mirror, 1f, 1f);
+            treadRoot.localPosition = new Vector3(TreadSeatXOffset * mirror, treadRoot.localPosition.y, 0f);
+        }
+        if (rocketRoot != null)
+        {
+            rocketRoot.localScale = new Vector3(mirror, 1f, 1f);
+            rocketRoot.localPosition = new Vector3(RocketSeatXOffset * mirror, rocketRoot.localPosition.y, 0f);
+        }
+        if (spiderRoot != null) spiderRoot.localScale = new Vector3(mirror, 1f, 1f);
+    }
+
+    /// <summary>
+    /// 캐터필러/로켓 장착 시 머리(몸통 스프라이트)를 다리 유닛에 <b>이미지 기준으로</b> 붙이는
+    /// 보정량(리그 로컬 단위, 음수 = 아래로). 두 단계로 계산한다:
+    ///
+    /// (1) <b>캔버스 정합</b> - 작가가 준 캐터필러/로켓 아트는 머리(Parts/Body.png)와 같은
+    /// 250px 캔버스에 그려져 있는데, 머리 스프라이트는 2족 보행용으로 "고관절 앵커
+    /// (bodyHipAnchor)가 bodyPivot에 오도록" 캔버스 중심보다 (0.5 - anchor.y) x 높이만큼
+    /// 위로 밀려 있다(ApplyBodyFacing 참고). 다리 프레임은 캔버스 중심이 그대로 standHipY에
+    /// 놓이므로 그 밀린 양을 먼저 되돌린다.
+    ///
+    /// (2) <b>시트 정렬</b> - 완전 정합은 머리 밑단이 다리 안으로 약 80px 파묻혀 "다리의
+    /// 아래쪽 타원"에 합쳐진 모습이 된다(사용자 재지적: "아래쪽 동그라미가 아니라 위쪽면
+    /// 동그라미에 합쳐야지"). 그래서 머리 밑단 곡선이 <b>윗면 개구부 타원의 앞림</b>과
+    /// 포개지는 높이까지 위 상수만큼 다시 올린다. 머리는 다리보다 앞 레이어이므로
+    /// (BuildTreadVisual/BuildRocketVisual 참고) 밑단 타원이 개구부 위에 그대로 보이고,
+    /// 개구부의 뒷림은 머리 양옆으로 살짝 드러난다 - 사용자 레퍼런스 그림과 같은 구성.
+    ///
+    /// 거미는 원본 캔버스 규격(827x509)이 달라 이 정합이 성립하지 않는다(spiderTorso*로 별도
+    /// 조정). 머리가 내려간 만큼 무기 소켓도 같이 내려와야 하는데, 소켓은 리그 밖(Player 직속)
+    /// 이라 리그가 못 옮긴다 - PlayerShootManager가 HeadCanvasWorldOffsetY를 읽어 처리한다.
+    /// </summary>
+    private float AltCanvasAlignY()
+    {
+        float seatRaise;
+        if (legVisualMode == LegVisualMode.Tread) seatRaise = TreadHeadSeatRaise;
+        else if (legVisualMode == LegVisualMode.Rocket) seatRaise = RocketHeadSeatRaise;
+        else return 0f;
+        if (bodySprite == null) return 0f;
+        return -(0.5f - bodyHipAnchor.y) * bodySprite.rect.height / bodySprite.pixelsPerUnit + seatRaise;
+    }
+
+    /// <summary>
+    /// 캔버스 정합으로 머리가 내려간 양(월드 단위, 내려갔으면 음수). 무기 소켓(RigingPoint,
+    /// 리그 밖 Player 직속)이 머리 귀 옆 높이를 유지하도록 PlayerShootManager가 매 프레임
+    /// 읽어 소켓을 같은 만큼 내린다. Biped/Spider에서는 0.
+    /// </summary>
+    public float HeadCanvasWorldOffsetY
+    {
+        get
+        {
+            if (rigRoot == null) return 0f;
+            float local = AltCanvasAlignY();
+            return local == 0f ? 0f : rigRoot.TransformVector(new Vector3(0f, local, 0f)).y;
+        }
     }
 
     /// <summary>
@@ -541,10 +634,12 @@ public class ProceduralCharacterRig : MonoBehaviour
         root.SetParent(rigRoot, false);
         root.localPosition = new Vector3(0f, standHipY, 0f);
 
-        // 뒤 트랙은 몸통보다 뒤(낮은 sortingOrder), 앞 트랙은 몸통보다 앞(높은 sortingOrder)에 그려
-        // 몸통을 사이에 두고 트랙이 앞뒤로 감싸는 것처럼 보인다.
-        treadBack = new FrameCycler { renderer = CreateFrameRenderer(root, "Back", bodySortingOrder - 1), frames = treadBackFrames };
-        treadFront = new FrameCycler { renderer = CreateFrameRenderer(root, "Front", bodySortingOrder + 1), frames = treadFrontFrames };
+        // 다리(하우징+트랙)는 전부 머리(bodySortingOrder)보다 **뒤**에 그린다(사용자 확정
+        // 레퍼런스: 머리가 다리 레이어보다 앞이고, 하우징의 윗면 개구부 림은 머리 뒤로 살짝
+        // 보인다). 머리 밑단이 개구부에 앉는 모습은 레이어가 아니라 AltCanvasAlignY()의 시트
+        // 정렬(머리 밑단 타원 = 개구부 앞림)이 만든다.
+        treadBack = new FrameCycler { renderer = CreateFrameRenderer(root, "Back", bodySortingOrder - 2), frames = treadBackFrames };
+        treadFront = new FrameCycler { renderer = CreateFrameRenderer(root, "Front", bodySortingOrder - 1), frames = treadFrontFrames };
         // Update()가 아직 한 번도 안 돌았어도(예: 정비 화면처럼 timeScale=0인 상태에서 장비를
         // 바꾸는 경우) sprite가 null인 첫 프레임이 보이지 않도록 즉시 0번 프레임을 채운다.
         treadBack.ShowFrame(0f);
@@ -565,9 +660,11 @@ public class ProceduralCharacterRig : MonoBehaviour
         root.SetParent(rigRoot, false);
         root.localPosition = new Vector3(0f, standHipY, 0f);
 
-        rocketFlame = new FrameCycler { renderer = CreateFrameRenderer(root, "Flame", bodySortingOrder - 2), frames = rocketFlameFrames };
-        rocketBase = new FrameCycler { renderer = CreateFrameRenderer(root, "Base", bodySortingOrder - 1), frames = rocketBaseFrames };
-        rocketNozzle = new FrameCycler { renderer = CreateFrameRenderer(root, "Nozzle", bodySortingOrder + 1), frames = rocketNozzleFrames };
+        // 캐터필러와 같은 규칙 - 다리(허브/노즐/화염)는 전부 머리보다 뒤. 머리가 허브 윗면
+        // 개구부에 앉는 모습은 AltCanvasAlignY()의 시트 정렬이 만든다.
+        rocketFlame = new FrameCycler { renderer = CreateFrameRenderer(root, "Flame", bodySortingOrder - 3), frames = rocketFlameFrames };
+        rocketBase = new FrameCycler { renderer = CreateFrameRenderer(root, "Base", bodySortingOrder - 2), frames = rocketBaseFrames };
+        rocketNozzle = new FrameCycler { renderer = CreateFrameRenderer(root, "Nozzle", bodySortingOrder - 1), frames = rocketNozzleFrames };
         rocketFlame.ShowFrame(0f);
         rocketBase.ShowFrame(0f);
         rocketNozzle.ShowFrame(0f);
@@ -654,8 +751,7 @@ public class ProceduralCharacterRig : MonoBehaviour
         float shinTilt = TiltToDown(footLocalOnLower - kneeLocalOnLower);
 
         Transform root = new GameObject("SpiderVisual").transform;
-        root.SetParent(rigRoot, false);
-        root.localScale = new Vector3(facingSign, 1f, 1f);
+        root.SetParent(rigRoot, false); // 좌우 반전은 EnsureAltVisualBuilt → ApplyAltVisualFacing이 담당
 
         // 몸통(다리 밑판) - 사용자 지적(2026-08-21): "거미다리 밑에 몸통은 왜 없앴니 그것도
         // 포함시켜야지". 거미 다리 파츠 세트에 원래 포함된 body.png(호버 패드 하우징)를
@@ -1040,9 +1136,7 @@ public class ProceduralCharacterRig : MonoBehaviour
             facingSign = newFacing;
             ApplyBodyFacing();
             legsGroup.localScale = new Vector3(facingSign, 1f, 1f);
-            if (treadRoot != null) treadRoot.localScale = new Vector3(facingSign, 1f, 1f);
-            if (rocketRoot != null) rocketRoot.localScale = new Vector3(facingSign, 1f, 1f);
-            if (spiderRoot != null) spiderRoot.localScale = new Vector3(facingSign, 1f, 1f);
+            ApplyAltVisualFacing();
         }
 
         if (legVisualMode != LegVisualMode.Biped)
@@ -1057,7 +1151,7 @@ public class ProceduralCharacterRig : MonoBehaviour
             float bodyYOffset = legVisualMode == LegVisualMode.Tread ? treadBodyYOffset
                                : legVisualMode == LegVisualMode.Rocket ? rocketBodyYOffset
                                : legVisualMode == LegVisualMode.Spider ? spiderBodyYOffset : 0f;
-            bodyPivot.localPosition = new Vector3(0f, standHipY + bodyYOffset, 0f);
+            bodyPivot.localPosition = new Vector3(0f, standHipY + AltCanvasAlignY() + bodyYOffset, 0f);
             bodyPivot.localRotation = Quaternion.identity;
             bodyVisual.localScale = Vector3.one;
 

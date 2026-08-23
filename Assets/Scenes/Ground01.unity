@@ -10106,7 +10106,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
+  m_fontSize: 18.25
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -10682,7 +10682,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 31.3
+  m_fontSize: 11.7
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -11513,7 +11513,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
+  m_fontSize: 12.55
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -12672,6 +12672,8 @@ MonoBehaviour:
     prefab: {fileID: 1813554706274653350, guid: 406f6c9ae2fe1b54dba02c4a2022b5ae, type: 3}
   - prefab_name: Pellet
     prefab: {fileID: 3409643553838284101, guid: af37c5f5184556c48838ed173aba44ab, type: 3}
+  - prefab_name: PrecisionBullet
+    prefab: {fileID: 3409643553838284013, guid: aa217f29b79339641a6c0a8bc272d3cc, type: 3}
   blast_visual_duration: 0.08
   max_detect_range: 6.1
   beam_sprite_name: PlasmaCannonBeam
@@ -15296,6 +15298,7 @@ MonoBehaviour:
   - 8
   rerollBaseCost: 10
   rerollCostIncrement: 5
+  levelUpEffectWidth: 2.5
 --- !u!114 &1656057953
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16479,6 +16482,18 @@ MonoBehaviour:
   dashDistance: 2.5
   dashDuration: 0.28
   dashCooldown: 1.2
+  rollDustWidth: 1.8
+  rollDustSortingOrder: 2
+  boostSpeedMultiplier: 2
+  boostSpeedCap: 3
+  boostDuration: 1
+  boostPenaltyDuration: 0.5
+  boostPenaltySpeedMultiplier: 0.5
+  rocketRampThreshold: 2
+  rocketRampToMaxDuration: 2
+  rocketRampMaxBonus: 2
+  spiderHpLossStep: 0.25
+  spiderHpLossSpeedPenaltyPercent: 5
   enemyPushSpeedRatio: 1.2
   fallbackRobotIdForTesting: 100001
   animator: {fileID: 1786583645}
@@ -16933,6 +16948,22 @@ MonoBehaviour:
   breathFrequency: 0.55
   gaitBlendSpeed: 5
   velocitySource: {fileID: 0}
+  treadUnitsPerFrame: 0.35
+  rocketFps: 8
+  treadBodyYOffset: 0
+  rocketBodyYOffset: 0
+  spiderLegScale: 0.34
+  spiderHipSpreadX: 0.62
+  spiderHipFrontBackY: 0.18
+  spiderStanceSpreadRatio: 0.62
+  spiderStanceDropRatio: 0.5
+  spiderStepThreshold: 0.16
+  spiderStepSpeed: 11
+  spiderStepOvershoot: 0.1
+  spiderFootLiftHeight: 0.05
+  spiderBodyYOffset: 0
+  spiderTorsoScale: 0.2
+  spiderTorsoYOffset: 0
 --- !u!1 &1842930808
 GameObject:
   m_ObjectHideFlags: 0
@@ -18468,7 +18499,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 28
+  m_fontSize: 14.05
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -19022,7 +19053,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
+  m_fontSize: 11.6
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -19535,7 +19566,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 32
+  m_fontSize: 14.1
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1

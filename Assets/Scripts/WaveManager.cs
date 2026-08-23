@@ -265,6 +265,11 @@ public class WaveManager : MonoBehaviour
         boss.Init(bossData);
         boss.OnDefeated += HandleBossDefeated;
 
+        // 등장(소환) 연출 - 2026-08-23 보스연출가이드라인 반영. 예전에는 Init 직후 곧바로
+        // 싸울 수 있는 즉시 스폰이었다. 이제 소환진(BossSummon 99프레임)이 도는 동안 보스는
+        // 완전 무적 + 본체 숨김이고, 절반쯤에서 드러나 포효까지 마쳐야 전투가 시작된다.
+        boss.PlaySpawnIntro();
+
         boss_spawned_this_wave = true;
         Debug.Log($"보스 등장 (웨이브 {RunState.WaveNumber}, HP {bossData.monster_hp}, 배율 x{multiplier:0.##})");
     }

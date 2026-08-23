@@ -157,7 +157,10 @@ public static class WeaponTableGenerator
             pierce = 3, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 0f, duration = 0f,
             firemode = WeaponFireMode.Projectile,
             imgscale = 1.15f, weight = 5.5f, basePrice = 55,
-            tanhwan = "Bullets", leftImg = "LeftAMR", rightImg = "RightAMR"
+            // 2026-08-23 사용자 제공 "정밀화기 탄환" 전용 투사체(Assets/Resources/PrecisionBullet,
+            // Assets/Prefebs/PrecisionBullet.prefab) 적용 - 그 전까지는 정밀화기(대물저격총/
+            // 지정사수소총)도 다른 4종과 같은 기본탄환(Bullets)을 공용으로 썼다.
+            tanhwan = "PrecisionBullet", leftImg = "LeftAMR", rightImg = "RightAMR"
         },
         new WeaponDef {
             // 3초 동안 총 90 데미지를 나눠 넣고(빔), 발사가 끝난 뒤 2초를 쉰다(atsp 0.5 = 대기 2초).
@@ -184,8 +187,9 @@ public static class WeaponTableGenerator
             // (PlayerShootManager.cs의 "프리팹이 기본적으로 오른쪽을 바라본다고 가정" 주석 참고)
             // 어느 방향으로 쏴도 로켓 머리가 진행 방향을 향한다.
             //
-            // 참고: 폭발 연출은 아직 전용 이펙트가 없어 기존 방식을 그대로 쓴다 -
-            // Projectile.Explode()가 날아온 투사체 자신의 스프라이트를 폭발 반경만큼 확대한다.
+            // 참고: 폭발 연출은 2026-08-23부터 전용 이펙트(ExplosionEffect,
+            // Resources/Explosion 10프레임)를 쓴다 - 그 전에는 Projectile.Explode()가
+            // 날아온 투사체 자신의 스프라이트를 폭발 반경만큼 확대하는 임시 처리였다.
             tanhwan = "Rocket", leftImg = "LeftRocketLauncher", rightImg = "RightRocketLauncher"
         },
 
@@ -217,7 +221,8 @@ public static class WeaponTableGenerator
             pierce = 1, pierceChance = 0f, splash = 0f, defignore = 0f, knockback = 0f, duration = 0f,
             firemode = WeaponFireMode.Projectile,
             imgscale = 1.0f, weight = 3.0f, basePrice = 40,
-            tanhwan = "Bullets", leftImg = "LeftDMR", rightImg = "RightDMR"
+            // 2026-08-23 사용자 제공 "정밀화기 탄환" 전용 투사체 적용(위 대물저격총과 같은 이유)
+            tanhwan = "PrecisionBullet", leftImg = "LeftDMR", rightImg = "RightDMR"
         },
         new WeaponDef {
             // 기존 기관단총 스프라이트(LeftSMG/RightSMG)를 그대로 재사용한다 - 신규 리소스와 바이트가 동일

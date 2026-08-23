@@ -441,6 +441,22 @@ public class EnemySpawner : MonoBehaviour
         { 200006, typeof(LeaderUnit) },
     };
 
+    /// <summary>
+    /// 스폰 루프 밖에서 몬스터를 만들 때 쓰는 경로(보스의 좀비 소환 패턴 - 2026-08-23).
+    /// <see cref="SpawnMonster"/>와 같지만 <b>생존 목록에 등록</b>하는 것이 차이다 -
+    /// 등록하지 않으면 웨이브 종료 시 <see cref="DespawnAllAliveEnemies"/>가 이 개체들을
+    /// 지우지 못해 정비 화면 뒤·다음 웨이브까지 필드에 그대로 남는다.
+    ///
+    /// 동시 생존 상한(maxAliveEnemies)에는 걸리지 않는다 - 보스 패턴은 "지금 8마리를 부른다"가
+    /// 곧 기획 의도라, 상한에 막혀 일부만 나오면 패턴 자체가 성립하지 않는다.
+    /// </summary>
+    public EnemyUnit SpawnMonsterTracked(int monsterId, Vector3 position)
+    {
+        EnemyUnit unit = SpawnMonster(monsterId, position);
+        if (unit != null) alive_enemies.Add(unit);
+        return unit;
+    }
+
     public EnemyUnit SpawnMonster(int monsterId, Vector3 position)
     {
         if (!prefabMap.TryGetValue(monsterId, out GameObject prefab))

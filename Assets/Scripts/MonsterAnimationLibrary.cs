@@ -61,8 +61,7 @@ public static class MonsterAnimationLibrary
     /// <summary>보스(좀비 군집체) 프레임 세트의 Resources 폴더명. <see cref="BossUnit"/>이 참조한다.</summary>
     public const string BossFolder = "BossMove";
 
-    // 몬스터ID → 프레임 세트. 차저(200002)는 사용자가 애니메이션을 제공하지 않아 일부러 비워 둔다
-    // (프리팹의 정지 스프라이트 Charger.png를 그대로 쓴다).
+    // 몬스터ID → 프레임 세트.
     //
     // Fps는 "그 몬스터의 기준 이동속도로 움직일 때"의 값이다(실제 속도에 비례해 자동으로
     // 빨라지고 느려진다 - EnemyUnit.UpdateWalkAnimation). 그래서 빠른 몬스터가 아니라
@@ -73,6 +72,10 @@ public static class MonsterAnimationLibrary
         // 기본 좀비는 StillFrameIndex = -1 - 전용 정지 그림(Zombie.png)이 이미 프리팹에 있어
         // 2026-08-12부터 쓰던 "멈추면 Zombie.png로 되돌린다" 동작을 그대로 유지한다.
         { 200001, new Entry { ResourceFolder = "ZombieMove",    StillFrameIndex = -1, Fps = 6f } }, // 좀비
+        // 2026-08-23 사용자 제공 "차저 걷기" 16프레임 적용 - 그 전까지는 프리팹의 정지
+        // 스프라이트(Charger.png)를 그대로 썼다(위 ChargerUnit.ResolveMoveClip 참고: 돌진 중에는
+        // 이 세트 대신 "ChargerCharge" 세트로 바뀐다).
+        { 200002, new Entry { ResourceFolder = "ChargerMove",   StillFrameIndex = 0, Fps = 8f } },  // 차저
         { 200003, new Entry { ResourceFolder = "SpitterMove",   StillFrameIndex = 0, Fps = 6f } },  // 스피터
         { 200004, new Entry { ResourceFolder = "SprinterMove",  StillFrameIndex = 3, Fps = 14f } }, // 스프린터
         { 200005, new Entry { ResourceFolder = "DisruptorMove", StillFrameIndex = 0, Fps = 6f } },  // 디스럭터
