@@ -39,9 +39,8 @@ public class EnemyProjectile : MonoBehaviour
         sr.sprite = sprite;
         sr.sortingOrder = 4;
 
-        // 스프라이트 실측 반지름(스케일 1 기준)을 그대로 반지름으로 쓴다 - Launch()가 뒤에서
-        // transform.localScale = visualSize를 적용하면 Unity가 콜라이더 반지름에도 같은 배율을
-        // 자동으로 곱하므로, 여기서 미리 곱하면 두 번 곱해진다.
+        // 스프라이트 실측 반지름과 같은 콜라이더를 사용한다. PNG 128px + PPU 400 설정으로
+        // 에셋 자체가 교체 전 빨간 투사체와 같은 0.32유닛 캔버스 크기를 가진다.
         float sprite_radius = Mathf.Max(sprite.bounds.extents.x, sprite.bounds.extents.y, 0.0001f);
 
         SphereCollider col = go.AddComponent<SphereCollider>();
@@ -65,7 +64,8 @@ public class EnemyProjectile : MonoBehaviour
         max_range = range > 0f ? range : 10f;
         spawn_position = transform.position;
 
-        if (visualSize > 0f) transform.localScale = Vector3.one * visualSize;
+        float visual_multiplier = visualSize > 0f ? visualSize : 1f;
+        transform.localScale = Vector3.one * visual_multiplier;
     }
 
     private void Update()
