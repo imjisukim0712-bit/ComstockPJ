@@ -42,6 +42,13 @@ public class ModdingManager : MonoBehaviour
     private void OnDestroy()
     {
         if (Instance == this) Instance = null;
+
+        if (subscribed_wave_manager != null)
+        {
+            subscribed_wave_manager.OnWaveStarted -= HandleWaveStartedForPartBox;
+            subscribed_wave_manager.OnWaveEnded -= HandleWaveEndedForPartBox;
+            subscribed_wave_manager = null;
+        }
     }
 
     // RunState.Reset()은 PlayerRobotController.Awake()에서 호출된다. Unity는 같은 프레임의
@@ -51,6 +58,10 @@ public class ModdingManager : MonoBehaviour
     private void Start()
     {
         EnsureDefaultPartsEquipped();
+
+        // 부품 상자 최소 보장(2026-08-24)에 쓰는 웨이브 시작/종료 구독. Awake가 아니라 Start에
+        // 두는 이유는 위와 같다(다른 오브젝트의 Awake 완료를 보장받아야 WaveManager를 찾을 수 있다).
+        EnsureWaveSubscription();
     }
 
     /// <summary>모딩 슬롯 중 아직 아무것도 장착되지 않은 슬롯에 기본 파츠를 채운다.</summary>
@@ -245,6 +256,86 @@ public class ModdingManager : MonoBehaviour
 
     /// <summary>부품 상자를 더 받을 수 있는지. EnemyUnit이 드랍하기 전에 확인한다.</summary>
     public bool CanReceiveMorePartBoxes => RunState.UnopenedPartBoxCount < PartBoxCapacity;
+
+    // ── 부품 상자 최소 보장 (2026-08-24 사용자 지정) ────────────────────────
+    //
+    // "부품상자 나올 확률을 2~3웨이브 마다 1개씩은 나오게 만들어줘".
+    // 확률만 올리면 <b>운이 나쁠 때 5~6웨이브 내내 하나도 못 받는</b> 구간이 계속 생기므로,
+    // 확률 상향과 확정 지급을 함께 쓴다:
+    //   1) 마지막 드랍 이후 PartBoxGuaranteeWaves 웨이브가 지나면 그 웨이브의 드랍 확률에
+    //      배율을 곱해 웨이브 도중 자연스럽게 나오도록 유도한다(= 몬스터가 떨어뜨린다).
+    //   2) 그래도 안 나온 채 웨이브가 끝나면 웨이브 종료 시점에 1개를 직접 지급한다(안전망).
+    // 카운터는 웨이브 단위라 WaveManager의 웨이브 시작/종료 이벤트에 맞춰 움직인다.
+
+    private int waves_since_part_box;          // 마지막 부품 상자 드랍 이후 지난 웨이브 수
+    private bool part_box_dropped_this_wave;
+    private WaveManager subscribed_wave_manager;
+
+    /// <summary>이번 웨이브가 "최소 보장" 구간인지(드랍 확률에 배율이 곱해진다).</summary>
+    public bool IsPartBoxGuaranteeWave =>
+        catalog != null && waves_since_part_box >= catalog.PartBoxGuaranteeWaves;
+
+    /// <summary>
+    /// 지금 적용해야 하는 부품 상자 드랍 확률. <see cref="EnemyUnit"/>이 카탈로그 값을 직접
+    /// 읽는 대신 이 값을 쓰면 보장 구간의 상향이 자동으로 반영된다.
+    /// </summary>
+    public float EffectivePartBoxDropChance
+    {
+        get
+        {
+            if (catalog == null) return 0f;
+
+            float chance = catalog.PartBoxDropChance;
+            if (IsPartBoxGuaranteeWave) chance *= catalog.PartBoxGuaranteeChanceMultiplier;
+            return Mathf.Clamp01(chance);
+        }
+    }
+
+    /// <summary>부품 상자가 실제로 드랍됐을 때 <see cref="EnemyUnit"/>이 알려준다(보장 카운터 초기화).</summary>
+    public void NotifyPartBoxDropped()
+    {
+        part_box_dropped_this_wave = true;
+        waves_since_part_box = 0;
+    }
+
+    private void EnsureWaveSubscription()
+    {
+        if (subscribed_wave_manager != null) return;
+
+        subscribed_wave_manager = FindFirstObjectByType<WaveManager>();
+        if (subscribed_wave_manager == null) return;
+
+        subscribed_wave_manager.OnWaveStarted += HandleWaveStartedForPartBox;
+        subscribed_wave_manager.OnWaveEnded += HandleWaveEndedForPartBox;
+    }
+
+    private void HandleWaveStartedForPartBox(int wave) => part_box_dropped_this_wave = false;
+
+    private void HandleWaveEndedForPartBox(int wave)
+    {
+        if (part_box_dropped_this_wave)
+        {
+            waves_since_part_box = 0;
+            return;
+        }
+
+        waves_since_part_box++;
+
+        // 보장 구간인데도 이 웨이브에 하나도 안 나왔으면 여기서 확정 지급한다. 필드에 픽업으로
+        // 뿌리지 않고 바로 주는 이유: 이 시점에는 이미 웨이브가 끝나 필드 정리(자석 흡수)가
+        // 진행되므로, 지금 스폰한 픽업은 주울 기회가 없거나 타이밍에 따라 사라질 수 있다.
+        if (waves_since_part_box >= (catalog != null ? catalog.PartBoxGuaranteeWaves : 2) &&
+            CanReceiveMorePartBoxes)
+        {
+            int granted = AddPartBoxes(1);
+            if (granted > 0)
+            {
+                waves_since_part_box = 0;
+                RunState.NotifyChanged();
+                Debug.Log($"부품 상자 최소 보장 지급(웨이브 {wave} 종료) - 이 웨이브에 드랍이 없었습니다.");
+            }
+        }
+    }
 
     /// <summary>
     /// 부품 상자를 amount개 지급하되 적재량 상한을 넘지 않도록 자르고, 실제 지급된 개수를 돌려준다.

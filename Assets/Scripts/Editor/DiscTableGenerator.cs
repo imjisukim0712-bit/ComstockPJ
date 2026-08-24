@@ -97,8 +97,9 @@ public static class DiscTableGenerator
         },
         new DiscDef {
             num = 6, name = "포근한 치유 디스크", grade = ItemGrade.Normal,
-            effectType = DiscEffectType.OnKillHeal,
-            description = "적을 처치하면 HP를 1 회복합니다.",
+            // 2026-08-24 사용자 지정 - 발동 시점을 "적 처치"에서 "경험치 획득"으로 바꿨다.
+            effectType = DiscEffectType.OnExpGainHeal,
+            description = "경험치를 획득하면 HP를 1 회복합니다.",
             flatValue = 1f
         },
         new DiscDef {

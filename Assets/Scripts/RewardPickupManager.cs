@@ -23,8 +23,12 @@ public static class RewardPickupManager
     // 그래서 세 아이콘 전부에 <b>같은 배율 하나</b>를 곱한다: 기준 아이콘(Gold)이 예전과 같은
     // ReferenceIconWorldSize(0.6)로 보이는 배율을 구해서 그대로 재사용 - 상대 비율(1.667배)은
     // 그대로 유지되면서 절대 크기만 익숙한 수준으로 돌아온다.
+    //
+    // 2026-08-24 사용자 지정 - "인게임에서 적을 처치하면 드랍되는 경험치, 골드, 부품상자 이미지
+    // 크기를 1/2로 줄여줘"에 따라 기준 크기를 0.6 → <b>0.3</b>으로 내렸다. 세 아이콘 전부 이
+    // 배율 하나만 쓰므로 상대 비율(상자:코인 1.667배)은 그대로 유지된다.
     private const string ReferenceIconResourceName = "Gold";
-    private const float ReferenceIconWorldSize = 0.6f;
+    private const float ReferenceIconWorldSize = 0.3f;
     private static float? icon_scale_multiplier;
 
     private const string GoldResourceName = "Gold";

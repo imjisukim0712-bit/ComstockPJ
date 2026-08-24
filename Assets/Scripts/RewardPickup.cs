@@ -99,8 +99,10 @@ public class RewardPickup : MonoBehaviour
                 // 머리 효과(미니 픽시 경험치 +50%). 반올림 후 최소 1은 보장한다 - 경험치 1짜리
                 // 픽업에 배율이 곱해져 0으로 사라지면 "먹었는데 아무 일도 없는" 픽업이 된다.
                 // 2026-08-20 뉴럴 캐시·아카식 레지스터(메모리 파츠)의 경험치 획득량 +%도 함께 곱한다.
-                RunState.CoreExp += Mathf.Max(1, Mathf.RoundToInt(Amount * HeadEffects.ExpGainMultiplier
-                                                                  * PartEffects.GainMultiplier(StatType.ExpGain)));
+                // 2026-08-24: 직접 더하지 않고 RunState.AddCoreExp를 쓴다 - "포근한 치유" 디스크가
+                // 경험치 획득 시점에 회복하도록 바뀌어(OnCoreExpGained) 획득 경로를 한 곳으로 모았다.
+                RunState.AddCoreExp(Mathf.Max(1, Mathf.RoundToInt(Amount * HeadEffects.ExpGainMultiplier
+                                                                  * PartEffects.GainMultiplier(StatType.ExpGain))));
                 break;
         }
 

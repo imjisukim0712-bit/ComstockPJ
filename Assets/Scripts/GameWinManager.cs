@@ -24,6 +24,9 @@ public static class GameWinManager
         // 진행도가 저장될 기회가 없다 - 게임 오버와 같은 이유로 여기서 저장한다(2026-08-19 Phase E).
         UnlockState.Flush();
 
+        // 머리별 최고 기록(2026-08-24) - 게임오버와 같은 자리다(HeadRecords 주석 참고).
+        HeadRecords.ReportRunFinished(PlayerSession.SelectedRobotId, RunScore.ComputeTotal(), RunState.WaveNumber);
+
         Debug.Log("=== 게임 클리어 ===");
         OnGameWon?.Invoke();
     }

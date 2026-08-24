@@ -305,15 +305,34 @@ public class HeadSelectPanelUI : MonoBehaviour
         string mass = "-";
         if (GameDataManager.Instance != null && GameDataManager.Instance.Robots.TryGetValue(robotId, out RobotData data))
         {
-            hp = data.robot_hp.ToString();
-            mass = $"{data.robot_mess:0.##}";
+            hp = StatFormat.Int(data.robot_hp);
+            mass = StatFormat.Decimal(data.robot_mess); // 질량은 소수점이 기본 단위(StatFormat 주석 참고)
         }
 
         detail_stats.text =
             $"체력  <b>{hp}</b>      질량  <b>{mass}</b>\n" +
             $"무기 소켓  <b>{info.weaponSocketCount}</b>      디스크 슬롯  <b>{info.discSlotCount}</b>\n" +
             $"적재량  <b>{info.partBoxCapacity}</b>\n" +
-            $"기본 무기  <b>{DescribeDefaultWeapons(info)}</b>";
+            $"기본 무기  <b>{DescribeDefaultWeapons(info)}</b>\n" +
+            BuildRecordLine(robotId);
+    }
+
+    /// <summary>
+    /// 이 머리로 세운 최고 기록 한 줄(2026-08-24 사용자 요청: "이 머리를 사용하여 달성한
+    /// 최대 점수, 최대 웨이브 등이 나오면 좋겠음"). 기록이 없으면 그 사실을 알려준다 -
+    /// 빈 줄로 두면 "왜 아무것도 없지?" 싶기 때문.
+    /// </summary>
+    private static string BuildRecordLine(int robotId)
+    {
+        if (!HeadRecords.HasRecord(robotId))
+            return "<color=#8A93A6>이 머리로 완주한 기록이 없습니다</color>";
+
+        int score = HeadRecords.GetBestScore(robotId);
+        int wave = HeadRecords.GetBestWave(robotId);
+        int plays = HeadRecords.GetPlayCount(robotId);
+
+        return $"<color=#FFD37A>최고 점수  <b>{score:N0}</b>      최고 웨이브  <b>{wave}</b>" +
+               $"      <size=85%>플레이 {plays}회</size></color>";
     }
 
     /// <summary>기본 장착 무기 이름 목록. 데이터가 없으면 "-".</summary>

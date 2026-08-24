@@ -24,8 +24,17 @@ using UnityEngine;
 /// 건드리지 않는 사이에 <see cref="PlayBodyFrames"/>가 직접 프레임을 그린다. 같은 플래그가
 /// 이동(ComputeSeekDirection)과 근접 공격 시작(TryAttack)도 함께 잠근다.
 ///
-/// <b>아트 규격</b> - 신규 몸통 세트(돌진 120 / 사망 16 / 포효 36)는 전부 800px 캔버스이며
-/// PPU 100 = 8유닛으로, 기존 BossMove(512px@PPU64)·BossGroggy(800px@PPU100)와 같은 월드 크기다.
+/// <b>아트 규격</b> - 몸통 세트는 전부 800px 캔버스(BossMove만 512px)지만, <b>캔버스 안에
+/// 그려진 보스 자체의 크기가 세트마다 달라서</b> 2026-08-24에 PPU로 맞췄다. 기준은 가장 오래
+/// 보이는 <see cref="MonsterAnimationLibrary.BossFolder"/>(512px@PPU64, 몸높이 약 5.7유닛)이고,
+/// 나머지는 실루엣 겹침(IoU)으로 실측한 배율만큼 PPU를 옮겼다 - <b>돌진 42 / 포효 112 /
+/// 그로기 105</b>(사망은 오차 1%라 100 유지). 특히 돌진 세트는 돌진 궤적까지 담은 광각 구도라
+/// 보스가 캔버스 대비 42%로 작게 그려져 있었고(= 돌진할 때마다 보스가 절반 크기로 쪼그라들어
+/// 보였다), PPU 42로 낮추면 캔버스가 19유닛까지 커진다. 캔버스가 커진 만큼 그림이 캔버스
+/// 안에서 좌우로 4유닛 넘게 움직이므로 <b>프레임마다 pivot을 몸 중심에 맞춰</b> 제자리에
+/// 고정했다(실제 이동은 Rigidbody가 담당한다). 몸집을 기준으로 계산하는 값
+/// (<see cref="EnemyUnit.BodyVisualWidth"/> 등)은 재생 중인 프레임이 아니라 프리팹
+/// 스프라이트에서 재야 한다 - 캔버스 크기가 세트마다 다르기 때문이다.
 /// 원본이 오른쪽을 보고 있어 임포트할 때 좌우 반전했다("아트는 왼쪽을 본다" 프로젝트 관례 -
 /// <see cref="EnemyUnit.LateUpdate"/>의 flipX. 같은 이유로 이번에 BossGroggy도 함께 반전해
 /// 그로기에 들어갈 때 보스가 갑자기 반대쪽을 보던 기존 불일치를 고쳤다).
@@ -617,7 +626,10 @@ public class BossUnit : EnemyUnit
         {
             float scale = transform.lossyScale.x;
             if (Mathf.Approximately(scale, 0f)) scale = 1f;
-            head_offset = (sr.bounds.extents.y + groggyStarsMargin) / scale;
+            // 재생 중인 프레임의 bounds가 아니라 프리팹 스프라이트에서 잰 캐시값을 쓴다 -
+            // 돌진 세트(19유닛 캔버스)가 떠 있는 동안 그로기에 들어가면 별이 몸집의 두 배
+            // 높이로 튄다(2026-08-24, EnemyUnit.BodyVisualHalfHeight 주석 참고).
+            head_offset = (BodyVisualHalfHeight + groggyStarsMargin) / scale;
         }
         GroggyStarsEffect.Play(transform, head_offset, groggyDuration,
             sr != null ? sr.sortingOrder + 5 : 5, groggyStarsWidth);
@@ -738,10 +750,20 @@ public class BossUnit : EnemyUnit
 
     private IEnumerator DeathSequence()
     {
+        // 진행 중이던 바닥 이펙트(돌진 레인 / 잔해 경고)와 머리 위 별을 사망 모션 시작 시점에
+        // 먼저 정리한다 - Die()가 CancelAction()으로 한 번 지우지만, 그 뒤에도 몇 초간 살아있는
+        // 동안 새로 남는 것이 없도록 사망 경로에서 다시 확인하는 쪽이 확실하다.
+        ClearEffects();
+
         yield return PlayBodyFrames(DeathFolder, 0, int.MaxValue, deathMotionDuration);
 
         SpriteRenderer sr = BodySpriteRenderer;
         if (sr != null) sr.enabled = false;
+
+        // 몸만 끄면 체력바·그로기 별이 허공에 떠서 폭발 내내 그대로 보인다
+        // (2026-08-24 사용자 리포트 "보스 사망 이후에도 보스의 UI나 이펙트 등이 남아있는 문제").
+        HideAttachedVisuals();
+        ClearEffects();
 
         BossFrameEffect.Play(DeathExplosionFolder, transform.position, deathExplosionWidth,
             sr != null ? sr.sortingOrder + 2 : 3, deathExplosionDuration);

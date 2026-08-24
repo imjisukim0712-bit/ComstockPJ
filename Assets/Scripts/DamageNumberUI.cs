@@ -101,6 +101,13 @@ public class DamageNumberUI : MonoBehaviour
         root.pivot = new Vector2(0.5f, 0.5f);
         root.sizeDelta = new Vector2(160f, 60f);
 
+        // <b>캔버스의 맨 첫 자식으로 내린다</b>(2026-08-24 사용자 리포트: "데미지 수치가 게임이
+        // 일시정지 될때 심지어 맨 상단 레이어에 표시되는 문제"). uGUI는 형제 순서가 곧 그리기
+        // 순서라, 코드로 만들어 붙이면 항상 맨 뒤 = 맨 위가 된다 - 그래서 이 팝업이 일시정지
+        // 메뉴·설정창 위로 뚫고 올라왔다. <see cref="DashGaugeUI"/>가 같은 문제를 같은 방법으로
+        // 이미 고쳐 뒀으므로 관례를 따른다(앞으로 어떤 패널이 추가돼도 재발하지 않는다).
+        root.SetAsFirstSibling();
+
         const float iconSize = 26f;
         const float iconGap = 4f;
         float textOffsetX = 0f;
@@ -151,7 +158,9 @@ public class DamageNumberUI : MonoBehaviour
         // 그러면 이 팝업이 Lifetime에 영영 못 미쳐 정비/상점 화면 위에 얼어붙은 채 계속
         // 남아있었다(2026-08-21 사용자 리포트). PlayerHitFeedback과 같은 관례로, 런타임
         // 생성 오브젝트는 스스로 IsIntermission을 체크해 즉시 정리한다.
-        if (GameFlowManager.IsIntermission)
+        // 일시정지(PauseMenuUI)도 같은 이유로 즉시 정리한다 - timeScale이 0이라 elapsed가 멈춰
+        // 팝업이 메뉴 위에 얼어붙은 채 남는다(2026-08-24 사용자 리포트).
+        if (GameFlowManager.IsIntermission || GameFlowManager.IsPaused)
         {
             Destroy(gameObject);
             return;
@@ -206,7 +215,10 @@ public class DamageNumberUI : MonoBehaviour
     }
 
     /// <summary>0.##로 소수점까지 보여준다(스탯 표시와 같은 관례 - 반올림하면 소수 피해가 숨는다).</summary>
-    private static string FormatDamage(float damage) => damage.ToString("0.##");
+    // 2026-08-24 사용자 지정 - 화면에 뜨는 데미지는 소수점 없이 정수로만 보여준다
+    // (실제 피해 계산은 float 그대로다 - StatFormat 주석 참고). 0으로 반올림되면 "0"이 떠서
+    // 안 맞은 것처럼 보이므로 최소 1은 보장한다.
+    private static string FormatDamage(float damage) => StatFormat.Int(Mathf.Max(1f, damage));
 
     private static Canvas ResolveCanvas()
     {

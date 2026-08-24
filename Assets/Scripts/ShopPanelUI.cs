@@ -118,10 +118,10 @@ public class ShopPanelUI : MonoBehaviour
 
         SetupDetailInspector();
 
-        // 음악 볼륨 설정(2026-08-13). 상점은 웨이브마다 반드시 거치는 화면이라 런 도중 볼륨을
-        // 조절할 수 있는 유일한 지점이다(타이틀 화면에도 같은 컨트롤이 있다).
-        // 위치는 상단의 비어 있는 구간(골드 표시와 '다음 웨이브 시작' 버튼 사이).
-        MusicVolumeSliderUI.Attach((RectTransform)transform, new Vector2(0.53f, 0.90f), new Vector2(0.70f, 0.97f));
+        // 2026-08-24 사용자 지정으로 <b>상점의 음악 볼륨 슬라이더를 삭제</b>했다("사운드 설정이
+        // 상점에 있으면 안돼. 삭제해."). 2026-08-13에 "런 도중 볼륨을 조절할 유일한 지점"으로
+        // 넣었던 것인데, 그 사이에 일시정지 메뉴의 설정창(SettingsPanelUI)이 생겨 인게임에서도
+        // 볼륨을 조절할 수 있으므로 상점에 둘 이유가 없어졌다(타이틀 화면에도 같은 컨트롤이 있다).
     }
 
     // ── 보유 장비 상세 보기 ──────────────────────────────────────────
@@ -795,6 +795,117 @@ public class ShopPanelUI : MonoBehaviour
                                           0.32f, 0.68f, 0.60f, 0.88f, 0.825f);
         discsGrid = EnsureGridContainer(panel, "DiscsGrid", equippedDiscsText,
                                         0.32f, 0.44f, 0.60f, 0.66f, 0.605f);
+
+        // 장착 무기 제목 줄의 오른쪽 끝에 "위치 교체" 버튼이 들어가므로 제목 영역을 그만큼 좁힌다
+        // (안 좁히면 제목 글자와 버튼이 겹친다 - 실측 캡처로 확인).
+        if (equippedWeaponsText != null)
+        {
+            RectTransform titleRect = equippedWeaponsText.rectTransform;
+            titleRect.anchorMax = new Vector2(0.495f, titleRect.anchorMax.y);
+        }
+
+        EnsureWeaponSwapButton(panel);
+    }
+
+    // ── 장착 무기 위치 교체 (2026-08-24 사용자 요청) ────────────────────────────
+    //
+    // "장착한 무기 서로 위치 교체기능 만들어줘".
+    //
+    // 무기 칸을 누르면 원래 <b>상세 팝업</b>이 열리므로, 같은 클릭에 교체를 겹쳐 넣으면 둘 다
+    // 예측하기 어려워진다. 그래서 제목 줄 옆에 "위치 교체" 버튼을 두고 <b>교체 모드</b>를
+    // 명시적으로 켠다 - 모드가 켜져 있는 동안에는 무기 칸 클릭이 "고르기 → 맞바꾸기"로 동작하고,
+    // 꺼져 있으면 예전처럼 상세 팝업이 열린다.
+    private Button weapon_swap_button;
+    private TextMeshProUGUI weapon_swap_label;
+    private bool weapon_swap_mode;
+    private int weapon_swap_source = -1;
+
+    private void EnsureWeaponSwapButton(RectTransform panel)
+    {
+        if (weapon_swap_button != null) return;
+
+        DestroyIfExists(panel, "WeaponSwapButton");
+
+        RectTransform rect = MakeChild(panel, "WeaponSwapButton", 0.500f, 0.828f, 0.600f, 0.880f,
+                                       typeof(CanvasRenderer), typeof(Image), typeof(Button));
+
+        var image = rect.GetComponent<Image>();
+        Sprite plate = Resources.Load<Sprite>("UI/Purple_button00");
+        if (plate != null)
+        {
+            image.sprite = plate;
+            image.type = Image.Type.Sliced; // UI 아트는 전부 9-슬라이스다(프로젝트 안내.md 참고)
+        }
+        image.color = Color.white;
+
+        weapon_swap_label = MakeText(rect, "Label", 0.05f, 0.05f, 0.95f, 0.95f, 20f, TextAlignmentOptions.Center);
+        weapon_swap_label.text = "위치 교체";
+
+        weapon_swap_button = rect.GetComponent<Button>();
+        weapon_swap_button.onClick.AddListener(ToggleWeaponSwapMode);
+    }
+
+    private void ToggleWeaponSwapMode()
+    {
+        weapon_swap_mode = !weapon_swap_mode;
+        weapon_swap_source = -1;
+
+        SetMessage(weapon_swap_mode
+            ? "무기 위치 교체: 옮길 무기 칸을 누르고, 이어서 바꿀 소켓 칸을 누르세요."
+            : "무기 위치 교체를 취소했습니다.");
+
+        RefreshEquipment();
+    }
+
+    /// <summary>무기 칸 클릭. 교체 모드가 아니면 예전처럼 상세 팝업을 연다.</summary>
+    private void HandleWeaponCellClicked(int socketIndex)
+    {
+        if (!weapon_swap_mode)
+        {
+            ShowDetail($"w:{socketIndex}");
+            return;
+        }
+
+        PlayerShootManager shootManager = FindFirstObjectByType<PlayerShootManager>();
+        if (shootManager == null) return;
+
+        if (weapon_swap_source < 0)
+        {
+            // 빈 소켓을 출발점으로 고르면 옮길 것이 없다.
+            if (!shootManager.TryGetSocketInfo(socketIndex, out _, out _))
+            {
+                SetMessage($"소켓 {socketIndex + 1}은(는) 비어 있어 옮길 무기가 없습니다.");
+                return;
+            }
+
+            weapon_swap_source = socketIndex;
+            SetMessage($"소켓 {socketIndex + 1}의 무기를 고름 - 바꿀 소켓 칸을 누르세요(다시 누르면 취소).");
+            RefreshEquipment();
+            return;
+        }
+
+        if (weapon_swap_source == socketIndex)
+        {
+            weapon_swap_source = -1;
+            SetMessage("선택을 취소했습니다. 옮길 무기 칸을 다시 누르세요.");
+            RefreshEquipment();
+            return;
+        }
+
+        int from = weapon_swap_source;
+        weapon_swap_source = -1;
+
+        if (shootManager.SwapWeapons(from, socketIndex))
+        {
+            weapon_swap_mode = false;
+            SetMessage($"소켓 {from + 1} ↔ 소켓 {socketIndex + 1} 무기 위치를 바꿨습니다.");
+        }
+        else
+        {
+            SetMessage("무기 위치를 바꾸지 못했습니다.");
+        }
+
+        RefreshEquipment();
     }
 
     /// <param name="titleBottom">제목 줄의 아래쪽 경계(정규화). 격자는 이 아래를 쓴다.</param>
@@ -915,7 +1026,17 @@ public class ShopPanelUI : MonoBehaviour
         }
 
         if (equippedWeaponsText != null)
-            equippedWeaponsText.text = $"[장착 무기] {equippedWeapons}/{socketCount} {DetailHint}";
+        {
+            // 제목 영역이 "위치 교체" 버튼 자리만큼 좁아졌으므로 이 줄만 짧은 안내를 쓴다.
+            // 교체 모드에서는 문구를 바꿔 "지금 무엇을 하는 중인지" 제목 줄에서 바로 보이게 한다.
+            string hint = weapon_swap_mode
+                ? "<size=70%><color=#FFD37A>(교체 선택)</color></size>"
+                : "<size=70%><color=#8FB8FF>(상세)</color></size>";
+            equippedWeaponsText.text = $"[장착 무기] {equippedWeapons}/{socketCount} {hint}";
+        }
+
+        if (weapon_swap_label != null) weapon_swap_label.text = weapon_swap_mode ? "교체 취소" : "위치 교체";
+        if (weapon_swap_button != null) weapon_swap_button.gameObject.SetActive(socketCount >= 2);
 
         if (shootManager == null) return;
 
@@ -928,12 +1049,22 @@ public class ShopPanelUI : MonoBehaviour
             // 무기 소켓 아이콘을 흐리게 깔아 "여기에 무기를 낄 수 있다"는 것을 보여준다.
             Sprite icon = has ? ResolveWeaponIcon(weapon) : PartIconLibrary.Get(PartSlot.ArmWeaponSocket);
 
-            ItemCellUI.CreateIconCell(weaponsGrid, $"Cell_Weapon_{i}", icon,
-                                      has ? grade.ToCellColor(CellPlainColor) : CellPlainColor,
-                                      $"소켓 {i + 1}", has,
-                                      has ? (System.Action)(() => ShowDetail($"w:{index}")) : null);
+            // 교체 모드에서는 빈 소켓도 눌러야 한다(그 자리로 옮기기). 고른 출발 칸은 노란색으로
+            // 강조한다 - 정비 화면이 교체 가능한 슬롯을 노란색으로 여는 것과 같은 관례.
+            Color cellColor = has ? grade.ToCellColor(CellPlainColor) : CellPlainColor;
+            if (weapon_swap_mode && weapon_swap_source == i) cellColor = SwapSelectedColor;
+
+            System.Action onClick = (weapon_swap_mode || has)
+                ? (System.Action)(() => HandleWeaponCellClicked(index))
+                : null;
+
+            ItemCellUI.CreateIconCell(weaponsGrid, $"Cell_Weapon_{i}", icon, cellColor,
+                                      $"소켓 {i + 1}", has, onClick);
         }
     }
+
+    /// <summary>무기 위치 교체에서 고른 출발 칸의 강조색(정비 화면의 슬롯 강조와 같은 노란색).</summary>
+    private static readonly Color SwapSelectedColor = new Color(0.95f, 0.75f, 0.15f, 1f);
 
     // 6. 장착된 디스크 - 슬롯 수만큼 칸을 만들고 낀 디스크만 아이콘을 채운다.
     private void RefreshDiscsGrid()
@@ -1041,15 +1172,16 @@ public class ShopPanelUI : MonoBehaviour
 
         statsText.text =
             "[현재 능력치]\n" +
-            $"체력 {player.CurrentHp:0.##}/{player.MaxHp:0.##}\n" +
-            $"공격력 {player.Atk:0.##}\n" +
-            $"방어력 {player.Def:0.##}\n" +
-            $"치명타 확률 {player.Cc:0.##}%\n" +
-            $"치명타 피해 {player.Cd:0.##}\n" +
-            $"이동속도 {player.MoveSpeed:0.##}\n" +
-            $"회피율 {player.Avoid:0.##}\n" +
-            $"행운 {player.Luck:0.##}\n" +
-            $"질량 {player.Mess:0.##}";
+            // 2026-08-24 사용자 지정 표기 규칙(StatFormat 참고).
+            $"체력 {StatFormat.Int(player.CurrentHp)}/{StatFormat.Int(player.MaxHp)}\n" +
+            $"공격력 {StatFormat.Int(player.Atk)}\n" +
+            $"방어력 {StatFormat.Int(player.Def)}\n" +
+            $"치명타 확률 {StatFormat.Percent(player.Cc)}\n" +
+            $"치명타 피해 {StatFormat.RatioPercent(player.Cd)}\n" +
+            $"이동속도 {StatFormat.Decimal(player.MoveSpeed)}\n" +
+            $"회피율 {StatFormat.Percent(player.Avoid)}\n" +
+            $"행운 {StatFormat.Int(player.Luck)}\n" +
+            $"질량 {StatFormat.Decimal(player.Mess)}";
     }
 
     // ─────────────────────────────────────────────────────────────────

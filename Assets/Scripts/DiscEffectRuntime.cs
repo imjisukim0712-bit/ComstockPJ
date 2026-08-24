@@ -38,6 +38,7 @@ public class DiscEffectRuntime : MonoBehaviour
     private void OnEnable()
     {
         EnemyUnit.OnKilledByPlayer += HandleEnemyKilled;
+        RunState.OnCoreExpGained += HandleCoreExpGained;
 
         subscribed_wave_manager = FindFirstObjectByType<WaveManager>();
         if (subscribed_wave_manager != null) subscribed_wave_manager.OnWaveStarted += HandleWaveStarted;
@@ -46,6 +47,7 @@ public class DiscEffectRuntime : MonoBehaviour
     private void OnDisable()
     {
         EnemyUnit.OnKilledByPlayer -= HandleEnemyKilled;
+        RunState.OnCoreExpGained -= HandleCoreExpGained;
         if (subscribed_wave_manager != null) subscribed_wave_manager.OnWaveStarted -= HandleWaveStarted;
     }
 
@@ -112,14 +114,31 @@ public class DiscEffectRuntime : MonoBehaviour
                     player.ApplyTempStatBonus(StatType.Avoid, disc.amountB * copies, disc.duration);
                     break;
 
-                case DiscEffectType.OnKillHeal:
-                    player.Heal(disc.flatValue * copies); // 2026-08-20 스탯 소수화: 반올림 제거
-                    break;
-
                 case DiscEffectType.OnKillStackStat:
                     ApplyKillStack(discId, disc, copies);
                     break;
             }
+        }
+    }
+
+    // ── 경험치 획득 시 발동 (RunState.OnCoreExpGained 구독) ──────────
+    //
+    // 2026-08-24 사용자 지정 - "포근한 치유" 디스크의 회복 시점이 "적 처치"에서 "경험치 획득"으로
+    // 바뀌었다. 처치 시 발동(HandleEnemyKilled)과 자리를 나눠 둔 이유는, 처치와 경험치 획득이
+    // 1:1이 아니기 때문이다(경험치는 확률 드랍이고, 필드에 떨어진 뒤 주워야 들어온다).
+
+    private void HandleCoreExpGained(int amount)
+    {
+        if (player == null || player.IsDead || amount <= 0 || !EnsureCatalog()) return;
+
+        HashSet<int> processed = new HashSet<int>();
+        foreach (int discId in RunState.EquippedDiscIds)
+        {
+            if (!processed.Add(discId)) continue; // 같은 디스크는 copies로 한 번에 반영
+            if (!disc_by_id.TryGetValue(discId, out DiscData disc)) continue;
+
+            if (disc.effectType == DiscEffectType.OnExpGainHeal)
+                player.Heal(disc.flatValue * CountCopies(discId));
         }
     }
 

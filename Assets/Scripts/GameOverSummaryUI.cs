@@ -184,15 +184,16 @@ public class GameOverSummaryUI : MonoBehaviour
 
         statsText.text =
             "[최종 능력치]\n" +
-            $"체력 {Mathf.Max(0f, player.CurrentHp):0.##}/{player.MaxHp:0.##}\n" +
-            $"공격력 {player.Atk:0.##}\n" +
-            $"방어력 {player.Def:0.##}\n" +
-            $"치명타 확률 {player.Cc:0.##}%\n" +
-            $"치명타 피해 {player.Cd:0.##}\n" +
-            $"이동속도 {player.MoveSpeed:0.##}\n" +
-            $"회피율 {player.Avoid:0.##}\n" +
-            $"행운 {player.Luck:0.##}\n" +
-            $"질량 {player.Mess:0.##}";
+            // 2026-08-24 사용자 지정 표기 규칙(StatFormat 참고).
+            $"체력 {StatFormat.Int(Mathf.Max(0f, player.CurrentHp))}/{StatFormat.Int(player.MaxHp)}\n" +
+            $"공격력 {StatFormat.Int(player.Atk)}\n" +
+            $"방어력 {StatFormat.Int(player.Def)}\n" +
+            $"치명타 확률 {StatFormat.Percent(player.Cc)}\n" +
+            $"치명타 피해 {StatFormat.RatioPercent(player.Cd)}\n" +
+            $"이동속도 {StatFormat.Decimal(player.MoveSpeed)}\n" +
+            $"회피율 {StatFormat.Percent(player.Avoid)}\n" +
+            $"행운 {StatFormat.Int(player.Luck)}\n" +
+            $"질량 {StatFormat.Decimal(player.Mess)}";
     }
 
     private static string PartLine(ModdingManager modding, PartSlot slot)

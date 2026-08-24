@@ -94,8 +94,8 @@ public class GameHUD : MonoBehaviour
             return;
         }
 
-        // 2026-08-20 스탯 소수화 - 체력이 float가 되어 표시도 소수점까지 보여준다("0.##"이라
-        // 정수일 때는 예전처럼 소수점이 붙지 않는다).
+        // 2026-08-20 스탯 소수화로 체력이 float가 됐고, 2026-08-24 사용자 지정으로 <b>표시만</b>
+        // 다시 정수로 되돌렸다(계산은 계속 float - StatFormat 주석 참고).
         float max = Mathf.Max(1f, player.MaxHp);
         float current = Mathf.Clamp(player.CurrentHp, 0f, max);
 
@@ -108,7 +108,9 @@ public class GameHUD : MonoBehaviour
 
         if (hpValueText != null)
         {
-            hpValueText.text = $"{current:0.##} / {max:0.##}";
+            // 2026-08-24 사용자 지정 - HUD 체력은 소수점 없이 정수로만 보여준다
+            // (실제 체력은 float 그대로 계산된다 - StatFormat 주석 참고).
+            hpValueText.text = StatFormat.IntPair(current, max);
         }
 
         // 항목명("웨이브"/"골드")은 상단 중앙 패널 위치와 골드 아이콘이 대신하므로 숫자만 쓴다

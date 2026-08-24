@@ -115,6 +115,15 @@ public class PartsCatalog : ScriptableObject
     [Range(0f, 1f)]
     [SerializeField] private float partBoxDropChance = 0.05f;
 
+    [Header("부품 상자 최소 보장 (2026-08-24 사용자 지정: '2~3웨이브 마다 1개씩은 나오게')")]
+    [Tooltip("이 웨이브 수 동안 부품 상자가 한 번도 안 나왔으면 보장 장치가 작동한다. " +
+             "2면 '늦어도 2~3웨이브마다 1개'가 된다(보장이 걸린 웨이브 안에서 드랍되므로)")]
+    [SerializeField] private int partBoxGuaranteeWaves = 2;
+
+    [Tooltip("보장이 걸린 웨이브에서 드랍 확률에 곱하는 배율. 웨이브 도중 자연스럽게 나오도록 " +
+             "확률만 크게 올리고, 그래도 안 나오면 웨이브가 끝날 때 1개를 직접 지급한다")]
+    [SerializeField] private float partBoxGuaranteeChanceMultiplier = 12f;
+
     [Header("무기 소켓 개별화 - 불일치/과적 패널티 (밸런스 미확정 임시값)")]
     [Tooltip("무기 소켓 파츠가 제한하는 타입과 다른 무기를 끼웠을 때, 그 무기 무게에 곱해지는 배율. " +
              "장착 자체는 항상 허용되고 이 배율만큼 무게만 늘어난다(2026-08-12 사용자 확정)")]
@@ -126,6 +135,8 @@ public class PartsCatalog : ScriptableObject
 
     public IReadOnlyList<PartData> Parts => parts;
     public float PartBoxDropChance => partBoxDropChance;
+    public int PartBoxGuaranteeWaves => Mathf.Max(1, partBoxGuaranteeWaves);
+    public float PartBoxGuaranteeChanceMultiplier => Mathf.Max(1f, partBoxGuaranteeChanceMultiplier);
     public float MismatchWeightMultiplier => mismatchWeightMultiplier > 0f ? mismatchWeightMultiplier : 1f;
     public float OverweightSpeedPenaltyPerUnit => Mathf.Max(0f, overweightSpeedPenaltyPerUnit);
 

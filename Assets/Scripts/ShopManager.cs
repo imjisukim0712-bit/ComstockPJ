@@ -155,10 +155,12 @@ public class ShopManager : MonoBehaviour
         if (index < 0 || index >= offers.Count) { reason = "잘못된 칸입니다"; return false; }
 
         Offer offer = offers[index];
-        // 악세사리는 이미 구매했어도 다시 사는 것이 정상 동작(스택형)이라 Purchased 검사에서
-        // 제외한다 - 대신 카드 자체를 "구매 완료" 스탬프로 막지 않고 계속 살 수 있게
-        // CreateAccessoryOffer()가 Purchased를 절대 true로 두지 않는다.
-        if (!offer.IsAccessory && offer.Purchased) { reason = "이미 구매했습니다"; return false; }
+        // 악세사리·디스크는 이미 구매했어도 다시 사는 것이 정상 동작(스택형)이라 Purchased
+        // 검사에서 제외한다 - 대신 카드 자체를 "구매 완료" 스탬프로 막지 않고 계속 살 수 있게
+        // TryPurchaseDisc/CreateAccessoryOffer가 Purchased를 절대 true로 두지 않는다.
+        // (디스크는 2026-08-24 사용자 지정으로 합류 - TryPurchaseDisc 주석 참고. 슬롯이 차면
+        //  아래 IsDiscSlotFull이 대신 막는다.)
+        if (!offer.IsAccessory && !offer.IsDisc && offer.Purchased) { reason = "이미 구매했습니다"; return false; }
         if (RunState.Gold < offer.Price) { reason = "골드가 부족합니다"; return false; }
         if (offer.IsDisc && IsDiscSlotFull) { reason = "디스크 슬롯이 가득 찼습니다"; return false; }
 
@@ -168,6 +170,13 @@ public class ShopManager : MonoBehaviour
     /// <summary>
     /// 디스크를 구매해 즉시 장착한다. 무기는 어느 소켓에 넣을지 정해야 해서
     /// PurchaseWeaponIntoSocket을 따로 쓴다.
+    ///
+    /// <b>같은 종류를 몇 개든 살 수 있다</b>(2026-08-24 사용자 지정: "디스크 같은 종류는 여러개도
+    /// 살 수 있게 만들어줘"). 디스크 효과 코드는 원래부터 중복 장착을 전제로 장 수를 곱하도록
+    /// 되어 있었는데(<see cref="DiscEffectRuntime"/>의 CountCopies, <see cref="RecomputeCritChancePerDisc"/>),
+    /// <b>상점 카드가 한 번 사면 "구매 완료"로 잠겨</b> 같은 칸에서 두 번째를 살 수 없었다.
+    /// 그래서 악세사리와 같은 방식으로 카드를 잠그지 않는다 - 골드와 디스크 슬롯이 남아있는
+    /// 동안 계속 살 수 있고, 슬롯이 차면 <see cref="CanPurchase"/>가 막아준다.
     /// </summary>
     public bool TryPurchaseDisc(int index)
     {
@@ -178,7 +187,6 @@ public class ShopManager : MonoBehaviour
 
         RunState.Gold -= offer.Price;
         EquipDisc(offer.Disc);
-        offer.Purchased = true;
         offer.Locked = false;
 
         // 핫팟(누적 디스크 구매 50) / 염동력(디스크 4개 이상 착용) / 엔드리스 구매 조건들

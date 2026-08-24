@@ -16,12 +16,12 @@ MonoBehaviour:
   - grade: 0
     statMultiplier: 1
     priceMultiplier: 1
-    weight: 50
+    weight: 182
     minWave: 1
   - grade: 1
     statMultiplier: 1.3
     priceMultiplier: 1.25
-    weight: 26
+    weight: 94
     minWave: 1
   - grade: 2
     statMultiplier: 1.7
@@ -286,7 +286,7 @@ MonoBehaviour:
     grade: 0
     price: 20
     iconName: "Discs/\uB514\uC2A4\uD06C06"
-    effectDescription: "\uC801\uC744 \uCC98\uCE58\uD558\uBA74 HP\uB97C 1 \uD68C\uBCF5\uD569\uB2C8\uB2E4."
+    effectDescription: "\uACBD\uD5D8\uCE58\uB97C \uD68D\uB4DD\uD558\uBA74 HP\uB97C 1 \uD68C\uBCF5\uD569\uB2C8\uB2E4."
     effectType: 4
     statA: 0
     amountA: 0

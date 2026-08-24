@@ -3361,6 +3361,9 @@ MonoBehaviour:
   fallbackSpawnRadius: 12
   maxAliveEnemies: 18
   trickleSpawnInterval: 3
+  newMonsterFirstWaveCount: 4
+  newMonsterCountGrowthPerWave: 2
+  newMonsterCountCapRelease: 30
   leaderCapWaveThreshold: 20
   leaderMaxPerWave: 3
 --- !u!4 &379423241
@@ -10106,7 +10109,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 18.25
+  m_fontSize: 22.55
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -10682,7 +10685,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 11.7
+  m_fontSize: 14.5
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -11513,7 +11516,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 12.55
+  m_fontSize: 15.5
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -11733,7 +11736,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1215217997
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15227,7 +15230,6 @@ MonoBehaviour:
   - {fileID: 1314134249}
   - {fileID: 1808371058}
   - {fileID: 462372024}
-  - {fileID: 1215217996}
   waveTransitionBannerDuration: 1.2
 --- !u!114 &1656057950
 MonoBehaviour:
@@ -18497,7 +18499,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 14.05
+  m_fontSize: 17.4
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -19051,7 +19053,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 11.6
+  m_fontSize: 14.35
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -19564,7 +19566,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 14.1
+  m_fontSize: 17.45
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1

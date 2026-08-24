@@ -281,13 +281,31 @@ public class TitleSceneManager : MonoBehaviour
         foreach (string name in TitleOnlyObjectNames)
         {
             Transform found = canvasRect.Find(name);
-            if (found != null) found.gameObject.SetActive(visible);
+            if (found == null) continue;
+
+            // <b>다시 켤 때는 "원래 켜져 있던 것만" 켠다</b>(2026-08-24 사용자 리포트: "어디
+            // 나갔다 들어오면 타이틀 Comstock 글씨 이미지 뒤에 옛날 타이틀 이미지가 나옴").
+            // TitleText/TitleText_BG는 로고 이미지로 대체되면서 <b>씬에서 비활성</b>으로 남겨둔
+            // 옛 오브젝트인데, 예전에는 이 목록을 전부 SetActive(visible)로 되돌려서 머리 선택
+            // 화면을 한 번 열고 닫으면 옛 텍스트 제목이 되살아나 로고 뒤에 겹쳐 보였다.
+            if (!title_object_initial_active.TryGetValue(name, out bool initiallyActive))
+            {
+                initiallyActive = found.gameObject.activeSelf;
+                title_object_initial_active[name] = initiallyActive;
+            }
+
+            found.gameObject.SetActive(visible && initiallyActive);
         }
     }
 
     // 2026-08-20: 사용자가 제공한 로고 이미지("TitleLogo")로 기존 텍스트 제목(TitleText/TitleText_BG)을
     // 대체했다 - 텍스트 오브젝트는 지우지 않고 비활성化해뒀다(되돌리려면 다시 켜고 TitleLogo를 지우면 됨).
     private static readonly string[] TitleOnlyObjectNames = { "TitleText", "TitleText_BG", "TitleLogo" };
+
+    // 위 목록 오브젝트의 <b>씬 초기 활성 상태</b>. 처음 숨길 때 기록해 두고, 다시 켤 때 이 값을
+    // 넘어서 켜지 않는다(비활성으로 남겨둔 옛 오브젝트가 되살아나지 않도록).
+    private readonly System.Collections.Generic.Dictionary<string, bool> title_object_initial_active =
+        new System.Collections.Generic.Dictionary<string, bool>();
 
     private SettingsPanelUI settingsPanel;
 

@@ -45,15 +45,24 @@ public class ShopCatalog : ScriptableObject
         public int basePrice;
     }
 
+    // <b>고등급 등장 확률 1/3로 하향</b>(2026-08-24 사용자 지정: "지금 후반가면 너무 쉽게 고등급
+    // 무기나 디스크가 상점에 나오는데, 좀 과한거같아. 현재 체감의 1/3으로 줄여줘").
+    //
+    // 고등급(에픽/유니크/전설)의 가중치를 직접 1/3로 깎으면 <b>총 가중치도 함께 줄어들어</b>
+    // 실제 확률은 1/3이 아니라 1/2.5 정도밖에 안 내려간다. 그래서 고등급 값은 그대로 두고
+    // <b>일반·레어를 3.632배로 올려</b> 총합을 100 → 300으로 만들었다 - 그러면 고등급 확률이
+    // 정확히 1/3이 되고(에픽 14% → 4.67%, 유니크 7% → 2.33%, 전설 3% → 1%), 일반:레어의
+    // 상대 비율(65.8:34.2)은 그대로 유지된다. minWave로 일부 등급만 열린 초반 웨이브에서도
+    // 같은 1/3 비율이 나온다(웨이브 3~4 실측 0.31 / 5~6 0.327).
     [Header("등급 설정 (전부 밸런스 미확정 임시값)")]
     [SerializeField]
     private List<GradeSetting> gradeSettings = new List<GradeSetting>
     {
-        new GradeSetting { grade = ItemGrade.Normal,    statMultiplier = 1.0f, priceMultiplier = 1.0f, weight = 50f, minWave = 1 },
-        new GradeSetting { grade = ItemGrade.Rare,      statMultiplier = 1.3f, priceMultiplier = 1.8f, weight = 26f, minWave = 1 },
-        new GradeSetting { grade = ItemGrade.Epic,      statMultiplier = 1.7f, priceMultiplier = 3.0f, weight = 14f, minWave = 3 },
-        new GradeSetting { grade = ItemGrade.Unique,    statMultiplier = 2.2f, priceMultiplier = 5.0f, weight = 7f,  minWave = 5 },
-        new GradeSetting { grade = ItemGrade.Legendary, statMultiplier = 3.0f, priceMultiplier = 8.0f, weight = 3f,  minWave = 7 }
+        new GradeSetting { grade = ItemGrade.Normal,    statMultiplier = 1.0f, priceMultiplier = 1.0f, weight = 182f, minWave = 1 },
+        new GradeSetting { grade = ItemGrade.Rare,      statMultiplier = 1.3f, priceMultiplier = 1.8f, weight = 94f,  minWave = 1 },
+        new GradeSetting { grade = ItemGrade.Epic,      statMultiplier = 1.7f, priceMultiplier = 3.0f, weight = 14f,  minWave = 3 },
+        new GradeSetting { grade = ItemGrade.Unique,    statMultiplier = 2.2f, priceMultiplier = 5.0f, weight = 7f,   minWave = 5 },
+        new GradeSetting { grade = ItemGrade.Legendary, statMultiplier = 3.0f, priceMultiplier = 8.0f, weight = 3f,   minWave = 7 }
     };
 
     [Header("상점에 나올 무기 (가격은 전부 밸런스 미확정 임시값)")]

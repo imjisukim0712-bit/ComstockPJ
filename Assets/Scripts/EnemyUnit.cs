@@ -89,6 +89,21 @@ public class EnemyUnit : MonoBehaviour
     /// 소유)이 깨지기 쉬워 읽기 전용 프로퍼티로만 노출한다.</summary>
     protected SpriteRenderer BodySpriteRenderer => body_sprite_renderer;
 
+    // 프리팹 스프라이트(= 그 몬스터의 기본 자세)에서 한 번만 잰 몸통 캔버스 크기(월드 유닛).
+    //
+    // <b>재생 중인 프레임의 bounds를 그때그때 읽으면 안 된다</b> - 프레임 세트마다 캔버스
+    // 월드 크기가 다를 수 있기 때문이다(2026-08-24: 보스 돌진 세트는 돌진 궤적까지 담긴
+    // 광각 구도라 PPU를 42로 낮춰 캔버스가 19유닛이 됐다. 이때 bounds를 그대로 쓰면 피격
+    // 이펙트 지름이나 그로기 별 높이가 몸집의 두 배 이상으로 튄다).
+    private float body_visual_width = 1f;
+    private float body_visual_half_height = 0.5f;
+
+    /// <summary>몸통 캔버스 폭(월드 유닛). 재생 중인 프레임과 무관하게 항상 같은 값이다.</summary>
+    protected float BodyVisualWidth => body_visual_width;
+
+    /// <summary>몸통 캔버스 절반 높이(월드 유닛). pivot이 대략 중앙이므로 머리 위 높이로 쓴다.</summary>
+    protected float BodyVisualHalfHeight => body_visual_half_height;
+
     private Transform health_bar_root;
     private Transform health_bar_fill;
     private float health_bar_width;
@@ -852,6 +867,19 @@ public class EnemyUnit : MonoBehaviour
     }
 
     /// <summary>
+    /// 방어력(방어무시 반영)을 적용한 <b>실제로 깎이는 체력</b>. 최소 1은 보장한다.
+    ///
+    /// <see cref="TakeDamage"/>가 쓰는 계산을 그대로 노출한 것이다 - 디스럭터처럼 "이 피해가
+    /// 들어가면 체력이 임계치 밑으로 떨어지는가"를 <b>맞기 전에</b> 판단해야 하는 서브클래스가
+    /// 같은 공식을 복사해 쓰지 않도록 protected로 열어 둔다(2026-08-24 자폭 조건 수정).
+    /// </summary>
+    protected float ComputeEffectiveDamage(float amount, float defIgnorePercent)
+    {
+        float effective_def = Def * (1f - Mathf.Clamp01(defIgnorePercent));
+        return Mathf.Max(1f, amount - effective_def);
+    }
+
+    /// <summary>
     /// 피해를 입힌다. def_ignore_percent(0~1)만큼 방어력이 무시된다
     /// (플라즈마 캐논 0.5 = 방어력 절반 무시, 레이저 피스톨 0.25 등).
     /// 기본값이 0이라 방어무시가 없는 기존 호출부는 그대로 동작한다.
@@ -865,8 +893,7 @@ public class EnemyUnit : MonoBehaviour
         // 0이 넘어오며, 그 경우 어느 무기 카운터도 오르지 않는다.
         if (source_weapon_id > 0) LastDamageWeaponId = source_weapon_id;
 
-        float effective_def = Def * (1f - Mathf.Clamp01(def_ignore_percent));
-        float dmg = Mathf.Max(1f, amount - effective_def);
+        float dmg = ComputeEffectiveDamage(amount, def_ignore_percent);
         CurrentHp -= dmg;
         UpdateHealthBar();
         PlayHitFlash();
@@ -876,7 +903,7 @@ public class EnemyUnit : MonoBehaviour
         // 폭에 비례시켜 좀비/차저/보스 등 규격이 달라도 자동으로 맞는다.
         if (body_sprite_renderer != null)
         {
-            ZombieHitEffect.Play(transform.position, body_sprite_renderer.bounds.size.x * 0.5f,
+            ZombieHitEffect.Play(transform.position, body_visual_width * 0.5f,
                 body_sprite_renderer.sortingOrder + 3);
         }
 
@@ -918,6 +945,11 @@ public class EnemyUnit : MonoBehaviour
         float world_sprite_width = body_sprite_renderer.bounds.size.x;
         float world_sprite_top = body_sprite_renderer.bounds.extents.y; // pivot이 중앙이므로 top = 절반 높이(월드 기준)
 
+        // 프레임 세트마다 캔버스 크기가 다를 수 있으므로, 몸집 기준값은 여기(프리팹 스프라이트)에서
+        // 한 번만 재서 캐시한다(위 body_visual_width 주석 참고).
+        body_visual_width = world_sprite_width;
+        body_visual_half_height = world_sprite_top;
+
         health_bar_width = Mathf.Max(0.05f, (world_sprite_width * healthBarWidthRatio) / scale);
         float thickness = health_bar_width * healthBarThicknessRatio;
         float local_top_offset = (world_sprite_top + healthBarMargin) / scale;
@@ -957,6 +989,26 @@ public class EnemyUnit : MonoBehaviour
         sr.color = color;
         sr.sortingOrder = sortingOrder;
         return sr;
+    }
+
+    /// <summary>
+    /// 몸에 붙어 따라다니는 <b>모든 부속 시각물</b>(체력바, 그로기 별 등 자식 오브젝트)을 끈다.
+    ///
+    /// 사망 연출이 몸 스프라이트만 끄고 오브젝트를 잠시 살려두는 경우(보스의
+    /// <c>DeathSequence</c>는 폭발 이펙트가 끝날 때까지 몇 초 더 살아있다)에 쓴다 - 몸만 끄면
+    /// 체력바와 머리 위 별이 허공에 떠서 그대로 보인다(2026-08-24 사용자 리포트
+    /// "보스 사망 이후에도 보스의 UI나 이펙트 등이 남아있는 문제").
+    /// </summary>
+    protected void HideAttachedVisuals()
+    {
+        if (health_bar_root != null) health_bar_root.gameObject.SetActive(false);
+
+        // 자식으로 붙는 런타임 이펙트(GroggyStarsEffect 등)까지 한꺼번에 끈다. 몸통 렌더러는
+        // 호출부가 직접 다루므로(사망 프레임을 마지막까지 보여주는 경우가 있다) 건드리지 않는다.
+        foreach (SpriteRenderer sr in GetComponentsInChildren<SpriteRenderer>(true))
+        {
+            if (sr != null && sr.gameObject != gameObject) sr.enabled = false;
+        }
     }
 
     /// <summary>MaxHp 대비 현재 체력 비율에 맞춰 채움 바 폭을 갱신하고, 100% 미만일 때만 보이게 한다.</summary>
@@ -1080,9 +1132,14 @@ public class EnemyUnit : MonoBehaviour
 
         if (!modding_manager_cache.CanReceiveMorePartBoxes) return;
 
-        if (Random.value <= modding_manager_cache.Catalog.PartBoxDropChance)
+        // 2026-08-24 사용자 지정("2~3웨이브 마다 1개씩은 나오게") - 카탈로그 값을 그대로 쓰지 않고
+        // ModdingManager가 계산한 실효 확률을 쓴다. 마지막 드랍 이후 지정 웨이브가 지나면 확률이
+        // 크게 올라가고, 그 웨이브에도 안 나오면 웨이브 종료 시점에 1개가 확정 지급된다
+        // (ModdingManager.EffectivePartBoxDropChance 주석 참고).
+        if (Random.value <= modding_manager_cache.EffectivePartBoxDropChance)
         {
             RewardPickupManager.SpawnReward(RewardType.PartBox, 1, transform.position);
+            modding_manager_cache.NotifyPartBoxDropped();
         }
     }
 }

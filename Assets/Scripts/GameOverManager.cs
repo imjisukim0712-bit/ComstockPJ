@@ -26,6 +26,11 @@ public static class GameOverManager
         // 죽으면 그 웨이브의 진행도가 저장되지 않은 채로 남는다.
         UnlockState.Flush();
 
+        // 머리별 최고 기록(점수·웨이브)을 남긴다(2026-08-24, 머리 선택 화면이 보여준다).
+        // 랭킹 제출과 달리 닉네임 입력을 기다리지 않고 여기서 바로 확정한다 - 정산 팝업을
+        // 닫지 않고 알트탭으로 나가버려도 기록이 남아야 한다.
+        HeadRecords.ReportRunFinished(PlayerSession.SelectedRobotId, RunScore.ComputeTotal(), RunState.WaveNumber);
+
         Debug.Log("=== 1회차 게임 오버 ===");
         OnGameOver?.Invoke();
     }

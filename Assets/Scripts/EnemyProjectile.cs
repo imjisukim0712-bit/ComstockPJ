@@ -39,8 +39,11 @@ public class EnemyProjectile : MonoBehaviour
         sr.sprite = sprite;
         sr.sortingOrder = 4;
 
-        // 스프라이트 실측 반지름과 같은 콜라이더를 사용한다. PNG 128px + PPU 400 설정으로
-        // 에셋 자체가 교체 전 빨간 투사체와 같은 0.32유닛 캔버스 크기를 가진다.
+        // 스프라이트 실측 반지름과 같은 콜라이더를 사용한다. 크기는 런타임에서 정규화하지 않고
+        // <b>PNG 해상도 자체</b>로 정한다(PPU는 항상 100) - 2026-08-24 사용자 요청으로
+        // 40px -> 120px(3배)이 되어 캔버스 지름은 projectileVisualSize 1.05 포함 1.26유닛이다.
+        // sprite.bounds는 캔버스(정사각) 기준이라 콜라이더가 실제 그려진 타원(1.20 x 0.71유닛)보다
+        // 세로로 넉넉하다 - 예전 32~40px 시절에는 오차가 0.1유닛 미만이라 그대로 뒀던 부분이다.
         float sprite_radius = Mathf.Max(sprite.bounds.extents.x, sprite.bounds.extents.y, 0.0001f);
 
         SphereCollider col = go.AddComponent<SphereCollider>();

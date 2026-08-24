@@ -164,6 +164,106 @@ public class GameFlowManager : MonoBehaviour
             HandleAiCoreRerollClicked);
     }
 
+    // ── AI 코어 카드 화면 반응형 보정 (2026-08-25 개정) ─────────────────────
+    //
+    // 사용자 리포트: "창모드로 전환시 AI 코어 업그레이드 화면만 반응형 UI가 아닌 짤려서 나옴"
+    // → 그 뒤 "원래 1080p에서는 동일하게 보이는걸 기준으로 만들어야지".
+    //
+    // 원인: 이 패널만 씬에서 <b>고정 픽셀 오프셋</b>으로 배치돼 있다 - 카드 3장이 앵커 (0.5,0.5)에
+    // offset -750~+750px로 놓여 <b>가로 1500px</b>을 요구하는데, 캔버스가 ConstantPixelSize라
+    // 창을 줄이면 캔버스 폭이 그대로 줄어들어(실측 889px) 양옆이 잘렸다.
+    //
+    // <b>해법: 1080p 설계를 그대로 두고 통째로 균등 축소한다.</b> 처음에는 정규화 앵커로 바꿨는데
+    // 그러면 창 크기에 따라 카드 비율·간격이 달라져 <b>1080p에서 보이던 모습과 달라진다</b>(사용자
+    // 지적). 그래서 1920x1080 크기의 래퍼(<see cref="DesignRootName"/>)를 만들어 설계 좌표 그대로인
+    // 자식들을 그 안에 담고, 래퍼의 localScale만 <c>min(캔버스폭/1920, 캔버스높이/1080)</c>로 준다.
+    // → 1080p에서는 배율이 정확히 1이라 <b>기존과 픽셀 단위로 동일</b>하고, 그보다 작거나 큰
+    //   해상도에서는 레이아웃이 그대로 비례 축소/확대된다.
+    //
+    // 리롤 버튼·골드 표시(<see cref="AiCoreExtraButtonsUI"/>)는 원래부터 정규화 앵커라 래퍼 밖에
+    // 둔다 - 안에 넣으면 배율이 곱해져 화면 밖으로 밀려난다.
+    private const string DesignRootName = "DesignRoot_1080p";
+    private const float DesignWidth = 1920f;
+    private const float DesignHeight = 1080f;
+
+    // 씬에서 1080p 설계 좌표로 배치돼 있는 자식들(래퍼 안으로 옮길 대상).
+    private static readonly string[] AiCoreDesignChildren =
+    {
+        "TitleText_BG", "TitleText",
+        "Option1Card", "Option1Text",
+        "Option2Card", "Option2Text",
+        "Option3Card", "Option3Text",
+    };
+
+    private RectTransform ai_core_design_root;
+
+    private void EnsureAiCorePanelResponsive()
+    {
+        if (aiCoreUpgradePanel == null) return;
+
+        var panel = (RectTransform)aiCoreUpgradePanel.transform;
+
+        if (ai_core_design_root == null)
+        {
+            // 에디터 도메인 리로드로 참조가 날아갔을 수 있으니 이름으로 먼저 찾는다
+            // (ModdingPanelUI의 설명 칸에서 겪은 함정과 같은 이유).
+            if (panel.Find(DesignRootName) is RectTransform found) ai_core_design_root = found;
+        }
+
+        if (ai_core_design_root == null)
+        {
+            var go = new GameObject(DesignRootName, typeof(RectTransform));
+            go.layer = panel.gameObject.layer;
+
+            var root = (RectTransform)go.transform;
+            root.SetParent(panel, false);
+            root.anchorMin = new Vector2(0.5f, 0.5f);
+            root.anchorMax = new Vector2(0.5f, 0.5f);
+            root.pivot = new Vector2(0.5f, 0.5f);
+            root.sizeDelta = new Vector2(DesignWidth, DesignHeight);
+            root.anchoredPosition = Vector2.zero;
+            root.SetAsFirstSibling(); // 리롤 버튼·골드 표시가 카드 위에 그려지도록
+
+            // 설계 좌표 그대로인 씬 자식들을 래퍼 안으로 옮긴다(worldPositionStays=false라
+            // 앵커/오프셋이 그대로 유지된다 - 래퍼가 1080p 캔버스와 같은 크기라 좌표가 맞는다).
+            foreach (string name in AiCoreDesignChildren)
+            {
+                if (panel.Find(name) is RectTransform child) child.SetParent(root, false);
+            }
+
+            ai_core_design_root = root;
+        }
+
+        ApplyAiCoreDesignScale();
+    }
+
+    /// <summary>
+    /// 설계 래퍼의 배율을 현재 캔버스 크기에 맞춘다. 창 크기는 언제든 바뀔 수 있어
+    /// 화면이 열려 있는 동안 매 프레임 갱신한다(<see cref="ModdingPanelUI"/>가 격자 칸 크기를
+    /// 매 프레임 맞추는 것과 같은 이유 - 정비 중에도 Update는 계속 호출된다).
+    /// </summary>
+    private void ApplyAiCoreDesignScale()
+    {
+        if (ai_core_design_root == null) return;
+
+        var canvasRect = ai_core_design_root.parent as RectTransform;
+        if (canvasRect == null) return;
+
+        float width = canvasRect.rect.width;
+        float height = canvasRect.rect.height;
+        if (width <= 1f || height <= 1f) return;
+
+        float scale = Mathf.Min(width / DesignWidth, height / DesignHeight);
+        if (scale <= 0f) return;
+
+        ai_core_design_root.localScale = new Vector3(scale, scale, 1f);
+    }
+
+    private void Update()
+    {
+        if (aiCoreUpgradePanel != null && aiCoreUpgradePanel.activeSelf) ApplyAiCoreDesignScale();
+    }
+
     private void Start()
     {
         if (waveManager != null) waveManager.OnWaveEnded += HandleWaveEnded;
@@ -500,6 +600,7 @@ public class GameFlowManager : MonoBehaviour
         CloseAllIntermissionPanels();
         SetCombatHudVisible(false);
 
+        EnsureAiCorePanelResponsive();
         EnsureAiCoreExtraButtons();
 
         // 카드 화면을 새로 열 때마다 리롤 누적 비용을 기본값으로 되돌린다(사용자 확정).

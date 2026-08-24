@@ -136,7 +136,27 @@ public static class RunState
 
     public static event Action OnChanged;
 
+    /// <summary>
+    /// AI 코어 경험치가 <b>실제로 들어온</b> 순간(획득량 전달). 2026-08-24 "포근한 치유" 디스크의
+    /// 발동 시점이 "적 처치"에서 "경험치 획득"으로 바뀌면서 신설했다
+    /// (<see cref="DiscEffectRuntime"/>가 구독한다).
+    ///
+    /// <see cref="OnChanged"/>로는 대신할 수 없다 - 그쪽은 골드/파츠/무기 등 무엇이든 바뀌면
+    /// 울리는 범용 신호라 "경험치를 얼마나 먹었는지"를 알 수 없다.
+    /// 다른 static 이벤트와 같은 규칙으로 <see cref="Reset"/>에서 null로 비우지 않는다.
+    /// </summary>
+    public static event Action<int> OnCoreExpGained;
+
     public static void NotifyChanged() => OnChanged?.Invoke();
+
+    /// <summary>경험치를 더하고 획득 이벤트를 발행한다(획득 경로는 항상 이 메서드를 쓴다).</summary>
+    public static void AddCoreExp(int amount)
+    {
+        if (amount <= 0) return;
+
+        CoreExp += amount;
+        OnCoreExpGained?.Invoke(amount);
+    }
 
     // 씬 재시작(재시도) 시 이전 판의 런 진행 상태가 남아있지 않도록 초기화할 때 사용.
     // OnChanged는 여기서 null로 비우지 않는다 - 이 Reset()은 PlayerRobotController.Awake()에서

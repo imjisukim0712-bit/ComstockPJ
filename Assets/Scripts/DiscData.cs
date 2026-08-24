@@ -22,8 +22,15 @@ public enum DiscEffectType
     /// <summary>적 처치 시 duration초 동안 방어력(amountA, 절대값)과 회피율(amountB, %p)이 함께 오른다.</summary>
     OnKillTempDefDodge,
 
-    /// <summary>적 처치 시 flatValue만큼 즉시 회복.</summary>
-    OnKillHeal,
+    /// <summary>
+    /// <b>경험치를 획득할 때</b> flatValue만큼 즉시 회복(2026-08-24 사용자 지정으로 발동 시점이
+    /// "적 처치"에서 "경험치 획득"으로 바뀌었다 - 처치해도 경험치가 안 나오는 경우가 절반이라
+    /// (EnemyUnit.ExpDropChance) 회복 빈도가 절반으로 줄어든 셈이다).
+    ///
+    /// enum 이름만 바꿨고 <b>순서(=직렬화되는 정수 4)는 그대로</b>다 - ShopCatalog.asset에
+    /// effectType이 숫자로 들어있어 중간에 끼워 넣거나 순서를 바꾸면 다른 효과로 어긋난다.
+    /// </summary>
+    OnExpGainHeal,
 
     /// <summary>적을 처치할 때마다 statA가 amountA씩 누적된다(cap까지만).</summary>
     OnKillStackStat,

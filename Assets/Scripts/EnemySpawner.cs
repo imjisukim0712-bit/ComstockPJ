@@ -67,12 +67,16 @@ public class EnemySpawner : MonoBehaviour
     // spawn_pool_buffer와 <b>같은 인덱스</b>로 짝지어지는 추첨 비중(가중 추첨용).
     private readonly List<float> spawn_weight_buffer = new List<float>();
 
+    // 이번 웨이브에 몬스터ID별로 몇 마리 스폰했는지(신규 몬스터 등장 완화용, 2026-08-24).
+    private readonly Dictionary<int, int> spawned_this_wave = new Dictionary<int, int>();
+
     /// <summary>WaveManager가 웨이브 시작 시 호출해 상위 몬스터 해금 여부를 갱신한다.
-    /// 리더 개체수 상한도 웨이브 단위라 여기서 함께 초기화한다.</summary>
+    /// 리더 개체수 상한·신규 몬스터 상한도 웨이브 단위라 여기서 함께 초기화한다.</summary>
     public void SetCurrentWave(int wave)
     {
         currentWave = wave;
         leaders_spawned_this_wave = 0;
+        spawned_this_wave.Clear();
     }
 
     /// <summary>현재 웨이브의 몬스터 체력·공격력 배율. HUD/검증용으로도 조회할 수 있게 공개한다.</summary>
@@ -105,6 +109,19 @@ public class EnemySpawner : MonoBehaviour
              "0 이하면 비활성(예전 동작). 이 스폰만 상한을 무시하지만, 웨이브 길이가 유한하므로 " +
              "무한정 쌓이지는 않는다(60초 웨이브 기준 최대 20마리)")]
     [SerializeField] private float trickleSpawnInterval = 3f;
+
+    [Header("신규 몬스터 등장 완화 (2026-08-24 사용자 지정)")]
+    [Tooltip("상위 몬스터가 처음 해금된 웨이브에 그 종류가 등장할 수 있는 최대 마리 수. " +
+             "사용자 지정: '웨이브마다 새로운 좀비가 나올때, 3~4마리가 나오고 웨이브가 진행될수록 " +
+             "조금씩 많아지는 느낌이어야 함. 지금은 갑자기 너무 많이 나와버림'")]
+    [SerializeField] private int newMonsterFirstWaveCount = 4;
+
+    [Tooltip("해금 이후 웨이브가 하나 지날 때마다 위 상한에 더해지는 수. " +
+             "예: 첫 웨이브 4마리 → 다음 웨이브 6 → 그 다음 8 ...")]
+    [SerializeField] private int newMonsterCountGrowthPerWave = 2;
+
+    [Tooltip("상한이 이 값을 넘으면 제한을 아예 풀어버린다(후반 물량을 얇게 만들지 않기 위한 상한 해제선)")]
+    [SerializeField] private int newMonsterCountCapRelease = 30;
 
     [Header("리더 개체수 제한 (2026-08-21 사용자 지정 - 무리 동반 기믹 삭제와 함께 도입)")]
     [Tooltip("이 웨이브 번호보다 낮은 웨이브에서는 리더 등장 수를 아래 상한으로 제한한다. " +
@@ -225,10 +242,12 @@ public class EnemySpawner : MonoBehaviour
 
                 int monsterId = PickWeightedMonsterId();
 
-                // 리더가 웨이브당 상한에 걸리면 그 슬롯을 비우지 않고 리더를 뺀 나머지 후보로
-                // 즉시 다시 뽑는다(= 리더 대신 다른 좀비가 그 자리를 채운다).
-                if (IsLeaderMonsterId(monsterId) && !CanSpawnMoreLeadersThisWave())
-                    monsterId = PickWeightedMonsterId(excludeLeader: true);
+                // 웨이브당 상한(리더 상한 / 신규 몬스터 등장 완화)에 걸리면 그 슬롯을 비우지 않고
+                // 상한에 걸린 종류를 뺀 나머지 후보로 즉시 다시 뽑는다
+                // (= 그 자리를 다른 좀비가 채운다. 사용자 지정: "다른 좀비들을 더 많이 스폰하는
+                //   걸로 난이도 조절해" - 2026-08-21 리더 상한에서 확립한 규칙을 그대로 확장).
+                if (!CanSpawnMoreThisWave(monsterId))
+                    monsterId = PickWeightedMonsterId(excludeCapped: true);
 
                 Vector3 position = GetRandomSpawnPosition();
 
@@ -236,6 +255,7 @@ public class EnemySpawner : MonoBehaviour
                 if (unit == null) continue;
 
                 alive_enemies.Add(unit);
+                CountSpawned(monsterId);
                 if (unit is LeaderUnit) leaders_spawned_this_wave++;
             }
         }
@@ -276,20 +296,21 @@ public class EnemySpawner : MonoBehaviour
     /// 가중 추첨으로 몬스터ID 하나를 고른다. 모든 비중이 0이면 균등 추첨으로 폴백한다
     /// (인스펙터에서 실수로 전부 0을 넣어도 스폰이 멈추지 않도록).
     /// </summary>
-    /// <param name="excludeLeader">true면 후보에서 리더를 빼고 다시 뽑는다(리더 웨이브당
-    /// 상한에 걸렸을 때 그 자리를 다른 몬스터로 채우기 위한 재추첨용).</param>
-    private int PickWeightedMonsterId(bool excludeLeader = false)
+    /// <param name="excludeCapped">true면 <b>이번 웨이브 상한에 걸린 종류</b>를 빼고 다시 뽑는다
+    /// (리더 웨이브당 상한 / 신규 몬스터 등장 완화에 걸렸을 때 그 자리를 다른 몬스터로 채우기
+    /// 위한 재추첨용). 2026-08-24에 리더 전용(excludeLeader)에서 일반화했다.</param>
+    private int PickWeightedMonsterId(bool excludeCapped = false)
     {
         float total = 0f;
         for (int i = 0; i < spawn_weight_buffer.Count; i++)
         {
-            if (excludeLeader && IsLeaderMonsterId(spawn_pool_buffer[i])) continue;
+            if (excludeCapped && !CanSpawnMoreThisWave(spawn_pool_buffer[i])) continue;
             total += spawn_weight_buffer[i];
         }
 
         if (total <= 0f)
         {
-            // excludeLeader가 폴백 후보까지 다 걸러내는 극단적인 경우(인스펙터 설정 오류)에는
+            // excludeCapped가 폴백 후보까지 다 걸러내는 경우(모든 종류가 상한에 걸림)에는
             // 제외 없이 원래 폴백(균등 추첨)으로 되돌아간다 - 스폰 자체가 멈추지 않게.
             return spawn_pool_buffer[UnityEngine.Random.Range(0, spawn_pool_buffer.Count)];
         }
@@ -297,7 +318,7 @@ public class EnemySpawner : MonoBehaviour
         float roll = UnityEngine.Random.value * total;
         for (int i = 0; i < spawn_pool_buffer.Count; i++)
         {
-            if (excludeLeader && IsLeaderMonsterId(spawn_pool_buffer[i])) continue;
+            if (excludeCapped && !CanSpawnMoreThisWave(spawn_pool_buffer[i])) continue;
 
             roll -= spawn_weight_buffer[i];
             if (roll <= 0f) return spawn_pool_buffer[i];
@@ -305,6 +326,61 @@ public class EnemySpawner : MonoBehaviour
 
         // 부동소수점 오차로 끝까지 떨어지지 않은 경우의 안전망
         return spawn_pool_buffer[spawn_pool_buffer.Count - 1];
+    }
+
+    // ── 웨이브당 종류별 상한 (2026-08-24 신규 몬스터 등장 완화) ─────────────
+    //
+    // 사용자 리포트: "웨이브마다 새로운 좀비가 나올때, 3~4마리가 나오고 웨이브가 진행될수록
+    // 조금씩 많아지는 느낌이어야 함. 지금은 갑자기 너무 많이 나와버림".
+    //
+    // 예전에는 해금 웨이브가 되는 순간 그 종류가 <b>가중치 그대로</b> 추첨에 합류해서, 해금
+    // 웨이브부터 곧바로 화면의 상당 비율을 새 몬스터가 차지했다(가중치 0.5로 낮춰도 배치·간격이
+    // 웨이브마다 늘어나므로 절대 수는 많다). 이제 <b>종류별 마리 수 상한</b>을 두고 해금 이후
+    // 웨이브마다 조금씩 올린다 - 상한에 걸린 종류가 뽑히면 다른 종류로 다시 뽑으므로 총 물량
+    // (스폰 압력)은 그대로다.
+
+    private void CountSpawned(int monsterId)
+    {
+        spawned_this_wave.TryGetValue(monsterId, out int count);
+        spawned_this_wave[monsterId] = count + 1;
+    }
+
+    /// <summary>이 종류를 이번 웨이브에 더 스폰해도 되는지(리더 상한 + 신규 몬스터 상한).</summary>
+    private bool CanSpawnMoreThisWave(int monsterId)
+    {
+        if (IsLeaderMonsterId(monsterId) && !CanSpawnMoreLeadersThisWave()) return false;
+
+        int cap = GetPerWaveCap(monsterId);
+        if (cap <= 0) return true; // 상한 없음(기본 좀비 또는 해제선을 넘긴 종류)
+
+        spawned_this_wave.TryGetValue(monsterId, out int spawned);
+        return spawned < cap;
+    }
+
+    /// <summary>
+    /// 이번 웨이브에 이 종류가 등장할 수 있는 최대 마리 수. 0 이하면 제한 없음이다.
+    /// <see cref="unlockSchedule"/>로 해금되는 상위 몬스터에만 적용한다
+    /// (기본 좀비는 항상 물량을 채우는 역할이라 제한하지 않는다).
+    /// </summary>
+    private int GetPerWaveCap(int monsterId)
+    {
+        if (newMonsterFirstWaveCount <= 0) return 0; // 기능 비활성
+
+        int unlockWave = -1;
+        foreach (MonsterUnlockEntry entry in unlockSchedule)
+        {
+            if (entry.monsterId == monsterId) { unlockWave = entry.unlockWave; break; }
+        }
+
+        if (unlockWave < 0) return 0; // 스케줄에 없는 종류(기본 좀비 등)
+
+        int wavesSinceUnlock = Mathf.Max(0, currentWave - unlockWave);
+        int cap = newMonsterFirstWaveCount + Mathf.Max(0, newMonsterCountGrowthPerWave) * wavesSinceUnlock;
+
+        // 상한이 충분히 커지면 아예 풀어준다 - 후반 물량이 이 제한 때문에 얇아지지 않도록.
+        if (newMonsterCountCapRelease > 0 && cap >= newMonsterCountCapRelease) return 0;
+
+        return cap;
     }
 
     /// <summary>몬스터ID→행동 컴포넌트 매핑에서 LeaderUnit으로 등록된 ID인지 판별한다

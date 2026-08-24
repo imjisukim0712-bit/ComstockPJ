@@ -168,10 +168,18 @@ public struct PartData
     {
         string sign = amount > 0f ? "+" : "-";
         float shown = Mathf.Abs(amount);
-        bool percent = stat == StatType.CritChance || stat == StatType.Avoid ||
-                       stat == StatType.GoldGain || stat == StatType.ExpGain;
 
-        return percent
+        // 2026-08-24 사용자 지정("%로 적용되는 스탯들은 숫자뒤에 % 붙여줘") - 판정 기준을
+        // StatFormat으로 모아 AI 코어 카드(AiCoreUpgradePool.BuildEffectLine)와 같은 분류를
+        // 쓰게 했다. 예전에는 여기 목록에 사거리 증폭(WeaponRangeBonus)과 치명타 피해
+        // (CritDamage, 비율 단위)가 빠져 있어서 "사거리 증폭 +10"처럼 단위 없이 나왔다.
+        //
+        // 설명 문구의 <b>수치 자체는 반올림하지 않는다</b>(사용자 지정: "아이템 설명 등 자체를
+        // 정수로 바꿔버리면 안됨") - 기획 수치를 그대로 보여줘야 하므로 소수점을 유지한다.
+        if (stat == StatType.CritDamage)
+            return $"{StatTypeNames.ToKorean(stat)} {sign}{shown * 100f:0.##}%";
+
+        return StatFormat.IsPercentStat(stat)
             ? $"{StatTypeNames.ToKorean(stat)} {sign}{shown:0.##}%"
             : $"{StatTypeNames.ToKorean(stat)} {sign}{shown:0.##}";
     }

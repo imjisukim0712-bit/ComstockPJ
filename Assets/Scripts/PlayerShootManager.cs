@@ -615,6 +615,64 @@ public class PlayerShootManager : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// 두 소켓의 <b>무기만</b> 서로 맞바꾼다(2026-08-24 사용자 요청: "장착한 무기 서로 위치
+    /// 교체기능 만들어줘").
+    ///
+    /// 소켓 자체(rig_point/muzzle_point 등 씬에 배치된 손 위치)와 소켓에 낀 <b>파츠</b>는 그대로
+    /// 두고 무기 ID만 교환한다 - 소켓마다 파츠 보정(공격속도·공격력·치명타 등)이 달라서, 무기를
+    /// 옮기는 것만으로 "어떤 무기에 어떤 소켓 보정을 줄지" 조합을 바꿀 수 있게 하는 것이 이
+    /// 기능의 목적이다. 무기가 없는 소켓과도 교체할 수 있다(= 그 소켓으로 옮기기).
+    /// </summary>
+    /// <returns>실제로 바꿨으면 true</returns>
+    public bool SwapWeapons(int socketA, int socketB)
+    {
+        if (socketA == socketB) return false;
+        if (socketA < 0 || socketA >= weapon_slots.Count) return false;
+        if (socketB < 0 || socketB >= weapon_slots.Count) return false;
+
+        // WeaponSlot은 struct라 꺼내서 고친 뒤 다시 넣어야 반영된다(EquipWeapon과 같은 규칙).
+        WeaponSlot a = weapon_slots[socketA];
+        WeaponSlot b = weapon_slots[socketB];
+
+        int idA = a.weapon_id;
+        int idB = b.weapon_id;
+        if (idA == idB) return false;
+
+        a.weapon_id = idB;
+        b.weapon_id = idA;
+        weapon_slots[socketA] = a;
+        weapon_slots[socketB] = b;
+
+        // 무기 데이터 캐시도 함께 옮긴다(둘 중 한쪽이 비어 있을 수 있으므로 제거/설정을 나눈다).
+        bool hasA = weapon_data_by_slot.TryGetValue(socketA, out WeaponData dataA);
+        bool hasB = weapon_data_by_slot.TryGetValue(socketB, out WeaponData dataB);
+
+        if (hasB) weapon_data_by_slot[socketA] = dataB; else weapon_data_by_slot.Remove(socketA);
+        if (hasA) weapon_data_by_slot[socketB] = dataA; else weapon_data_by_slot.Remove(socketB);
+
+        // 장착 기록(등급 포함)도 같은 순서로 맞바꾼다 - 상점/게임오버 요약이 이 목록을 읽는다.
+        int needed = Mathf.Max(socketA, socketB);
+        while (RunState.EquippedWeapons.Count <= needed)
+        {
+            RunState.EquippedWeapons.Add(new RunState.EquippedWeapon { WeaponId = 0, Grade = ItemGrade.Normal });
+        }
+
+        RunState.EquippedWeapon recordA = RunState.EquippedWeapons[socketA];
+        RunState.EquippedWeapons[socketA] = RunState.EquippedWeapons[socketB];
+        RunState.EquippedWeapons[socketB] = recordA;
+
+        RefreshWeaponVisual(socketA);
+        RefreshWeaponVisual(socketB);
+
+        // 교체 직후 이전 무기의 남은 쿨다운이 이어지지 않도록 양쪽 다 초기화한다(EquipWeapon과 동일).
+        GetOrCreateRuntimeState(socketA).next_fire_time = 0f;
+        GetOrCreateRuntimeState(socketB).next_fire_time = 0f;
+
+        RunState.NotifyChanged();
+        return true;
+    }
+
     // 데이터테이블에 적힌 이미지 이름으로 Resources 폴더에서 스프라이트를 찾아온다 (캐시 사용)
     private Sprite ResolveWeaponSprite(string sprite_name, WeaponData weapon)
     {
@@ -1118,7 +1176,16 @@ public class PlayerShootManager : MonoBehaviour
         state.melee_thrust_active = true;
         state.melee_thrust_start_time = Time.time;
         state.melee_thrust_duration = Mathf.Max(0.01f, weapon.weapon_duration);
-        state.melee_thrust_distance = weapon.ProjectileSize; // weapon_atsize를 찌르는 거리로 재활용
+        // 찌르는 거리 = weapon_atsize x <b>사거리 보너스</b>(2026-08-24 사용자 리포트
+        // "근접무기에 사거리 증가가 적용되지 않음").
+        //
+        // 근접무기는 2026-08-13부터 "찌르는 동작 자체가 판정"이라 이 거리가 곧 실제 사거리다.
+        // 그런데 여기서는 weapon_atsize를 그대로 써서, AI 코어 "사거리 증폭"이나 머리 효과
+        // (픽시의 근접 사거리 x2)가 <b>탄을 쓰는 무기에만</b> 적용되고 있었다. 조준·발사 판정에
+        // 쓰는 감지거리(GetDetectRange)는 이미 같은 배율을 받고 있었으므로, "멀리서 조준은
+        // 하는데 칼은 그만큼 안 나가는" 어긋남까지 함께 고쳐진다.
+        state.melee_thrust_distance = weapon.ProjectileSize * GetWeaponRangeBonusMultiplier()
+                                      * HeadEffects.RangeMultiplier(weapon);
         state.melee_thrust_home_local = pivot.localPosition;
         state.melee_thrust_direction = direction;
 
