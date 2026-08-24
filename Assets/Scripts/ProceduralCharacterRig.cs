@@ -235,8 +235,16 @@ public class ProceduralCharacterRig : MonoBehaviour
     private static Sprite spiderLowerSprite;
     private static Sprite spiderTorsoSprite;
     private readonly SpiderLeg[] spiderLegs = new SpiderLeg[4];
-    private float spiderThighLength;
-    private float spiderShinLength;
+
+    // ── 거미 다리 기하: Prototype/SpiderLegRig.html의 LEG_DEFS 실측값 ──────────────
+    // 고관절 위치는 밑판(body.png 827x509) 원본 픽셀 기준 비율이라, 밑판 크기가 바뀌어도
+    // 저절로 따라온다. 뒷다리(sy 음수 = 화면 위)는 멀리 있어 얕게, 앞다리는 가까워 깊게 짚는다.
+    private const float SpiderRearHipXRatio = 327.75f / 827f;
+    private const float SpiderRearHipYRatio = 163.10f / 509f;
+    private const float SpiderFrontHipXRatio = 313.85f / 827f;
+    private const float SpiderFrontHipYRatio = 170.55f / 509f;
+    private const float SpiderRearLegScale = 0.94f, SpiderRearSpread = 0.56f, SpiderRearDrop = 0.30f;
+    private const float SpiderFrontLegScale = 1.06f, SpiderFrontSpread = 0.50f, SpiderFrontDrop = 0.52f;
 
     private class SpiderLeg
     {
@@ -244,6 +252,11 @@ public class ProceduralCharacterRig : MonoBehaviour
         public Transform knee;
         public Vector2 hipLocalPos;   // 고정(보행 중에도 움직이지 않는다 - 발만 움직인다)
         public Vector2 idealLocalPos; // 대기 자세 발 목표(몸통 기준 로컬)
+
+        // 앞/뒤 다리가 원근 배율(0.94 / 1.06)로 서로 다른 크기라 뼈 길이도 다리마다 다르다.
+        public float thighLength;
+        public float shinLength;
+        public bool isRear;
 
         // 발은 <b>월드 좌표</b>로 들고 있어야 한다 - 몸이 걸어가는 동안 발은 "그 자리에 심겨"
         // 있다가 목표에서 너무 멀어지면 그제서야 다음 자리로 옮긴다. 로컬(몸통 기준) 좌표로
@@ -271,19 +284,18 @@ public class ProceduralCharacterRig : MonoBehaviour
     [SerializeField] private float rocketBodyYOffset = 0f;
 
     [Header("다리 비주얼 - 거미 (2026-08-21 다리 기획서 Ver02, 실제 IK 리깅)")]
-    [Tooltip("거미 다리 파츠(upper_leg/lower_leg) 전체 크기 배율. 원본 이미지가 몸통(250px)보다 " +
-             "훨씬 큰 캔버스(허벅지 405px/정강이 458px)로 그려져 있어 별도 배율이 필요하다")]
-    [SerializeField] private float spiderLegScale = 0.34f;
-    [Tooltip("좌우 고관절 간격의 절반(유닛). 2족 다리의 hipSeparation보다 넓게 잡아야 4다리가 " +
-             "겹치지 않는다")]
-    [SerializeField] private float spiderHipSpreadX = 0.62f;
-    [Tooltip("앞/뒤 다리 쌍의 세로 스태거(유닛) - 2족 다리의 Leg_Front/Leg_Back 관례와 같은 " +
-             "이유로 깊이감을 준다")]
-    [SerializeField] private float spiderHipFrontBackY = 0.18f;
-    [Tooltip("대기 시 발이 고관절에서 바깥으로 얼마나 뻗는지(다리 최대 도달거리에 대한 비율)")]
-    [SerializeField] private float spiderStanceSpreadRatio = 0.62f;
-    [Tooltip("대기 시 발이 고관절에서 얼마나 아래(지면)로 내려가는지(다리 최대 도달거리에 대한 비율)")]
-    [SerializeField] private float spiderStanceDropRatio = 0.5f;
+    [Tooltip("거미 다리 파츠(upper_leg/lower_leg) 기본 크기 배율. 프로토타입(Prototype/SpiderLegRig.html)은 " +
+             "밑판(body.png)과 다리에 같은 assetScale을 쓰고 앞/뒤 다리에만 0.94/1.06 원근 배율을 곱한다 - " +
+             "그래서 <b>이 값은 spiderTorsoScale과 항상 같게 유지</b>해야 프로토타입 비율이 지켜진다. " +
+             "둘을 같은 비율로 올리면 조립체 전체가 커진다(로봇 머리가 밑판보다 크기 때문에, 너무 작으면 " +
+             "뒤쪽 다리 한 쌍이 머리에 완전히 가려진다 - 2026-08-24 사용자 리포트)")]
+    [SerializeField] private float spiderLegScale = 0.32f;
+    [Tooltip("대기 자세에서 발이 바깥으로 뻗는 양의 <b>배율</b>(1 = 프로토타입 기본값). " +
+             "실제 기준값은 앞/뒤 다리별로 다르다(뒤 0.56 / 앞 0.50)")]
+    [SerializeField] private float spiderStanceSpreadRatio = 1f;
+    [Tooltip("대기 자세에서 발이 아래로 내려가는 양의 <b>배율</b>(1 = 프로토타입 기본값). " +
+             "실제 기준값은 앞/뒤 다리별로 다르다(뒤 0.30 / 앞 0.52 - 뒷다리는 멀리 있어 얕게 짚는다)")]
+    [SerializeField] private float spiderStanceDropRatio = 1f;
     [Tooltip("발이 목표 지점에서 이 거리(유닛) 이상 벌어지면 그 다리가 스텝을 시작한다")]
     [SerializeField] private float spiderStepThreshold = 0.16f;
     [Tooltip("스텝 진행 속도(1/스텝 시간) - 클수록 빠르게 사삭거린다")]
@@ -295,8 +307,9 @@ public class ProceduralCharacterRig : MonoBehaviour
     [Tooltip("거미 다리 장착 시 머리(몸통) 위치를 다리에 맞춰 위/아래로 미세 조정한다")]
     [SerializeField] private float spiderBodyYOffset = 0f;
     [Tooltip("거미 다리 밑판(body.png, 호버 패드 하우징) 크기 배율. 원본이 몸통(250px)보다 " +
-             "훨씬 큰 캔버스(827px)라 별도 배율이 필요하다")]
-    [SerializeField] private float spiderTorsoScale = 0.2f;
+             "훨씬 큰 캔버스(827px)라 별도 배율이 필요하다. <b>spiderLegScale과 항상 같은 값으로 유지</b>할 것 " +
+             "- 고관절 위치가 이 밑판 크기 비율에서 계산되므로 둘이 어긋나면 다리가 밑판에서 떨어진다")]
+    [SerializeField] private float spiderTorsoScale = 0.32f;
     [Tooltip("거미 다리 밑판의 세로 위치 미세 조정")]
     [SerializeField] private float spiderTorsoYOffset = 0f;
 
@@ -744,8 +757,9 @@ public class ProceduralCharacterRig : MonoBehaviour
         Vector2 kneeLocalOnLower = AnchorToLocal(spiderLowerSprite, kneeAnchorLowerN);
         Vector2 footLocalOnLower = AnchorToLocal(spiderLowerSprite, footAnchorN);
 
-        spiderThighLength = Vector2.Distance(hipLocalOnSprite, kneeLocalOnUpper) * spiderLegScale;
-        spiderShinLength = Vector2.Distance(kneeLocalOnLower, footLocalOnLower) * spiderLegScale;
+        // 스프라이트 원본 기준 뼈 길이(배율 미적용). 실제 길이는 다리별 원근 배율을 곱해서 쓴다.
+        float thighLengthBase = Vector2.Distance(hipLocalOnSprite, kneeLocalOnUpper);
+        float shinLengthBase = Vector2.Distance(kneeLocalOnLower, footLocalOnLower);
 
         float thighTilt = TiltToDown(kneeLocalOnUpper - hipLocalOnSprite);
         float shinTilt = TiltToDown(footLocalOnLower - kneeLocalOnLower);
@@ -767,43 +781,82 @@ public class ProceduralCharacterRig : MonoBehaviour
             SpriteRenderer torsoRenderer = torsoGo.AddComponent<SpriteRenderer>();
             torsoRenderer.sprite = spiderTorsoSprite;
             torsoRenderer.sortingLayerName = sortingLayerName;
-            torsoRenderer.sortingOrder = bodySortingOrder - 1; // 머리보다 뒤, 다리(-3/-4)보다는 앞
+            // 프로토타입 draw() 순서: 뒷다리 → 밑판 → 앞다리. 밑판이 그 사이에 끼어야
+            // 뒷다리는 몸통 뒤로, 앞다리는 몸통 앞으로 보이는 컨셉 아트의 깊이감이 나온다.
+            torsoRenderer.sortingOrder = bodySortingOrder - 4;
         }
 
-        // 4개 고관절(좌/우 x 앞/뒤). standHipY를 기준으로 살짝 위/아래로 스태거해 깊이감을 준다 -
-        // 2족 다리의 Leg_Front/Leg_Back 관례와 같은 이유다. 고관절 자체는 보행 중에도 고정이고
-        // (숨쉬기/보행 bob이 없다), 발만 반응형으로 움직인다.
-        Vector2[] hipOffsets =
-        {
-            new Vector2(-spiderHipSpreadX, standHipY + spiderHipFrontBackY), // 앞-좌
-            new Vector2( spiderHipSpreadX, standHipY + spiderHipFrontBackY), // 앞-우
-            new Vector2(-spiderHipSpreadX, standHipY - spiderHipFrontBackY), // 뒤-좌
-            new Vector2( spiderHipSpreadX, standHipY - spiderHipFrontBackY), // 뒤-우
-        };
-        // 대각선 짝(거미/사족 보행의 정석): 앞좌+뒤우 = 짝0, 앞우+뒤좌 = 짝1
-        int[] pairOf = { 0, 1, 1, 0 };
+        // 4개 고관절. 위치는 밑판(body.png) 원본 픽셀 비율에서 뽑으므로 밑판 크기를 바꾸면
+        // 저절로 따라온다. 고관절 자체는 보행 중에도 고정이고(숨쉬기/보행 bob이 없다), 발만 움직인다.
+        float torsoW = spiderTorsoSprite != null ? spiderTorsoSprite.bounds.size.x * spiderTorsoScale : 1.65f;
+        float torsoH = spiderTorsoSprite != null ? spiderTorsoSprite.bounds.size.y * spiderTorsoScale : 1.02f;
+        float torsoCenterY = standHipY + spiderTorsoYOffset;
 
-        float maxReach = spiderThighLength + spiderShinLength;
+        // 프로토타입 LEG_DEFS 순서: RL(뒤-좌), RR(뒤-우), FL(앞-좌), FR(앞-우).
+        // 대각선 걸음 짝(GAIT_GROUPS): 뒤좌+앞우 = 짝0, 뒤우+앞좌 = 짝1
+        bool[] rearOf = { true, true, false, false };
+        float[] sideOf = { -1f, +1f, -1f, +1f };
+        int[] pairOf = { 0, 1, 1, 0 };
 
         for (int i = 0; i < 4; i++)
         {
-            var leg = new SpiderLeg { hipLocalPos = hipOffsets[i], pairIndex = pairOf[i] };
+            bool isRear = rearOf[i];
+            float side = sideOf[i];
+            bool mirror = side < 0f;   // 프로토타입 drawPivoted(mirror = hip.x < body.x)와 동일 조건
 
-            float side = Mathf.Sign(hipOffsets[i].x);
-            Vector2 idealOffset = new Vector2(side * maxReach * spiderStanceSpreadRatio, -maxReach * spiderStanceDropRatio);
-            leg.idealLocalPos = leg.hipLocalPos + idealOffset;
+            float legScale = spiderLegScale * (isRear ? SpiderRearLegScale : SpiderFrontLegScale);
+            float hipX = side * (isRear ? SpiderRearHipXRatio : SpiderFrontHipXRatio) * torsoW;
+            float hipY = torsoCenterY + (isRear ? +SpiderRearHipYRatio : -SpiderFrontHipYRatio) * torsoH;
+
+            var leg = new SpiderLeg
+            {
+                pairIndex = pairOf[i],
+                isRear = isRear,
+                hipLocalPos = new Vector2(hipX, hipY),
+                thighLength = thighLengthBase * legScale,
+                shinLength = shinLengthBase * legScale,
+            };
+
+            // 대기 자세 발 목표: 바깥으로(spread)와 아래로(drop)를 따로 정하는 것이 핵심이다 -
+            // 길이 하나로 정하면 발이 수평으로 멀리 나가 발톱이 눕고 기어가는 모양이 된다.
+            float reach = leg.thighLength + leg.shinLength;
+            float dx = reach * (isRear ? SpiderRearSpread : SpiderFrontSpread) * spiderStanceSpreadRatio;
+            float dy = -reach * (isRear ? SpiderRearDrop : SpiderFrontDrop) * spiderStanceDropRatio;
+
+            // 목표가 다리 도달 범위를 벗어나면 방향을 유지한 채 길이만 줄인다(프로토타입과 동일).
+            float chord = Mathf.Sqrt(dx * dx + dy * dy);
+            float clamped = Mathf.Clamp(chord, Mathf.Abs(leg.thighLength - leg.shinLength) * 1.06f, reach * 0.985f);
+            if (chord > 1e-5f && !Mathf.Approximately(clamped, chord))
+            {
+                float k = clamped / chord;
+                dx *= k; dy *= k;
+            }
+            leg.idealLocalPos = leg.hipLocalPos + new Vector2(side * dx, dy);
+
+            // 왼쪽 다리는 스프라이트를 좌우로 뒤집는다. flipX만 켜면 앵커(고관절 볼)가 반대편으로
+            // 가버리므로 <b>앵커도 함께 미러링</b>하고 기울기 보정각도 부호를 뒤집어야 한다
+            // (2족 발의 MaybeMirrorX + footSpriteFlipX와 같은 원리).
+            Vector2 thighAnchor = mirror
+                ? AnchorToLocal(spiderUpperSprite, new Vector2(1f - hipAnchorN.x, hipAnchorN.y))
+                : hipLocalOnSprite;
+            Vector2 shinAnchor = mirror
+                ? AnchorToLocal(spiderLowerSprite, new Vector2(1f - kneeAnchorLowerN.x, kneeAnchorLowerN.y))
+                : kneeLocalOnLower;
+
+            int shinOrder = isRear ? bodySortingOrder - 6 : bodySortingOrder - 3;
+            int thighOrder = isRear ? bodySortingOrder - 5 : bodySortingOrder - 2;
 
             leg.hip = new GameObject("Hip_" + i).transform;
             leg.hip.SetParent(root, false);
             leg.hip.localPosition = new Vector3(leg.hipLocalPos.x, leg.hipLocalPos.y, 0f);
-            AttachVisual(leg.hip, "Thigh", spiderUpperSprite, hipLocalOnSprite, thighTilt,
-                        bodySortingOrder - 3, Color.white, false, spiderLegScale);
+            AttachVisual(leg.hip, "Thigh", spiderUpperSprite, thighAnchor, mirror ? -thighTilt : thighTilt,
+                        thighOrder, Color.white, mirror, legScale);
 
             leg.knee = new GameObject("Knee_" + i).transform;
             leg.knee.SetParent(leg.hip, false);
-            leg.knee.localPosition = new Vector3(0f, -spiderThighLength, 0f);
-            AttachVisual(leg.knee, "Shin", spiderLowerSprite, kneeLocalOnLower, shinTilt,
-                        bodySortingOrder - 4, Color.white, false, spiderLegScale);
+            leg.knee.localPosition = new Vector3(0f, -leg.thighLength, 0f);
+            AttachVisual(leg.knee, "Shin", spiderLowerSprite, shinAnchor, mirror ? -shinTilt : shinTilt,
+                        shinOrder, Color.white, mirror, legScale);
 
             // 발을 대기 자세 목표 위치에 "심는다" - 월드 좌표로 저장(위 필드 설명 참고).
             leg.footWorldPos = root.TransformPoint(new Vector3(leg.idealLocalPos.x, leg.idealLocalPos.y, 0f));
@@ -817,33 +870,37 @@ public class ProceduralCharacterRig : MonoBehaviour
 
     /// <summary>
     /// 거미 다리 2관절 IK. hip은 고정, foot을 목표로 코사인 법칙으로 무릎을 구한다. 무릎이 부풀 수
-    /// 있는 두 해 중 <b>몸통 중심(x=0)에서 더 먼 쪽</b>을 매 프레임 직접 비교해서 고른다 - 좌/우로만
-    /// 고정하면 코너에 따라 무릎이 몸 쪽으로 말려 "관절이 거꾸로 붙은" 것처럼 보인다(프로토타입
-    /// 검증 과정에서 실제로 겪은 버그). footLocal은 호출자가 이미 로컬 공간으로 변환해 건네준
-    /// 발 목표다(들려 있는 동안은 살짝 위로 보정된 값이 들어온다).
+    /// 있는 두 해 중 <b>더 위쪽(y가 큰) 무릎</b>을 고른다 - 프로토타입의 <c>solveIKArchUp</c>과 같은
+    /// 규칙이며, 이래야 거미처럼 관절이 위로 솟고 발톱이 아래로 내려오는 자세가 된다.
+    /// (2026-08-24 수정: 예전에는 "몸통 중심에서 더 먼 쪽"을 골라 무릎이 <b>반대로 꺾여</b> 있었다 -
+    /// 프로토타입과 다른 규칙이 들어가 있던 것이 원인이었다.)
+    /// footLocal은 호출자가 이미 로컬 공간으로 변환해 건네준 발 목표다(들려 있는 동안은 살짝
+    /// 위로 보정된 값이 들어온다).
     /// </summary>
     private void SolveSpiderLeg(SpiderLeg leg, Vector2 footLocal)
     {
         Vector2 hip = leg.hipLocalPos;
         Vector2 delta = footLocal - hip;
 
-        float maxReach = spiderThighLength + spiderShinLength - 0.001f;
-        float minReach = Mathf.Abs(spiderThighLength - spiderShinLength) + 0.001f;
+        float thigh = leg.thighLength;
+        float shin = leg.shinLength;
+
+        float maxReach = thigh + shin - 0.001f;
+        float minReach = Mathf.Abs(thigh - shin) + 0.001f;
         float dist = Mathf.Clamp(delta.magnitude, minReach, maxReach);
         Vector2 dir = delta.sqrMagnitude > 0.0001f ? delta.normalized : Vector2.down;
         Vector2 clampedTarget = hip + dir * dist;
 
         float baseAngle = Mathf.Atan2(dir.y, dir.x);
-        float cosA = (spiderThighLength * spiderThighLength + dist * dist - spiderShinLength * spiderShinLength)
-                    / (2f * spiderThighLength * dist);
+        float cosA = (thigh * thigh + dist * dist - shin * shin) / (2f * thigh * dist);
         float a = Mathf.Acos(Mathf.Clamp(cosA, -1f, 1f));
 
         float angleA = baseAngle + a;
         float angleB = baseAngle - a;
-        Vector2 kneeA = hip + new Vector2(Mathf.Cos(angleA), Mathf.Sin(angleA)) * spiderThighLength;
-        Vector2 kneeB = hip + new Vector2(Mathf.Cos(angleB), Mathf.Sin(angleB)) * spiderThighLength;
+        Vector2 kneeA = hip + new Vector2(Mathf.Cos(angleA), Mathf.Sin(angleA)) * thigh;
+        Vector2 kneeB = hip + new Vector2(Mathf.Cos(angleB), Mathf.Sin(angleB)) * thigh;
 
-        bool useA = Mathf.Abs(kneeA.x) >= Mathf.Abs(kneeB.x);
+        bool useA = kneeA.y >= kneeB.y;   // 아치업: 더 위쪽 무릎
         Vector2 knee = useA ? kneeA : kneeB;
         float thighAngle = useA ? angleA : angleB;
 

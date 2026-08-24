@@ -16952,17 +16952,15 @@ MonoBehaviour:
   rocketFps: 8
   treadBodyYOffset: 0
   rocketBodyYOffset: 0
-  spiderLegScale: 0.34
-  spiderHipSpreadX: 0.62
-  spiderHipFrontBackY: 0.18
-  spiderStanceSpreadRatio: 0.62
-  spiderStanceDropRatio: 0.5
+  spiderLegScale: 0.32
+  spiderStanceSpreadRatio: 1
+  spiderStanceDropRatio: 1
   spiderStepThreshold: 0.16
   spiderStepSpeed: 11
   spiderStepOvershoot: 0.1
   spiderFootLiftHeight: 0.05
   spiderBodyYOffset: 0
-  spiderTorsoScale: 0.2
+  spiderTorsoScale: 0.32
   spiderTorsoYOffset: 0
 --- !u!1 &1842930808
 GameObject:
