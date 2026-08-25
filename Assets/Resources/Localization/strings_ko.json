@@ -270,6 +270,7 @@
   "ranking.row": "{0}위 · {1} · {2}점",
   "nickname.title": "랭킹에 올릴 닉네임",
   "nickname.placeholder": "닉네임을 입력하세요",
+  "nickname.skip": "다음에",
   "hud.score": "점수 {0}",
   "settings.music_volume": "음악 볼륨",
   "summary.header": "도달 웨이브 {0}     보유 골드 {1}",

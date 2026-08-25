@@ -71,15 +71,29 @@ public class AiCoreManager : MonoBehaviour
         if (RunState.CoreLevel > level_before) PlayLevelUpEffect();
     }
 
-    /// <summary>플레이어 위치에 레벨업 이펙트를 한 번 재생한다. 태그로 찾는 이유는 이
-    /// 매니저가 플레이어가 아닌 별도 GameObject에 배치돼 있어 직접 참조가 없기 때문이다.</summary>
+    /// <summary>플레이어 <b>머리</b>에 레벨업 이펙트를 한 번 재생하고 효과음을 함께 낸다.
+    /// 태그로 찾는 이유는 이 매니저가 플레이어가 아닌 별도 GameObject에 배치돼 있어 직접 참조가
+    /// 없기 때문이다.
+    ///
+    /// 2026-08-25 사용자 요청으로 <b>발밑(플레이어 원점)이 아니라 머리 위치</b>에서 재생하고,
+    /// 재생 내내 머리를 따라가게 했다. 머리는 <see cref="ProceduralCharacterRig.BodyVisual"/>이며
+    /// (이 프로젝트에서 "머리" = 리그의 몸통 스프라이트), 리그가 없는 예외 상황에서는 예전처럼
+    /// 플레이어 원점에 고정 재생한다.</summary>
     private void PlayLevelUpEffect()
     {
         GameObject player_go = GameObject.FindGameObjectWithTag("Player");
         if (player_go == null) return;
 
         SpriteRenderer body = player_go.GetComponentInChildren<SpriteRenderer>();
-        LevelUpEffect.Play(player_go.transform.position, levelUpEffectWidth, body != null ? body.sortingOrder + 5 : 15);
+        int sorting = body != null ? body.sortingOrder + 5 : 15;
+
+        var rig = player_go.GetComponentInChildren<ProceduralCharacterRig>();
+        Transform head = rig != null ? rig.BodyVisual : null;
+
+        LevelUpEffect.Play(head != null ? head.position : player_go.transform.position,
+                           levelUpEffectWidth, sorting, head);
+
+        SFXManager.Play(SFXManager.LevelUpClipName);
     }
 
     private int RequiredExpForNextLevel()

@@ -23,12 +23,20 @@ public class NicknameInputPopup : MonoBehaviour
 
     private TMP_InputField inputField;
     private System.Action<string> onConfirm;
+    private System.Action onSkip;
     private string fallbackName;
 
     /// <summary>부모(보통 최상위 캔버스) 아래에 팝업을 만들어 돌려준다. parent가 없으면(캔버스를
     /// 못 찾은 등의 예외 상황) 팝업 없이 바로 defaultName으로 확인 콜백을 불러 흐름이 막히지
-    /// 않게 한다.</summary>
-    public static NicknameInputPopup Attach(RectTransform parent, string defaultName, System.Action<string> onConfirm)
+    /// 않게 한다.
+    ///
+    /// <paramref name="onSkip"/>은 <b>"다음에"</b>(등록하지 않음)를 눌렀을 때 호출된다
+    /// (2026-08-25 사용자 요청 - "랭킹 등록할때 등록 안하고 싶을수도 있으니"). 랭킹 제출만
+    /// 건너뛰고 그 뒤에 이어지던 흐름(타이틀 이동 등)은 호출부가 여기서 그대로 이어간다.
+    /// null이면 팝업만 닫는다. parent가 없어 팝업 자체를 못 만드는 예외 상황에서는 예전처럼
+    /// 확인 경로로 진행한다 - 흐름이 멈추는 것이 등록되는 것보다 나쁘기 때문이다.</summary>
+    public static NicknameInputPopup Attach(RectTransform parent, string defaultName,
+                                            System.Action<string> onConfirm, System.Action onSkip = null)
     {
         if (parent == null)
         {
@@ -45,6 +53,7 @@ public class NicknameInputPopup : MonoBehaviour
 
         var ui = root.AddComponent<NicknameInputPopup>();
         ui.onConfirm = onConfirm;
+        ui.onSkip = onSkip;
         ui.fallbackName = string.IsNullOrWhiteSpace(defaultName) ? Loc.T("common.player") : defaultName;
         ui.Build(rootRect);
         return ui;
@@ -76,8 +85,30 @@ public class NicknameInputPopup : MonoBehaviour
         inputField.text = string.IsNullOrEmpty(saved) ? fallbackName : saved;
         inputField.onSubmit.AddListener(_ => Confirm()); // 입력창에서 Enter를 눌러도 확인된다
 
-        Button confirmButton = CreateButton(panelRect, "ConfirmButton", new Vector2(0.30f, 0.08f), new Vector2(0.70f, 0.30f), Loc.T("common.confirm"));
+        // 등록을 원하지 않을 수도 있으므로 "다음에"를 함께 둔다(2026-08-25 사용자 요청).
+        // 주 동작(확인)을 오른쪽에 두는 프로젝트 UI 관례를 따르고, 보조 버튼은 채도를 낮춰
+        // 어느 쪽이 기본 동작인지 한눈에 보이게 한다.
+        Button skipButton = CreateButton(panelRect, "SkipButton", new Vector2(0.08f, 0.08f), new Vector2(0.46f, 0.30f), Loc.T("nickname.skip"));
+        skipButton.onClick.AddListener(Skip);
+
+        Image skipImage = skipButton.GetComponent<Image>();
+        if (skipImage != null) skipImage.color = new Color(0.62f, 0.62f, 0.66f, 1f);
+
+        Button confirmButton = CreateButton(panelRect, "ConfirmButton", new Vector2(0.54f, 0.08f), new Vector2(0.92f, 0.30f), Loc.T("common.confirm"));
         confirmButton.onClick.AddListener(Confirm);
+    }
+
+    /// <summary>랭킹에 올리지 않고 닫는다. 호출부가 넘긴 후속 흐름(타이틀 이동 등)은 그대로 이어간다.</summary>
+    private void Skip()
+    {
+        System.Action skip = onSkip;
+
+        // 두 번 눌려도 후속 흐름이 두 번 돌지 않도록 콜백을 먼저 비운다(팝업 파괴는 프레임 끝에 일어난다).
+        onSkip = null;
+        onConfirm = null;
+
+        Destroy(gameObject);
+        skip?.Invoke();
     }
 
     private void Confirm()
@@ -89,8 +120,14 @@ public class NicknameInputPopup : MonoBehaviour
         PlayerPrefs.SetString(PrefsKey, name);
         PlayerPrefs.Save();
 
-        onConfirm?.Invoke(name);
+        // Skip()과 같은 이유로 콜백을 먼저 비운다 - 확인 버튼과 입력창 Enter가 같은 프레임에
+        // 겹쳐 들어와도 제출이 두 번 일어나지 않는다.
+        System.Action<string> confirm = onConfirm;
+        onConfirm = null;
+        onSkip = null;
+
         Destroy(gameObject);
+        confirm?.Invoke(name);
     }
 
     // ── UI 헬퍼 (RankingPanelUI·CollectionPanelUI와 같은 관례) ──────────────────────────

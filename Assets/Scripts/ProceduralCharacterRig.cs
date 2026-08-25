@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -298,10 +299,20 @@ public class ProceduralCharacterRig : MonoBehaviour
     [SerializeField] private float spiderStanceDropRatio = 1f;
     [Tooltip("발이 목표 지점에서 이 거리(유닛) 이상 벌어지면 그 다리가 스텝을 시작한다")]
     [SerializeField] private float spiderStepThreshold = 0.16f;
-    [Tooltip("스텝 진행 속도(1/스텝 시간) - 클수록 빠르게 사삭거린다")]
+    [Tooltip("스텝 진행 속도(1/스텝 시간) - 클수록 빠르게 사삭거린다. 정지 상태의 기준값이며 " +
+             "이동 속도에 따라 spiderStepSpeedPerSpeed만큼 더 빨라진다")]
     [SerializeField] private float spiderStepSpeed = 11f;
-    [Tooltip("스텝 목표에 이동 방향으로 살짝 더 뻗는 오버슈트(유닛)")]
+    [Tooltip("이동 속도 1유닛/초마다 스텝 속도에 곱해지는 증가율. 0이면 예전처럼 속도와 무관하게 " +
+             "항상 같은 빠르기로 딛는다(빠르게 달리면 발이 몸을 못 따라가 끌려 보인다)")]
+    [SerializeField] private float spiderStepSpeedPerSpeed = 0.16f;
+    [Tooltip("스텝 목표에 이동 방향으로 살짝 더 뻗는 오버슈트(유닛). 정지 상태의 기준값")]
     [SerializeField] private float spiderStepOvershoot = 0.1f;
+    [Tooltip("스텝하는 동안 몸이 이동할 거리(속도 x 스텝 시간)를 목표에 얼마나 미리 얹을지. " +
+             "1 = 착지 순간 발이 정확히 대기 위치에 오도록 완전히 앞서 짚는다. 0이면 예전 동작")]
+    [SerializeField] private float spiderStepLeadRatio = 1f;
+    [Tooltip("이동 속도에 따라 앞서 짚는 거리의 상한(유닛). 구르기처럼 극단적으로 빠른 순간에 " +
+             "다리가 몸에서 지나치게 멀리 뻗는 것을 막는다")]
+    [SerializeField] private float spiderStepLeadMax = 0.9f;
     [Tooltip("스텝 중 발이 들리는 높이(유닛)")]
     [SerializeField] private float spiderFootLiftHeight = 0.05f;
     [Tooltip("거미 다리 장착 시 머리(몸통) 위치를 다리에 맞춰 위/아래로 미세 조정한다")]
@@ -616,20 +627,27 @@ public class ProceduralCharacterRig : MonoBehaviour
         else if (legVisualMode == LegVisualMode.Rocket) seatRaise = RocketHeadSeatRaise;
         else return 0f;
         if (bodySprite == null) return 0f;
-        return -(0.5f - bodyHipAnchor.y) * bodySprite.rect.height / bodySprite.pixelsPerUnit + seatRaise;
+
+        // ApplyBodyFacing이 실제로 쓰는 앵커(머리별 보정 반영)를 그대로 되돌려야 캔버스가 정확히 포개진다.
+        return -(0.5f - EffectiveBodyHipAnchorY()) * bodySprite.rect.height / bodySprite.pixelsPerUnit + seatRaise;
     }
 
     /// <summary>
-    /// 캔버스 정합으로 머리가 내려간 양(월드 단위, 내려갔으면 음수). 무기 소켓(RigingPoint,
-    /// 리그 밖 Player 직속)이 머리 귀 옆 높이를 유지하도록 PlayerShootManager가 매 프레임
-    /// 읽어 소켓을 같은 만큼 내린다. Biped/Spider에서는 0.
+    /// 머리가 authored 기준 위치보다 내려간 양(월드 단위, 내려갔으면 음수). 무기 소켓
+    /// (RigingPoint, 리그 밖 Player 직속)이 머리 귀 옆 높이를 유지하도록 PlayerShootManager가
+    /// 매 프레임 읽어 소켓을 같은 만큼 내린다.
+    ///
+    /// 두 가지가 합산된다: 캐터필러/로켓의 캔버스 정합(<see cref="AltCanvasAlignY"/>, Biped/Spider
+    /// 에서는 0)과, 머리 그림이 캔버스 안에서 위쪽에 그려져 생긴 보정
+    /// (<see cref="HeadArtSeatAlignY"/>, 기본 머리에서는 0). 둘 다 "머리 그림이 실제로 이동한 양"
+    /// 이므로 소켓도 같은 만큼 따라가야 귀 옆에 남는다.
     /// </summary>
     public float HeadCanvasWorldOffsetY
     {
         get
         {
             if (rigRoot == null) return 0f;
-            float local = AltCanvasAlignY();
+            float local = AltCanvasAlignY() + HeadArtSeatAlignY();
             return local == 0f ? 0f : rigRoot.TransformVector(new Vector3(0f, local, 0f)).y;
         }
     }
@@ -935,6 +953,32 @@ public class ProceduralCharacterRig : MonoBehaviour
             moveDirLocal = ((Vector2)localDir).normalized;
         }
 
+        // ── 이동 속도에 맞춰 스텝을 빠르게 + 앞서 짚게 한다 (2026-08-25) ───────────────
+        //
+        // 예전에는 스텝 속도와 오버슈트가 <b>고정 상수</b>였다. 스텝 한 번에 걸리는 시간(1/11 =
+        // 0.09초) 동안 몸은 계속 이동하는데 발의 착지 지점은 <b>스텝을 시작한 순간의 대기 위치</b>
+        // 로 굳어 있어서, 빠르게 달릴수록 착지하자마자 그 발이 이미 몸 뒤로 밀려 있었다. 그러면
+        // 곧바로 다시 스텝 조건에 걸리고, 네 다리가 전부 뒤처진 채 대각선 교대 순서를 기다리게
+        // 되어 <b>발이 땅에 끌려다니는 것처럼</b> 보인다(2026-08-25 사용자 리포트).
+        //
+        // 두 가지로 고친다. (1) 빠를수록 스텝을 빨리 끝내고, (2) 스텝하는 동안 몸이 이동할 거리를
+        // 착지 지점에 미리 얹어 <b>앞서 짚게</b> 한다 - 실제 보행이 하는 일과 같다. 정지 상태
+        // (speed = 0)에서는 두 값 모두 예전 상수 그대로가 되므로 서 있을 때의 모습은 바뀌지 않는다.
+        float speed = velocity.magnitude;
+        float stepSpeed = spiderStepSpeed * (1f + Mathf.Max(0f, spiderStepSpeedPerSpeed) * speed);
+
+        // 앞서 짚을 거리는 <b>스텝 한 번이 아니라 교대 한 바퀴</b> 동안 몸이 가는 거리로 잡는다.
+        // 네 다리가 대각선 두 쌍으로 번갈아 딛으므로(pairBusy), 한 발이 다시 자기 차례를 받기까지
+        // 스텝 시간의 약 2배가 걸린다. 스텝 시간만 보고 계산했더니 실측에서 발 오차가 임계값
+        // (0.16)의 6~11배인 1.0~1.8유닛으로 남아 여전히 끌려 보였다.
+        // 오차가 임계값의 이 배수를 넘으면 대각선 교대 순서를 무시하고 즉시 딛는다.
+        const float SpiderUrgentStepFactor = 2.5f;
+
+        const float StepCycleFactor = 2f;
+        float cycleSeconds = StepCycleFactor / Mathf.Max(0.01f, stepSpeed);
+        float stepLead = Mathf.Min(spiderStepLeadMax, speed * cycleSeconds * spiderStepLeadRatio);
+        float stepReach = spiderStepOvershoot + stepLead;
+
         var footLocalNow = new Vector2[spiderLegs.Length];
         for (int i = 0; i < spiderLegs.Length; i++)
             footLocalNow[i] = spiderRoot.InverseTransformPoint(spiderLegs[i].footWorldPos);
@@ -953,12 +997,18 @@ public class ProceduralCharacterRig : MonoBehaviour
             if (leg.stepping) continue;
             float err = Vector2.Distance(footLocalNow[i], leg.idealLocalPos);
             if (err <= spiderStepThreshold) continue;
-            if (pairBusy[1 - leg.pairIndex]) continue; // 반대 짝이 스텝 중이면 기다린다(대각선 교대)
+
+            // 평소에는 대각선 두 쌍이 번갈아 딛는다(반대 짝이 스텝 중이면 기다린다). 다만
+            // <b>이미 크게 뒤처진 발은 순서를 기다리지 않고 즉시 딛는다</b> - 빠르게 달릴 때는
+            // 교대를 기다리는 시간 자체가 병목이라, 실측에서 발 오차가 임계값의 9배(1.5유닛,
+            // 다리 길이보다 길다)까지 벌어진 채 유지됐다. 그 상태가 곧 "발이 땅에 끌려다니는"
+            // 모습이다. 순서를 지키는 것보다 발이 몸을 따라가는 쪽이 낫다.
+            if (err <= spiderStepThreshold * SpiderUrgentStepFactor && pairBusy[1 - leg.pairIndex]) continue;
 
             leg.stepping = true;
             leg.stepT = 0f;
             leg.stepFromWorld = leg.footWorldPos;
-            Vector2 stepToLocal = leg.idealLocalPos + moveDirLocal * spiderStepOvershoot;
+            Vector2 stepToLocal = leg.idealLocalPos + moveDirLocal * stepReach;
             leg.stepToWorld = spiderRoot.TransformPoint(new Vector3(stepToLocal.x, stepToLocal.y, 0f));
             pairBusy[leg.pairIndex] = true;
         }
@@ -967,7 +1017,7 @@ public class ProceduralCharacterRig : MonoBehaviour
         {
             if (!leg.stepping) continue;
 
-            leg.stepT += dt * spiderStepSpeed;
+            leg.stepT += dt * stepSpeed;
             if (leg.stepT >= 1f)
             {
                 leg.stepT = 1f;
@@ -991,6 +1041,26 @@ public class ProceduralCharacterRig : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 이동 속도의 x 부호로 좌우 방향을 정한다. 확실히 움직일 때만 바꿔서 제자리에서 떨리지
+    /// 않게 하고, 스케일 보간 없이 즉시 전환한다 - 몸통(flipX)·다리(legsGroup 부호) 둘 다
+    /// 찌그러지는 중간 프레임이 없다.
+    /// </summary>
+    private void UpdateFacing(Vector2 velocity)
+    {
+        float newFacing = facingSign;
+        if (Mathf.Abs(velocity.x) > 0.15f) newFacing = Mathf.Sign(velocity.x);
+        if (Mathf.Approximately(newFacing, facingSign)) return;
+
+        facingSign = newFacing;
+
+        // 다리 비주얼을 바꾸는 도중(SetLegVisual)이나 씬 전환 프레임에는 조각이 아직/이미 없을 수
+        // 있다. 이 메서드는 구르는 동안에도 매 프레임 불리므로 방어적으로 확인한다.
+        if (bodyRenderer != null && bodyVisual != null && bodySprite != null) ApplyBodyFacing();
+        if (legsGroup != null) legsGroup.localScale = new Vector3(facingSign, 1f, 1f);
+        ApplyAltVisualFacing();
+    }
+
     /// <summary>몸통의 flipX와 앵커 위치를 facingSign에 맞춰 갱신한다. flipX는 픽셀만
     /// 좌우로 뒤집으므로, 배치에 쓰는 앵커도 같이 뒤집어야 위치가 어긋나지 않는다
     /// (발의 MaybeMirrorX와 같은 원리).</summary>
@@ -998,9 +1068,84 @@ public class ProceduralCharacterRig : MonoBehaviour
     {
         bool flip = facingSign > 0f;
         bodyRenderer.flipX = flip;
-        Vector2 anchor = flip ? new Vector2(1f - bodyHipAnchor.x, bodyHipAnchor.y) : bodyHipAnchor;
+        float anchorY = EffectiveBodyHipAnchorY();
+        Vector2 anchor = flip ? new Vector2(1f - bodyHipAnchor.x, anchorY) : new Vector2(bodyHipAnchor.x, anchorY);
         Vector3 anchorPos = -(Vector3)AnchorToLocal(bodySprite, anchor);
         bodyVisual.localPosition = new Vector3(anchorPos.x, anchorPos.y, 0f);
+    }
+
+    // ── 머리 그림이 캔버스 안에서 차지하는 세로 위치 보정 (2026-08-25) ──────────────────
+    //
+    // <b>문제</b>: bodyHipAnchor.y(0.21)는 "캔버스 아래에서 21% 지점이 고관절"이라는 고정
+    // 상수인데, 이 값은 기본 머리(Parts/Body.png)의 그림 밑단(캔버스 아래에서 51px = 20.4%)에
+    // 맞춰 튜닝된 값이다. 머리 12종은 전부 250x250 규격이지만 그 <b>캔버스 안에서 그림이
+    // 그려진 높이는 제각각</b>이라(메테우스는 밑단이 아래에서 85px, 가드맨은 77px), 같은 앵커를
+    // 쓰면 그림이 위쪽에 그려진 머리일수록 다리에서 떠 보인다
+    // (2026-08-25 사용자 리포트: "메테우스 헬멧일때 기본 다리와 머리가 너무 멀리 떨어져 있다").
+    // 스프린터가 좀비보다 작아 보였던 것과 같은 종류의 함정이다 - 규격 픽셀 수가 같아도
+    // 캔버스를 채운 정도는 다르다.
+    //
+    // <b>해결</b>: 앵커를 그림 밑단에서 역산한다. 기준 머리에서 "앵커가 밑단보다 얼마나 위인가"
+    // (여유 간격)를 실측해 두고, 어떤 머리든 그 간격을 유지하도록 앵커 y를 다시 구한다.
+    // 기준 머리 자신은 계산 결과가 authored 값과 픽셀 단위로 같아지므로 <b>기존 동작에 회귀가 없다</b>.
+    //
+    // 그림 밑단은 <b>PNG 알파를 한 번 실측해 굳힌 표</b>(HeadArtBottomRatio)로 갖고 있다.
+    // Tight 스프라이트 메시(<c>sprite.vertices</c>)로 읽어보기도 했지만 Unity가 메시를 알파보다
+    // 넉넉하게 부풀려서 - 메테우스는 알파 밑단이 캔버스 아래 85px인데 메시는 53px까지 내려온다 -
+    // 보정량이 실제 필요량의 1/8밖에 나오지 않았다. 알파를 런타임에 직접 읽으려면 isReadable을
+    // 켜야 하는데 머리 19장의 텍스처 사본을 메모리에 상주시킬 이유가 없어 표로 굳혔다.
+    //
+    // <b>새 머리를 추가하면 이 표에 한 줄을 더한다.</b> 값은 "캔버스 아래에서 그림 밑단까지의
+    // 픽셀 ÷ 캔버스 높이"이고, 표에 없는 머리는 보정 없이(= 예전 동작 그대로) 지나간다.
+
+    /// <summary>머리 스프라이트별 그림 밑단 비율(0 = 캔버스 맨 아래, 1 = 맨 위). 2026-08-25 알파 실측값.</summary>
+    private static readonly Dictionary<string, float> HeadArtBottomRatio = new Dictionary<string, float>
+    {
+        { "Body",            0.2040f }, // 기준 머리(= 컴스톡 MK-01). 밑단 51px, authored 앵커 0.21이 이 값에 맞춰져 있다
+        { "ComstockMk01",    0.2040f },
+        { "Berserker",       0.1480f },
+        { "FanBot",          0.0680f },
+        { "Guardman",        0.3080f },
+        { "HappyPixel",      0.2000f },
+        { "HotPot",          0.1520f },
+        { "Meteus",          0.3400f }, // 밑단 85px - 기본보다 34px 높아 다리에서 떠 보였다(이번 리포트)
+        { "MiniPixie",       0.2320f },
+        { "NeonEye_0",       0.2000f },
+        { "NeonEye_1",       0.2000f },
+        { "NeonEye_2",       0.2000f },
+        { "NeonEye_3",       0.2000f },
+        { "NeonEye_4",       0.2000f },
+        { "NeonEye_5",       0.2000f },
+        { "NeonEye_6",       0.2000f },
+        { "NeonEye_7",       0.2000f },
+        { "Pixie",           0.1080f },
+        { "PrivateComstock", 0.1480f },
+        { "SodaCan",         0.1200f },
+    };
+
+    /// <summary>기준 머리(Body)의 밑단 비율. 표가 바뀌어도 상수를 손댈 필요가 없게 표에서 읽는다.</summary>
+    private const string ReferenceHeadSpriteName = "Body";
+
+    /// <summary>지금 머리 그림에 맞는 고관절 앵커 y(0~1). 표에 없는 머리는 authored 값 그대로.</summary>
+    private float EffectiveBodyHipAnchorY()
+    {
+        if (bodySprite == null) return bodyHipAnchor.y;
+        if (!HeadArtBottomRatio.TryGetValue(bodySprite.name, out float bottomRatio)) return bodyHipAnchor.y;
+        if (!HeadArtBottomRatio.TryGetValue(ReferenceHeadSpriteName, out float referenceRatio)) return bodyHipAnchor.y;
+
+        // 기준 머리에서 "앵커가 그림 밑단보다 얼마나 위인가"를 그대로 유지한다.
+        // 기준 머리 자신은 결과가 authored 값과 정확히 같아지므로 기존 동작에 회귀가 없다.
+        float gap = bodyHipAnchor.y - referenceRatio;
+        return Mathf.Clamp01(bottomRatio + gap);
+    }
+
+    /// <summary>이번 보정으로 머리 그림이 authored 앵커 기준보다 내려간 양(리그 로컬, 음수 = 아래로).
+    /// 무기 소켓이 귀 옆 높이를 유지하도록 <see cref="HeadCanvasWorldOffsetY"/>가 함께 반영한다.</summary>
+    private float HeadArtSeatAlignY()
+    {
+        if (bodySprite == null) return 0f;
+        float heightUnits = bodySprite.rect.height / bodySprite.pixelsPerUnit;
+        return -(EffectiveBodyHipAnchorY() - bodyHipAnchor.y) * heightUnits;
     }
 
     private Leg BuildLeg(string name, int sortingBase, float sideX, float phaseOffset, Color tint,
@@ -1171,30 +1316,25 @@ public class ProceduralCharacterRig : MonoBehaviour
 
         RestorePartSprites();
 
+        float dt = Time.deltaTime;
+        Vector2 velocity = velocitySource != null
+            ? new Vector2(velocitySource.linearVelocity.x, velocitySource.linearVelocity.y)
+            : externalVelocity;
+
+        // 좌우 방향은 <b>구르는 동안에도</b> 갱신한다(2026-08-25 사용자 요청: "왼쪽으로 구를때는
+        // 얼굴이 왼쪽 보고있어야함"). 예전에는 rollActive 분기가 이 지점 앞에서 곧장 return해서
+        // 구르기 직전에 보던 방향이 구르는 내내 얼어붙어 있었다 - 오른쪽을 보다가 왼쪽으로 구르면
+        // 얼굴이 뒤통수 방향(오른쪽)을 향한 채 굴러갔다. 구르기도 결국 Rigidbody 속도로 이동하므로
+        // 평소와 같은 규칙(속도의 x 부호)을 그대로 쓰면 된다.
+        UpdateFacing(velocity);
+
         if (rollActive)
         {
             ApplyRollPose();
             return;
         }
 
-        float dt = Time.deltaTime;
-        Vector2 velocity = velocitySource != null
-            ? new Vector2(velocitySource.linearVelocity.x, velocitySource.linearVelocity.y)
-            : externalVelocity;
-
         CurrentSpeed = velocity.magnitude;
-
-        // 좌우 방향: 확실히 움직일 때만 바꾼다(제자리에서 떨리는 것 방지). 스케일 보간 없이
-        // 즉시 전환한다 - 몸통(flipX)·다리(legsGroup 부호) 둘 다 찌그러지는 중간 프레임이 없다.
-        float newFacing = facingSign;
-        if (Mathf.Abs(velocity.x) > 0.15f) newFacing = Mathf.Sign(velocity.x);
-        if (!Mathf.Approximately(newFacing, facingSign))
-        {
-            facingSign = newFacing;
-            ApplyBodyFacing();
-            legsGroup.localScale = new Vector3(facingSign, 1f, 1f);
-            ApplyAltVisualFacing();
-        }
 
         if (legVisualMode != LegVisualMode.Biped)
         {

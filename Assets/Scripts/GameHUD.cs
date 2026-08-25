@@ -71,8 +71,41 @@ public class GameHUD : MonoBehaviour
         if (gameOverObject != null) gameOverObject.SetActive(false); // 게임 시작 시 항상 비활성화
 
         FindPlayer();
+        ApplyResponsiveWaveHud();
 
         GameOverManager.OnGameOver += HandleGameOver;
+    }
+
+    /// <summary>
+    /// 상단 웨이브/남은 시간 표시를 화면 크기에 비례하게 만든다(2026-08-25 사용자 요청).
+    /// 씬을 고치지 않고 런타임에 래퍼를 만들어 <b>묶음째 균등 축소</b>한다
+    /// (<see cref="ResponsiveHudScaler"/>에 이유가 적혀 있다). 글자와 그 뒤의 9-slice 배경
+    /// (<c>~_BG</c> 형제, 씬 관례)을 한 래퍼에 같이 넣어야 둘의 정렬이 그대로 유지된다.
+    ///
+    /// pivot을 <b>상단 중앙</b>으로 두는 이유: 이 묶음은 화면 위쪽에 붙어 있어서 중심 기준으로
+    /// 줄이면 화면 안쪽으로 끌려 내려온다.
+    /// </summary>
+    private void ApplyResponsiveWaveHud()
+    {
+        var members = new System.Collections.Generic.List<Component>();
+        AddWithBackground(members, waveText);
+        AddWithBackground(members, waveTimeText);
+
+        ResponsiveHudScaler.Wrap("WaveHud_DesignRoot_1080p", new Vector2(0.5f, 1f), members.ToArray());
+    }
+
+    private static void AddWithBackground(System.Collections.Generic.List<Component> members, TextMeshProUGUI label)
+    {
+        if (label == null) return;
+
+        members.Add(label);
+
+        // 씬 관례: 배경은 같은 부모 아래 "<이름>_BG"로 놓여 있다(UiSafeArea가 쓰는 규칙과 동일).
+        Transform parent = label.transform.parent;
+        if (parent == null) return;
+
+        Transform background = parent.Find(label.name + "_BG");
+        if (background != null) members.Add(background);
     }
 
     private void OnDestroy()

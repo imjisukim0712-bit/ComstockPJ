@@ -304,6 +304,39 @@ public class PlayerShootManager : MonoBehaviour
         return is_left ? 180f - melee_rest_tilt_degrees : melee_rest_tilt_degrees;
     }
 
+    /// <summary>
+    /// 근접무기 그림이 <paramref name="targetAngleDeg"/> 방향을 향하게 하면서 <b>칼날이 계속
+    /// 아래를 보도록</b> 회전과 좌우 반전을 함께 정한다.
+    ///
+    /// <b>왜 회전만으로는 안 되는가</b> — 근접 3종은 좌우 미러 이미지가 따로 없이 한 장을
+    /// 공유하고(<c>leftImg == rightImg</c>), 원본은 칼끝이 <b>좌상단(약 145도)</b>을 향하고
+    /// 칼날이 아래인 그림이다. 왼쪽 소켓(목표 165도)은 +20도만 돌리면 되지만, 오른쪽 소켓
+    /// (목표 15도)은 회전만으로 맞추려면 -130도를 돌려야 해서 <b>칼이 거의 뒤집혀 칼날이 위로
+    /// 올라갔다</b>(2026-08-25 사용자 리포트: "마체테 오른방향이 뒤집어져 있다").
+    ///
+    /// 좌우 반전을 쓰면 칼끝 각도만 세로축 대칭(A → 180 - A)되고 <b>칼날의 위아래는 그대로</b>
+    /// 유지되므로, 반전 후 -20도만 돌려 목표를 맞출 수 있다. 총기가 좌우 미러 이미지를 따로
+    /// 두고 쓰는 것과 같은 처리를 이미지 한 장으로 해내는 셈이다.
+    /// </summary>
+    private void ApplyMeleeOrientation(WeaponSlot slot, WeaponData weapon, Transform pivot, float targetAngleDeg)
+    {
+        // 원본 그림에서 칼끝이 향한 각도. weapon_imgangle은 이 값을 상쇄하는 보정각이라 부호가 반대다.
+        float art_angle = -weapon.weapon_imgangle;
+        float target = NormalizeAngleDegrees(targetAngleDeg);
+
+        // 화면 오른쪽 반구를 향할 때만 뒤집는다(왼쪽 반구는 원본 그림 방향과 같아 그대로가 맞다).
+        bool mirror = Mathf.Abs(target) < 90f;
+
+        float rotation = mirror ? target - (180f - art_angle) : target - art_angle;
+        pivot.rotation = Quaternion.Euler(0f, 0f, rotation);
+
+        if (slot.hand_sprite_renderer == null) return;
+
+        slot.hand_sprite_renderer.flipX = mirror;
+        slot.hand_sprite_renderer.flipY = false;
+        slot.hand_sprite_renderer.transform.localRotation = Quaternion.identity;
+    }
+
     private void Start()
     {
         // 픽시 효과("모든 소켓이 근접이면 사거리 x2")가 소켓 장착 상태를 물어볼 수 있도록 등록한다.
@@ -791,12 +824,13 @@ public class PlayerShootManager : MonoBehaviour
         }
     }
 
-    /// <summary>조준용 상하 반전 보정을 해제해 원래 그림 상태로 되돌린다(구르는 동안 사용).</summary>
+    /// <summary>조준용 반전 보정을 해제해 원래 그림 상태로 되돌린다(구르는 동안 사용).</summary>
     private static void ClearAngleFlip(WeaponSlot slot)
     {
         if (slot.hand_sprite_renderer == null) return;
 
         slot.hand_sprite_renderer.flipY = false;
+        slot.hand_sprite_renderer.flipX = false; // 근접무기가 남긴 좌우 반전도 함께 되돌린다
         slot.hand_sprite_renderer.transform.localRotation = Quaternion.identity;
     }
 
@@ -884,7 +918,7 @@ public class PlayerShootManager : MonoBehaviour
         // 세 근접 원본 그림의 칼끝이 우측이 아니라 좌상단(~140도)을 향해 그려져 있어서다.
         if (is_melee)
         {
-            pivot.rotation = Quaternion.Euler(0f, 0f, MeleeRestFacingDegrees(slot_index) + weapon.weapon_imgangle);
+            ApplyMeleeOrientation(slot, weapon, pivot, MeleeRestFacingDegrees(slot_index));
 
             // 조준 회전이 없으므로 발사 각도 허용치(fire_angle_tolerance_degrees) 게이트도 타지 않는다.
             if (target == null) return;
@@ -1029,7 +1063,13 @@ public class PlayerShootManager : MonoBehaviour
     // 그림이 뒤집혀 보이는 것을 막기 위해 스프라이트를 X축 기준(flipY, 상하 반전) 처리한다.
     private void ApplyAngleFlip(WeaponSlot slot, float angle, bool is_active_slot)
     {
-        if (!slot.use_angle_flip || slot.hand_sprite_renderer == null) return;
+        if (slot.hand_sprite_renderer == null) return;
+
+        // 이 소켓에 근접무기가 끼워져 있었다면 ApplyMeleeOrientation이 flipX를 남겨뒀을 수 있다.
+        // 총기는 좌우 미러 이미지를 따로 쓰므로 좌우 반전이 걸려 있으면 총이 뒤집혀 보인다.
+        slot.hand_sprite_renderer.flipX = false;
+
+        if (!slot.use_angle_flip) return;
 
         float normalized = NormalizeAngleDegrees(angle);
         bool should_flip = normalized > slot.flip_angle_max_degrees || normalized < slot.flip_angle_min_degrees;
@@ -1058,6 +1098,100 @@ public class PlayerShootManager : MonoBehaviour
         return state;
     }
 
+    // ── 총구 위치 (2026-08-25) ──────────────────────────────────────────────────────
+    //
+    // <b>문제</b>: 발사 원점이 <c>muzzle_point</c>(씬에 배치된 Transform)였는데, 이 좌표는
+    // 소켓마다 <b>rig_point 기준 고정 오프셋 (±0.35, -0.15)</b>일 뿐 무기 그림과 아무 관계가
+    // 없다. 실측하면 무기 이미지 중심에서 겨우 0.106유닛 떨어진 지점이라, 총열 길이가 제각각인
+    // 13종 무기 어디에서도 총구 끝과 맞지 않았다 - 총구 화염이 총 몸통 한가운데서 터졌다
+    // (2026-08-25 사용자 리포트: "총구섬광이 각 총의 총구에서 나오는게 아닌 엉뚱한 곳에서 나온다").
+    //
+    // <b>해결</b>: 무기 그림에서 <b>조준 방향으로 가장 멀리 나간 지점</b>을 총구로 삼는다.
+    // 무기는 늘 총구가 적을 향하도록 회전하므로(rest 자세 포함) "조준 방향 최원점 = 총구"가
+    // 성립한다. 원본 그림에서 총구가 왼쪽 아래를 향하든(이 프로젝트의 총기 13종이 그렇다)
+    // 좌우 미러 이미지든 <c>weapon_imgangle</c>이 얼마든 상관없이 자동으로 맞는다.
+    //
+    // 좌표는 <b>Tight 스프라이트 메시</b>의 정점에서 읽는다(모든 무기 PNG가 spriteMeshType: 1).
+    // 텍스처를 읽지 않으므로 isReadable이 필요 없다. <c>flipX/flipY</c>는 렌더러 속성이라
+    // 정점에 반영되지 않으므로 여기서 직접 부호를 뒤집는다(무기 스프라이트는 pivot이 중앙이다).
+
+    private static readonly Dictionary<Sprite, Vector2[]> sprite_mesh_cache = new Dictionary<Sprite, Vector2[]>();
+
+    /// <summary>스프라이트 메시 정점(로컬, pivot 기준). 호출마다 배열을 새로 만드는 API라 캐시한다.</summary>
+    private static Vector2[] GetSpriteMeshVertices(Sprite sprite)
+    {
+        if (sprite == null) return null;
+        if (sprite_mesh_cache.TryGetValue(sprite, out Vector2[] cached)) return cached;
+
+        Vector2[] verts = sprite.vertices;
+        sprite_mesh_cache[sprite] = verts;
+        return verts;
+    }
+
+    /// <summary>씬을 다시 시작해 스프라이트가 언로드됐을 때 대비용.</summary>
+    public static void ResetSpriteMeshCache() => sprite_mesh_cache.Clear();
+
+    /// <summary>
+    /// 이 소켓의 무기가 실제로 총알을 뱉는 지점(월드). 무기 이미지가 없거나 근접무기면
+    /// 예전처럼 <c>muzzle_point</c>를 그대로 돌려준다(근접은 총구 개념이 없고, 찌르기 연출이
+    /// 소켓 Transform 자체를 움직여 판정한다).
+    /// </summary>
+    private Vector3 ResolveMuzzleWorldPosition(WeaponSlot slot, WeaponData weapon, Vector3 aimDirection)
+    {
+        Vector3 fallback = slot.muzzle_point != null ? slot.muzzle_point.position : transform.position;
+        if (weapon.weapon_firemode == WeaponFireMode.MeleeSwing) return fallback;
+
+        SpriteRenderer renderer = slot.hand_sprite_renderer;
+        if (renderer == null || !renderer.enabled || renderer.sprite == null) return fallback;
+
+        Vector2[] verts = GetSpriteMeshVertices(renderer.sprite);
+        if (verts == null || verts.Length == 0) return fallback;
+
+        Transform image = renderer.transform;
+        Vector2 aim = new Vector2(aimDirection.x, aimDirection.y);
+        if (aim.sqrMagnitude < 0.0001f) return fallback;
+        aim.Normalize();
+
+        // 조준 방향 투영이 가장 큰 정점들을 모아 평균 낸다. 최원점 하나만 쓰면 메시가 만든
+        // 뾰족한 모서리에 걸려 총열 중심에서 벗어날 수 있다.
+        float best = float.MinValue;
+        for (int i = 0; i < verts.Length; i++)
+        {
+            Vector3 world = image.TransformPoint(ApplyRendererFlip(verts[i], renderer));
+            float projection = Vector2.Dot(new Vector2(world.x, world.y), aim);
+            if (projection > best) best = projection;
+        }
+
+        // 최원점에서 이 정도(월드 유닛) 안쪽까지를 "총구 끝" 무리로 본다.
+        const float TipBandWorld = 0.06f;
+
+        Vector3 sum = Vector3.zero;
+        int count = 0;
+        for (int i = 0; i < verts.Length; i++)
+        {
+            Vector3 world = image.TransformPoint(ApplyRendererFlip(verts[i], renderer));
+            float projection = Vector2.Dot(new Vector2(world.x, world.y), aim);
+            if (projection < best - TipBandWorld) continue;
+
+            sum += world;
+            count++;
+        }
+
+        if (count == 0) return fallback;
+
+        Vector3 tip = sum / count;
+        tip.z = fallback.z; // 발사 판정은 XY 평면에서만 한다(프로젝트 관례)
+        return tip;
+    }
+
+    /// <summary>SpriteRenderer의 flipX/flipY를 메시 정점에 반영한다(렌더러 속성은 Transform에 없다).</summary>
+    private static Vector3 ApplyRendererFlip(Vector2 vertex, SpriteRenderer renderer)
+    {
+        if (renderer.flipX) vertex.x = -vertex.x;
+        if (renderer.flipY) vertex.y = -vertex.y;
+        return new Vector3(vertex.x, vertex.y, 0f);
+    }
+
     private void TryFireSlot(int slot_index, WeaponSlot slot, WeaponData weapon, EnemyUnit target)
     {
         if (slot.muzzle_point == null)
@@ -1069,12 +1203,16 @@ public class PlayerShootManager : MonoBehaviour
         WeaponRuntimeState state = GetOrCreateRuntimeState(slot_index);
         if (Time.time < state.next_fire_time) return; // 대기시간 중
 
-        Vector3 fire_origin = slot.muzzle_point.position;
-        Vector3 to_target = target.transform.position - fire_origin;
+        // 총구는 무기 그림의 실제 앞 끝에서 구한다(ResolveMuzzleWorldPosition 참고).
+        // 방향 계산에는 소켓 위치를 그대로 써야 한다 - 총구 위치가 조준 방향에 의존하므로
+        // 총구로 방향을 구하면 서로를 참조하게 된다.
+        Vector3 socket_origin = slot.muzzle_point.position;
+        Vector3 to_target = target.transform.position - socket_origin;
         to_target.z = 0f; // Z축 미사용 규칙 - 방향은 X-Y 평면 안에서만 계산
         float target_distance = to_target.magnitude; // 폭발 무기가 조기 폭발할지 판단하는 데 사용
 
         Vector3 aim_direction = to_target.sqrMagnitude > 0.0001f ? to_target.normalized : Vector3.right;
+        Vector3 fire_origin = ResolveMuzzleWorldPosition(slot, weapon, aim_direction);
 
         // 최종 데미지 = weapon_atk + (robot_atk를 투사체 수로 나눈 값), 그리고 robot_cc/cd(치명타) 적용.
         // 여러 발이 나가는 무기는 발사 1회에 한 번만 치명타를 굴려 모든 탄에 동일하게 적용한다.
@@ -1165,16 +1303,19 @@ public class PlayerShootManager : MonoBehaviour
             if (GameOverManager.IsGameOver || GameWinManager.IsGameWon) yield break;
             if (slot.muzzle_point == null) yield break;
 
-            Vector3 origin = slot.muzzle_point.position;
+            Vector3 socket_origin = slot.muzzle_point.position;
             float distance = 0f;
 
             if (target != null && !target.IsDead)
             {
-                Vector3 to_target = target.transform.position - origin;
+                Vector3 to_target = target.transform.position - socket_origin;
                 to_target.z = 0f;
                 distance = to_target.magnitude;
                 if (to_target.sqrMagnitude > 0.0001f) last_direction = to_target.normalized;
             }
+
+            // 첫 발과 같은 기준(무기 그림의 총구 끝)에서 나가야 연발이 한 자리에서 이어져 보인다.
+            Vector3 origin = ResolveMuzzleWorldPosition(slot, weapon, last_direction);
 
             GameObject prefab = ResolveProjectilePrefab(weapon, slot);
             if (prefab == null) yield break;
@@ -1220,8 +1361,10 @@ public class PlayerShootManager : MonoBehaviour
         // 다음 프레임에 대기 각도로 즉시 돌아온다.
         if (direction.sqrMagnitude > 0.0001f)
         {
-            float thrust_angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg + weapon.weapon_imgangle;
-            pivot.rotation = Quaternion.Euler(0f, 0f, thrust_angle);
+            // 대기 자세와 같은 규칙으로 방향을 맞춘다 - 찌르는 동안에도 칼날이 아래를 향해야 한다
+            // (오른쪽으로 찌를 때 칼이 뒤집히던 문제, 2026-08-25).
+            float thrust_angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+            ApplyMeleeOrientation(slot, weapon, pivot, thrust_angle);
         }
 
         state.melee_damage = damage;

@@ -147,6 +147,7 @@ public class EnemyUnit : MonoBehaviour
         ZombieHitEffect.ResetCache();
         RollDustEffect.ResetCache();
         LevelUpEffect.ResetCache();
+        PlayerShootManager.ResetSpriteMeshCache(); // 총구 위치 계산용 무기 메시 캐시
         EnemyProjectile.ResetCache();
         ChargerUnit.ResetStaticCaches();
         BossFrameEffect.ResetCache();

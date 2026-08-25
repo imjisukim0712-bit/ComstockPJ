@@ -1,5 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 /// <summary>
 /// 짧은 효과음(SFX) 재생을 전담하는 전역 매니저. <see cref="MusicManager"/>와 같은 방식
@@ -19,6 +22,16 @@ public class SFXManager : MonoBehaviour
     private const string SfxFolder = "SFX";
 
     private const string PlayerHitClipName = "Player_Hit";
+
+    /// <summary>UI 버튼 클릭음(2026-08-25 사용자 제공 <c>23_ui_click.wav</c>).
+    /// 개별 버튼마다 리스너를 다는 대신 <see cref="PlayUiClickIfButtonPressed"/>가 전역으로
+    /// 감지해 재생한다 - 이 프로젝트 UI는 대부분 코드로 만들어지고 버튼이 화면마다 새로
+    /// 생성되므로, 생성부마다 붙이면 반드시 빠뜨리는 곳이 생긴다.</summary>
+    public const string UiClickClipName = "UI_Click";
+
+    /// <summary>AI 코어 레벨업 효과음(2026-08-25 사용자 제공 <c>26_core_upgrade.wav</c>).
+    /// <see cref="AiCoreManager"/>가 레벨업 이펙트와 같은 지점에서 한 번 재생한다.</summary>
+    public const string LevelUpClipName = "LevelUp";
 
     private const string VolumePrefsKey = "comstock_sfx_volume";
     private const float DefaultVolume = 0.7f;
@@ -83,6 +96,48 @@ public class SFXManager : MonoBehaviour
     {
         if (Instance == this) Instance = null;
     }
+
+    private void Update()
+    {
+        PlayUiClickIfButtonPressed();
+    }
+
+    /// <summary>
+    /// 이번 프레임에 마우스 왼쪽 버튼이 <b>UI 버튼 위에서</b> 눌렸으면 클릭음을 재생한다.
+    ///
+    /// 전역 감지를 쓰는 이유는 <see cref="UiClickClipName"/> 주석 참고. 판정 대상을
+    /// <see cref="Button"/>으로 한정해서 슬라이더 드래그나 빈 패널 클릭에는 소리가 나지 않는다.
+    /// 입력은 프로젝트 관례대로 새 Input System(<see cref="Mouse.current"/>)을 직접 폴링하고,
+    /// <c>Time.timeScale = 0</c>인 정비·상점 화면에서도 Update는 계속 돌기 때문에 그대로 동작한다.
+    /// (<c>비활성 버튼</c>은 클릭돼도 아무 일이 없으므로 소리도 내지 않는다.)
+    /// </summary>
+    private void PlayUiClickIfButtonPressed()
+    {
+        if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame) return;
+
+        EventSystem events = EventSystem.current;
+        if (events == null) return;
+
+        var pointer = new PointerEventData(events) { position = Mouse.current.position.ReadValue() };
+        ui_raycast_results.Clear();
+        events.RaycastAll(pointer, ui_raycast_results);
+
+        for (int i = 0; i < ui_raycast_results.Count; i++)
+        {
+            GameObject hit = ui_raycast_results[i].gameObject;
+            if (hit == null) continue;
+
+            // 라벨/아이콘을 눌러도 부모 버튼이 받으므로 부모까지 거슬러 올라가 찾는다.
+            var button = hit.GetComponentInParent<Button>();
+            if (button == null || !button.IsInteractable()) continue;
+
+            Play(UiClickClipName);
+            return;
+        }
+    }
+
+    // RaycastAll은 결과 리스트를 재사용할 수 있다(매 클릭마다 새로 할당하지 않는다).
+    private readonly List<RaycastResult> ui_raycast_results = new List<RaycastResult>();
 
     /// <summary>클립이 없으면(에셋 미준비) 조용히 스킵한다 - 어떤 호출부도 null 체크를 할 필요가 없다.</summary>
     public static void Play(string clipName, float volumeScale = 1f)

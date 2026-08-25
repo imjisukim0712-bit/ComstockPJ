@@ -270,6 +270,7 @@
   "ranking.row": "#{0} · {1} · {2} pts",
   "nickname.title": "Nickname for the leaderboard",
   "nickname.placeholder": "Enter a nickname",
+  "nickname.skip": "Not Now",
   "monster.200001.name": "Zombie",
   "monster.200002.name": "Charger",
   "monster.200003.name": "Spitter",

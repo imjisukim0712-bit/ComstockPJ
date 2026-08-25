@@ -202,11 +202,12 @@ public class PauseMenuUI : MonoBehaviour
         // 미리 채워져 있어 그냥 확인만 눌러도 예전과 동일하게 동작한다).
         if (RunState.IsEndless)
         {
+            // "다음에"를 누르면 제출만 건너뛰고 나가기는 그대로 진행한다(2026-08-25).
             NicknameInputPopup.Attach(overlayRoot, RunScore.ResolveDefaultPlayerName(), name =>
             {
                 RunScore.SubmitToLeaderboard(name);
                 FinishQuitToTitle();
-            });
+            }, FinishQuitToTitle);
             return;
         }
 

@@ -67,6 +67,8 @@ public class GameOverSummaryUI : MonoBehaviour
 
             Canvas canvas = GetComponentInParent<Canvas>();
             RectTransform parent = canvas != null ? canvas.transform as RectTransform : null;
+            // "다음에"(2026-08-25)를 누르면 제출 없이 팝업만 닫힌다 - 이 화면은 팝업 뒤에
+            // 이어지는 흐름이 없어 onSkip 콜백이 필요 없다(요약 화면이 그대로 남는다).
             NicknameInputPopup.Attach(parent, RunScore.ResolveDefaultPlayerName(), RunScore.SubmitToLeaderboard);
         }
     }

@@ -400,14 +400,19 @@ public class GameFlowManager : MonoBehaviour
         Canvas canvas = FindFirstObjectByType<Canvas>();
         RectTransform parent = canvas != null ? (RectTransform)canvas.transform : null;
 
-        NicknameInputPopup.Attach(parent, RunScore.ResolveDefaultPlayerName(), name =>
+        // "다음에"를 누르면 제출만 건너뛰고 타이틀 복귀는 그대로 진행한다(2026-08-25).
+        void ReturnToTitle()
         {
-            RunScore.SubmitToLeaderboard(name);
-
             Time.timeScale = 1f;
             GameFlowManager.SetPaused(false);
             UnityEngine.SceneManagement.SceneManager.LoadScene("Title");
-        });
+        }
+
+        NicknameInputPopup.Attach(parent, RunScore.ResolveDefaultPlayerName(), name =>
+        {
+            RunScore.SubmitToLeaderboard(name);
+            ReturnToTitle();
+        }, ReturnToTitle);
     }
 
     private void EnterIntermissionScreens()

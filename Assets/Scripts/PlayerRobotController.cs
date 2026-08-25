@@ -58,6 +58,11 @@ public class PlayerRobotController : MonoBehaviour
     [SerializeField] private float rollDustWidth = 1.8f;
     [Tooltip("땅먼지 이펙트의 렌더 순서 - 좀비(1)보다는 위, 로봇 몸통(13)보다는 아래로 둔다")]
     [SerializeField] private int rollDustSortingOrder = 2;
+    [Tooltip("구르는 동안 땅먼지가 캐릭터를 따라가는 비율(0 = 출발점에 고정, 1 = 완전히 붙어 다닌다).\n" +
+             "구르기는 0.28초에 2.5유닛을 이동하는데 먼지는 0.25초간 남아서, 0이면 먼지가 끝날 때쯤\n" +
+             "캐릭터가 2.2유닛(몸 두 개 거리) 앞에 가 있어 멀리 떨어져 보인다(2026-08-25 사용자 지적).\n" +
+             "1로 두면 먼지가 땅을 미끄러지는 것처럼 보이므로 일부만 따라가게 한다")]
+    [SerializeField, Range(0f, 1f)] private float rollDustFollowRatio = 0.6f;
 
     [Header("다리 기획서 Ver02 - 캐터필러(순간 부스트) / 로켓 추진기(가속 패시브)")]
     [Tooltip("순간 부스트 중 이동속도 배율")]
@@ -651,10 +656,37 @@ public class PlayerRobotController : MonoBehaviour
         UnlockTracker.ReportSkillUsed(); // 팬봇(스킬 100회) / 은하수(기본 외 다리 + 스킬)
         dashTimeLeft = dashDuration;
 
-        RollDustEffect.Play(transform.position, -dashDirection, rollDustWidth, rollDustSortingOrder);
+        // 먼지의 바닥선이 <b>발바닥</b>에 오도록 y를 실제 발 높이로 넘긴다(2026-08-25 사용자 지적:
+        // "구르기 이펙트의 바닥 직선면이 발바닥 직선면과 일치하여야 한다"). 플레이어 원점은 발밑
+        // 근처지만 정확히 발바닥은 아니다(실측 0.0465유닛 차이).
+        var dust_at = new Vector3(transform.position.x, GetSoleWorldY(), transform.position.z);
+        RollDustEffect.Play(dust_at, -dashDirection, rollDustWidth, rollDustSortingOrder,
+                            transform, rollDustFollowRatio);
 
         // 팬봇은 쿨다운 배율이 0이라 곧바로 다시 구를 수 있다("무제한 액티브 스킬").
         dashCooldownLeft = legSkillCooldownValue * HeadEffects.RollCooldownMultiplier;
+    }
+
+    /// <summary>
+    /// 지면에 닿는 발바닥의 월드 y(리그에서 가장 아래에 그려지는 조각의 밑단). 다리 종류마다
+    /// 바닥에 닿는 조각이 다르므로(2족은 신발, 캐터필러는 트랙, 거미는 발끝) 특정 조각을 지목하지
+    /// 않고 실제로 가장 낮게 그려진 것을 쓴다. 구르기를 시작하는 순간에만 부르므로 순회 비용은 무시할 만하다.
+    /// </summary>
+    private float GetSoleWorldY()
+    {
+        // 무기 소켓은 리그 밖(Player 직속)이라 여기 섞이면 안 된다 - 근접 찌르기나 구르기 자세에서
+        // 무기가 아래로 내려가면 그것을 발바닥으로 오인한다. 리그가 없으면 원점으로 폴백한다.
+        if (proceduralRig == null) return transform.position.y;
+
+        float sole = float.MaxValue;
+
+        foreach (SpriteRenderer renderer in proceduralRig.GetComponentsInChildren<SpriteRenderer>())
+        {
+            if (renderer == null || !renderer.enabled || renderer.sprite == null) continue;
+            if (renderer.bounds.min.y < sole) sole = renderer.bounds.min.y;
+        }
+
+        return sole < float.MaxValue ? sole : transform.position.y;
     }
 
     /// <summary>
