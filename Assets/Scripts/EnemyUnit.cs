@@ -104,6 +104,26 @@ public class EnemyUnit : MonoBehaviour
     /// <summary>몸통 캔버스 절반 높이(월드 유닛). pivot이 대략 중앙이므로 머리 위 높이로 쓴다.</summary>
     protected float BodyVisualHalfHeight => body_visual_half_height;
 
+    /// <summary>
+    /// 스프라이트 캔버스 안의 투명 여백을 제외한 <b>실제 그림 폭</b>의 비율(0~1).
+    /// 기본값은 캔버스 전체이며, 원본 그림이 캔버스 일부만 쓰는 경우에만 재정의한다.
+    /// Transform 배율이나 콜라이더 크기와는 별개다.
+    /// </summary>
+    protected virtual float BodyVisualWidthScale => 1f;
+
+    /// <summary>
+    /// 캔버스 안에서 <b>실제 그림이 차지하는 세로 구간</b>(0 = 캔버스 맨 아래, 1 = 맨 위).
+    /// 기본값 (0,1)은 캔버스 전체 = 예전 동작과 픽셀 단위로 같다.
+    ///
+    /// <para><b>왜 배율(곱셈)이 아니라 구간(범위)인가</b>(2026-08-25 검수에서 잡은 문제):
+    /// 그림이 캔버스 <b>가운데에 있지 않으면</b> 대칭 축소로는 위쪽 여백을 없앨 수 없다.
+    /// 스프린터가 그 경우다 - 알파 실루엣이 캔버스 250px 중 y 4~110에만 있어서 <b>실제 머리
+    /// 끝이 pivot(125)보다 아래</b>인데, <c>extents.y × 0.40</c> 같은 곱셈은 항상 pivot 위쪽
+    /// 값만 만들 수 있다(0.50u). 그 결과 체력바가 머리 위로 0.86u나 떠 있었다(좀비는 0.43u).
+    /// 구간으로 두면 상단 비율이 0.5보다 작을 때 <b>음수 높이</b>가 자연스럽게 나온다.</para>
+    /// </summary>
+    protected virtual Vector2 BodyVisualVerticalRange => new Vector2(0f, 1f);
+
     private Transform health_bar_root;
     private Transform health_bar_fill;
     private float health_bar_width;
@@ -942,8 +962,14 @@ public class EnemyUnit : MonoBehaviour
         float scale = transform.lossyScale.x; // 좀비/차저/보스/플레이어 전부 x=y=z 균등 스케일
         if (Mathf.Approximately(scale, 0f)) scale = 1f;
 
-        float world_sprite_width = body_sprite_renderer.bounds.size.x;
-        float world_sprite_top = body_sprite_renderer.bounds.extents.y; // pivot이 중앙이므로 top = 절반 높이(월드 기준)
+        float world_sprite_width = body_sprite_renderer.bounds.size.x * Mathf.Max(0.01f, BodyVisualWidthScale);
+
+        // 그림의 실제 상단을 pivot(캔버스 중앙) 기준 높이로 환산한다. 투명 캔버스를 먼저 걷어내야
+        // 체력바와 피격 이펙트가 빈 공간을 몸집으로 오인하지 않는다. 기본값 (0,1)이면
+        // (1 - 0.5) x 캔버스높이 = 캔버스 절반 높이라 예전 동작과 완전히 같다.
+        Vector2 visual_range = BodyVisualVerticalRange;
+        float visual_top_fraction = Mathf.Clamp01(Mathf.Max(visual_range.x, visual_range.y));
+        float world_sprite_top = (visual_top_fraction - 0.5f) * body_sprite_renderer.bounds.size.y;
 
         // 프레임 세트마다 캔버스 크기가 다를 수 있으므로, 몸집 기준값은 여기(프리팹 스프라이트)에서
         // 한 번만 재서 캐시한다(위 body_visual_width 주석 참고).

@@ -152,8 +152,28 @@ public class ShopPanelUI : MonoBehaviour
         SetCombatHudVisible(false);
 
         gameObject.SetActive(true);
+        ApplyTextPolish();
         if (detail_popup != null) detail_popup.Hide(); // 상세 팝업은 캔버스 직속이라 패널과 같이 꺼지지 않는다
         Refresh();
+    }
+
+    /// <summary>
+    /// 상점의 씬 텍스트가 각 9-slice 배경 베젤을 침범하지 않도록 실제 border 기반 여백을 준다.
+    /// 기존 RectTransform 범위 검사는 통과해도 글리프가 장식 위에 붙는 영문 UI 문제를 보완한다.
+    /// </summary>
+    private void ApplyTextPolish()
+    {
+        TextMeshProUGUI title = transform.Find("TitleText")?.GetComponent<TextMeshProUGUI>();
+
+        UiSafeArea.ApplyTextMarginsFromSibling(title);
+        UiSafeArea.ApplyTextMarginsFromSibling(waveText);
+        UiSafeArea.ApplyTextMarginsFromSibling(goldText);
+        UiSafeArea.ApplyTextMarginsFromSibling(moddingStatusText);
+        UiSafeArea.ApplyTextMarginsFromSibling(equippedWeaponsText);
+        UiSafeArea.ApplyTextMarginsFromSibling(equippedDiscsText);
+        UiSafeArea.ApplyTextMarginsFromSibling(statsText, 8f, true);
+        UiSafeArea.ApplyTextMarginsFromSibling(refreshText, 5f);
+        UiSafeArea.ApplyTextMarginsFromSibling(messageText, 5f);
     }
 
     public void Close()
@@ -478,6 +498,16 @@ public class ShopPanelUI : MonoBehaviour
                 ui.iconImage.enabled = icon != null;
             }
 
+            // ①-b 카드 배경도 등급별 아트로 바꾼다(2026-08-25 - "등급이 존재하는 모든 아이템
+            // 카드 ui를 교체하면돼"). 씬은 Black_ui01을 물고 있고, 같은 세트의 색깔 변형이
+            // UI/Grade/<색>/ 아래에 있다. 아트를 못 찾으면 씬의 원래 배경을 그대로 둔다.
+            if (ui.cardButton != null)
+            {
+                Image cardBackground = ui.cardButton.GetComponent<Image>();
+                Sprite gradeCard = ItemCellUI.GradeSprite(offer.Grade, "ui01");
+                if (cardBackground != null && gradeCard != null) cardBackground.sprite = gradeCard;
+            }
+
             // ② 종류 - 기획서 표기 형식: "전설 · 무기"
             if (ui.headerText != null)
             {
@@ -504,7 +534,13 @@ public class ShopPanelUI : MonoBehaviour
             // 구매 완료 스탬프 / 잠금 강조
             if (decor.stamp != null) decor.stamp.SetActive(offer.Purchased);
             if (decor.lockGlow != null) decor.lockGlow.SetActive(offer.Locked && !offer.Purchased);
-            if (decor.lockIcon != null) decor.lockIcon.color = offer.Locked ? LockYellow : Color.white;
+            // 2026-08-25 사용자가 잠김/해제 아이콘을 따로 올려줬다 - 예전처럼 자물쇠 하나를
+            // 노란색으로 물들여 구분하지 않고 그림 자체를 바꾼다(색은 원색 그대로 둔다).
+            if (decor.lockIcon != null)
+            {
+                decor.lockIcon.sprite = offer.Locked ? UiIconLibrary.Lock() : UiIconLibrary.Unlock();
+                decor.lockIcon.color = Color.white;
+            }
 
             if (ui.cardButton != null) ui.cardButton.interactable = !offer.Purchased;
             if (ui.lockButton != null) ui.lockButton.interactable = !offer.Purchased;
@@ -582,24 +618,42 @@ public class ShopPanelUI : MonoBehaviour
         DestroyIfExists(root, "LockGlow");
         DestroyIfExists(root, "PurchasedStamp");
 
+        // 카드 내용물은 아래 설계 좌표(테두리를 무시한 0~1)로 잡고, 실제 앵커는 ShopCardLayout이
+        // 카드 배경 아트의 진짜 베젤 안쪽으로 사상한다(2026-08-25 "상점에서 이미지 어긋난다" 수정).
+        ShopCardLayout layout = card.GetComponent<ShopCardLayout>();
+        if (layout == null) layout = card.gameObject.AddComponent<ShopCardLayout>();
+        layout.SetBackground(card.GetComponent<Image>());
+
         // 씬의 BodyText를 "능력치" 자리로 좁힌다. 이 파일의 EnsureGridContainer가 보유 목록
         // 제목 텍스트를 같은 방식으로 옮기고 있어서 새로운 수법은 아니다.
         if (offerSlots[index].bodyText != null)
         {
-            RectTransform body = offerSlots[index].bodyText.rectTransform;
-            body.anchorMin = new Vector2(0.05f, 0.26f);
-            body.anchorMax = new Vector2(0.95f, 0.54f);
-            body.offsetMin = Vector2.zero;
-            body.offsetMax = Vector2.zero;
+            layout.Track(offerSlots[index].bodyText.rectTransform,
+                         new Vector2(0.05f, 0.26f), new Vector2(0.95f, 0.54f));
             offerSlots[index].bodyText.alignment = TextAlignmentOptions.TopLeft;
             ItemCellUI.ApplyTextSizing(offerSlots[index].bodyText, 20f);
+            offerSlots[index].bodyText.margin = new Vector4(8f, 4f, 8f, 4f);
         }
 
+        // 아이콘·종류 줄은 씬이 소유한 요소다 - 설계 좌표를 여기 적어 두고 함께 사상한다
+        // (씬 파일은 건드리지 않는다는 이 화면의 기존 관례를 유지한다).
+        TrackSceneCardChild(layout, root, "IconImage_BG", 0.04f, 0.72f, 0.19f, 0.98f);
+        TrackSceneCardChild(layout, root, "IconImage", 0.05f, 0.74f, 0.18f, 0.96f);
+        TrackSceneCardChild(layout, root, "HeaderText_BG", 0.18f, 0.72f, 0.97f, 0.98f);
+        TrackSceneCardChild(layout, root, "HeaderText", 0.20f, 0.74f, 0.95f, 0.96f);
+
+        TextMeshProUGUI header = root.Find("HeaderText")?.GetComponent<TextMeshProUGUI>();
+        Image headerBackground = root.Find("HeaderText_BG")?.GetComponent<Image>();
+        UiSafeArea.ApplyTextMargins(header, headerBackground, 4f);
+
         decor.nameText = MakeText(root, "NameText", 0.05f, 0.55f, 0.95f, 0.70f, 30f, TextAlignmentOptions.Left);
+        layout.Track(decor.nameText.rectTransform, new Vector2(0.05f, 0.55f), new Vector2(0.95f, 0.70f));
+        decor.nameText.margin = new Vector4(8f, 0f, 8f, 0f);
 
         // 가격 박스 - 카드 안쪽 박스라 아이콘 칸(IconImage_BG)과 같은 아트를 써서 톤을 맞춘다.
         RectTransform priceBox = MakeChild(root, "PriceBox", 0.05f, 0.05f, 0.95f, 0.24f,
                                            typeof(CanvasRenderer), typeof(Image));
+        layout.Track(priceBox, new Vector2(0.05f, 0.05f), new Vector2(0.95f, 0.24f));
         var boxImage = priceBox.GetComponent<Image>();
         Sprite boxSprite = Resources.Load<Sprite>("UI/Black_ui04");
         if (boxSprite != null)
@@ -687,6 +741,19 @@ public class ShopPanelUI : MonoBehaviour
         }
 
         return decor;
+    }
+
+    /// <summary>
+    /// 씬이 소유한 카드 자식(아이콘·종류 줄)을 <see cref="ShopCardLayout"/>에 등록한다.
+    /// 이름으로 찾으므로 씬에서 그 요소가 사라지면 조용히 넘어간다.
+    /// </summary>
+    private static void TrackSceneCardChild(ShopCardLayout layout, RectTransform card, string childName,
+                                             float xMin, float yMin, float xMax, float yMax)
+    {
+        Transform child = card.Find(childName);
+        if (child == null) return;
+
+        layout.Track((RectTransform)child, new Vector2(xMin, yMin), new Vector2(xMax, yMax));
     }
 
     // ── 코드로 UI 요소를 만들 때 쓰는 공용 도구 ──────────────────────
@@ -840,6 +907,7 @@ public class ShopPanelUI : MonoBehaviour
 
         weapon_swap_label = MakeText(rect, "Label", 0.05f, 0.05f, 0.95f, 0.95f, 20f, TextAlignmentOptions.Center);
         weapon_swap_label.text = Loc.T("shop.swap");
+        UiSafeArea.ApplyTextMargins(weapon_swap_label, image, 3f);
 
         weapon_swap_button = rect.GetComponent<Button>();
         weapon_swap_button.onClick.AddListener(ToggleWeaponSwapMode);
@@ -922,6 +990,9 @@ public class ShopPanelUI : MonoBehaviour
             t.offsetMax = Vector2.zero;
             title.alignment = TextAlignmentOptions.Left;
             ItemCellUI.ApplyTextSizing(title, 30f);
+            // 제목/보조 안내의 줄 경계는 문자열에서 명시한다. 자동 줄바꿈에 맡기면 영문
+            // "[Equipped Weapons]"가 단어 사이에서 어색하게 쪼개진다.
+            title.textWrappingMode = TextWrappingModes.NoWrap;
         }
 
         Transform existing = panel.Find(name);
@@ -969,12 +1040,12 @@ public class ShopPanelUI : MonoBehaviour
             string weightLine = weight > capacity
                 ? $"<color=#FF5555>{weight:0.#}/{capacity:0.#}</color>"
                 : $"{weight:0.#}/{capacity:0.#}";
-            moddingStatusText.text = $"{Loc.T("modding.equipped_parts")} <size=75%>{Loc.T("modding.core_lv", RunState.CoreLevel)} · {Loc.T("modding.weight")} {weightLine} {DetailHint}</size>";
+            moddingStatusText.text = $"{Loc.T("modding.equipped_parts")}\n<size=75%>{Loc.T("modding.core_lv", RunState.CoreLevel)} · {Loc.T("modding.weight")} {weightLine} {DetailHint}</size>";
         }
 
         // 아이콘은 지금 선택된 머리의 실제 아트다(2026-08-19 - 이전에는 Parts/Body 하드코딩).
         ItemCellUI.CreateIconCell(partsGrid, "Cell_Head", HeadSpriteLibrary.GetCurrentIcon(),
-                                  new Color(0.16f, 0.17f, 0.19f, 1f), Loc.T("modding.head"), true, () => ShowDetail("head"));
+                                  ItemGrade.Normal, null, Loc.T("modding.head"), true, () => ShowDetail("head"));
 
         for (int i = 0; i < socketCount; i++)
         {
@@ -985,7 +1056,7 @@ public class ShopPanelUI : MonoBehaviour
 
             ItemCellUI.CreateIconCell(partsGrid, $"Cell_SocketPart_{i}",
                                       has ? PartIconLibrary.Get(socketPart) : PartIconLibrary.Get(PartSlot.ArmWeaponSocket),
-                                      grade.ToCellColor(CellPlainColor), $"{Loc.T("shop.socket_n", i + 1)}", has,
+                                      grade, null, $"{Loc.T("shop.socket_n", i + 1)}", has,
                                       () => ShowDetail($"ws:{index}"));
         }
 
@@ -998,7 +1069,7 @@ public class ShopPanelUI : MonoBehaviour
 
             ItemCellUI.CreateIconCell(partsGrid, $"Cell_Part_{slot}",
                                       has ? PartIconLibrary.Get(part) : PartIconLibrary.Get(slot),
-                                      grade.ToCellColor(CellPlainColor), slot.ToDisplayName(), has,
+                                      grade, null, slot.ToDisplayName(), has,
                                       () => ShowDetail($"p:{captured}"));
         }
     }
@@ -1032,7 +1103,7 @@ public class ShopPanelUI : MonoBehaviour
             string hint = weapon_swap_mode
                 ? $"<size=70%><color=#FFD37A>({Loc.T("shop.swap.pick_hint")})</color></size>"
                 : $"<size=70%><color=#8FB8FF>({Loc.T("common.detail")})</color></size>";
-            equippedWeaponsText.text = $"{Loc.T("modding.equipped_weapons")} {equippedWeapons}/{socketCount} {hint}";
+            equippedWeaponsText.text = $"{Loc.T("modding.equipped_weapons")} · {equippedWeapons}/{socketCount}\n{hint}";
         }
 
         if (weapon_swap_label != null) weapon_swap_label.text = Loc.T(weapon_swap_mode ? "shop.swap.cancel" : "shop.swap");
@@ -1051,20 +1122,24 @@ public class ShopPanelUI : MonoBehaviour
 
             // 교체 모드에서는 빈 소켓도 눌러야 한다(그 자리로 옮기기). 고른 출발 칸은 노란색으로
             // 강조한다 - 정비 화면이 교체 가능한 슬롯을 노란색으로 여는 것과 같은 관례.
-            Color cellColor = has ? grade.ToCellColor(CellPlainColor) : CellPlainColor;
-            if (weapon_swap_mode && weapon_swap_source == i) cellColor = SwapSelectedColor;
+            // 등급색은 칸 아트가 갖고 있다 - 여기서는 교체 모드의 출발 칸 강조만 tint로 얹는다.
+            Color? cellTint = (weapon_swap_mode && weapon_swap_source == i) ? SwapSelectedColor : (Color?)null;
 
             System.Action onClick = (weapon_swap_mode || has)
                 ? (System.Action)(() => HandleWeaponCellClicked(index))
                 : null;
 
-            ItemCellUI.CreateIconCell(weaponsGrid, $"Cell_Weapon_{i}", icon, cellColor,
+            ItemCellUI.CreateIconCell(weaponsGrid, $"Cell_Weapon_{i}", icon,
+                                      has ? grade : ItemGrade.Normal, cellTint,
                                       $"{Loc.T("shop.socket_n", i + 1)}", has, onClick);
         }
     }
 
     /// <summary>무기 위치 교체에서 고른 출발 칸의 강조색(정비 화면의 슬롯 강조와 같은 노란색).</summary>
     private static readonly Color SwapSelectedColor = new Color(0.95f, 0.75f, 0.15f, 1f);
+
+    /// <summary>빈 칸을 흐리게 보이게 하는 tint(등급 아트를 어둡게 곱한다).</summary>
+    private static readonly Color EmptyCellTint = new Color(0.55f, 0.55f, 0.55f, 1f);
 
     // 6. 장착된 디스크 - 슬롯 수만큼 칸을 만들고 낀 디스크만 아이콘을 채운다.
     private void RefreshDiscsGrid()
@@ -1080,7 +1155,7 @@ public class ShopPanelUI : MonoBehaviour
         ItemCellUI.ClearChildren(discsGrid);
 
         if (equippedDiscsText != null)
-            equippedDiscsText.text = $"{Loc.T("modding.discs")} {RunState.EquippedDiscIds.Count}/{slotCount} {DetailHint}";
+            equippedDiscsText.text = $"{Loc.T("modding.discs")} {RunState.EquippedDiscIds.Count}/{slotCount}\n<size=70%>{DetailHint}</size>";
 
         for (int i = 0; i < cellCount; i++)
         {
@@ -1092,12 +1167,12 @@ public class ShopPanelUI : MonoBehaviour
             {
                 int discId = disc.discId;
                 ItemCellUI.CreateIconCell(discsGrid, $"Cell_Disc_{i}", disc.LoadIcon(),
-                                          disc.grade.ToCellColor(CellPlainColor), null, true,
+                                          disc.grade, null, null, true,
                                           () => ShowDetail($"d:{discId}"));
             }
             else
             {
-                ItemCellUI.CreateIconCell(discsGrid, $"Cell_DiscEmpty_{i}", null, CellPlainColor * 0.6f, null, false, null);
+                ItemCellUI.CreateIconCell(discsGrid, $"Cell_DiscEmpty_{i}", null, ItemGrade.Normal, EmptyCellTint, null, false, null);
             }
         }
     }

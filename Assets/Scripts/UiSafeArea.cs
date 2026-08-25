@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -79,5 +80,41 @@ public static class UiSafeArea
         content.anchorMax = max;
         content.offsetMin = Vector2.zero;
         content.offsetMax = Vector2.zero;
+    }
+
+    /// <summary>
+    /// TMP 글리프가 9-slice 장식 테두리 위에 올라가지 않도록 실제 border 픽셀만큼 margin을 준다.
+    /// RectTransform이 박스 안에 있더라도 글자가 베젤에 너무 붙는 문제를 별도로 막는다.
+    /// 여러 번 호출해도 여백이 누적되지 않도록 기존 값과 큰 쪽만 사용한다.
+    /// </summary>
+    public static void ApplyTextMargins(TMP_Text text, Image background, float extraPadding = 8f,
+                                        bool vertical = false)
+    {
+        if (text == null || background == null || background.sprite == null) return;
+
+        Vector4 border = background.sprite.border; // (left, bottom, right, top)
+        float ppu = Mathf.Max(0.0001f, background.pixelsPerUnitMultiplier);
+        float extra = Mathf.Max(0f, extraPadding);
+        Vector4 old = text.margin; // TMP 순서: (left, top, right, bottom)
+
+        float left = Mathf.Max(old.x, border.x / ppu + extra);
+        float right = Mathf.Max(old.z, border.z / ppu + extra);
+        float top = vertical ? Mathf.Max(old.y, border.w / ppu + extra) : old.y;
+        float bottom = vertical ? Mathf.Max(old.w, border.y / ppu + extra) : old.w;
+        text.margin = new Vector4(left, top, right, bottom);
+    }
+
+    /// <summary>
+    /// 씬 관례인 <c>TextName_BG</c> 형제 Image를 찾아 <see cref="ApplyTextMargins"/>를 적용한다.
+    /// 배경이 없으면 조용히 넘어가므로 코드 생성 UI와 씬 UI 양쪽에서 안전하게 호출할 수 있다.
+    /// </summary>
+    public static void ApplyTextMarginsFromSibling(TMP_Text text, float extraPadding = 8f,
+                                                   bool vertical = false)
+    {
+        if (text == null || text.transform.parent == null) return;
+
+        Transform bgTransform = text.transform.parent.Find(text.name + "_BG");
+        if (bgTransform == null) return;
+        ApplyTextMargins(text, bgTransform.GetComponent<Image>(), extraPadding, vertical);
     }
 }

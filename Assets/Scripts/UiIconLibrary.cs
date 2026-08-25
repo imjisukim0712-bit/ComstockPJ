@@ -20,6 +20,7 @@ public static class UiIconLibrary
     private static Sprite lock_icon;
     private static Sprite stamp_frame;
     private static Sprite settings_icon;
+    private static Sprite unlock_icon;
 
     /// <summary>잠금 버튼에 쓸 자물쇠 아이콘.</summary>
     public static Sprite Lock()
@@ -29,6 +30,19 @@ public static class UiIconLibrary
         lock_icon = Resources.Load<Sprite>("UI/Lock_icon");
         if (lock_icon == null) lock_icon = BuildLock();
         return lock_icon;
+    }
+
+    /// <summary>
+    /// 잠금 <b>해제</b> 상태(열린 자물쇠) 아이콘. 2026-08-25 사용자가 아트를 올려주면서 신설했다 -
+    /// 예전에는 자물쇠 하나를 노란색으로 물들여 잠김/해제를 구분했는데, 이제 그림 자체가 다르다.
+    /// </summary>
+    public static Sprite Unlock()
+    {
+        if (unlock_icon != null) return unlock_icon;
+
+        unlock_icon = Resources.Load<Sprite>("UI/Unlock_icon");
+        if (unlock_icon == null) unlock_icon = Lock(); // 아트가 없으면 잠금 아이콘으로 대체
+        return unlock_icon;
     }
 
     /// <summary>
@@ -61,6 +75,7 @@ public static class UiIconLibrary
     public static void ClearCache()
     {
         lock_icon = null;
+        unlock_icon = null;
         stamp_frame = null;
         settings_icon = null;
         edgeRingCache.Clear();

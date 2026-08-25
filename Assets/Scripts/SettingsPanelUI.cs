@@ -94,18 +94,20 @@ public class SettingsPanelUI : MonoBehaviour
 
         // 세로 배치는 패널 안쪽(0~1 로컬)을 빈틈없이 채운다 - 처음엔 화면비율 아래로 패널의
         // 1/3 넘게 빈 공간이 남고 저장 버튼은 패널 밖(y<0)으로 튀어나가 있었다(실측으로 발견).
-        CreateLabel(panelRect, "Title", Loc.T("settings.title"), 0.05f, 0.90f, 0.80f, 0.965f, TextAlignmentOptions.MidlineLeft, 32f);
+        CreateLabel(panelRect, "Title", Loc.T("settings.title"), 0.05f, 0.90f, 0.80f, 0.965f, TextAlignmentOptions.MidlineLeft, 32f, "settings.title");
         CreateCloseButton(panelRect);
 
         VolumeSliderUI.Attach(panelRect, new Vector2(0.06f, 0.78f), new Vector2(0.94f, 0.865f),
             Loc.T("settings.music"), () => MusicManager.Volume, v => MusicManager.Volume = v,
-            h => MusicManager.OnVolumeChanged += h, h => MusicManager.OnVolumeChanged -= h);
+            h => MusicManager.OnVolumeChanged += h, h => MusicManager.OnVolumeChanged -= h,
+            "settings.music");
 
         VolumeSliderUI.Attach(panelRect, new Vector2(0.06f, 0.665f), new Vector2(0.94f, 0.75f),
             Loc.T("settings.sfx"), () => SFXManager.Volume, v => SFXManager.Volume = v,
-            h => SFXManager.OnVolumeChanged += h, h => SFXManager.OnVolumeChanged -= h);
+            h => SFXManager.OnVolumeChanged += h, h => SFXManager.OnVolumeChanged -= h,
+            "settings.sfx");
 
-        CreateLabel(panelRect, "ScreenLabel", Loc.T("settings.screen"), 0.06f, 0.565f, 0.5f, 0.625f, TextAlignmentOptions.MidlineLeft, 24f);
+        CreateLabel(panelRect, "ScreenLabel", Loc.T("settings.screen"), 0.06f, 0.565f, 0.5f, 0.625f, TextAlignmentOptions.MidlineLeft, 24f, "settings.screen");
 
         float modeWidth = 0.88f / ScreenModeKeys.Length;
         for (int i = 0; i < ScreenModeKeys.Length; i++)
@@ -113,7 +115,8 @@ public class SettingsPanelUI : MonoBehaviour
             int index = i;
             float x = 0.06f + modeWidth * i;
             screenModeBgs[i] = CreateRadioButton(panelRect, $"ScreenMode_{i}", Loc.T(ScreenModeKeys[i]),
-                x, 0.45f, x + modeWidth - 0.01f, 0.545f, () => SelectScreenMode(index), out screenModeButtons[i]);
+                x, 0.45f, x + modeWidth - 0.01f, 0.545f, () => SelectScreenMode(index), out screenModeButtons[i],
+                ScreenModeKeys[i]);
         }
 
         float aspectWidth = 0.88f / AspectLabels.Length;
@@ -128,10 +131,10 @@ public class SettingsPanelUI : MonoBehaviour
         // 피드백 웹사이트 버튼 - 열람할 URL을 아직 받지 못해 비활성으로 둔다(2026-08-18).
         // URL이 정해지면 CreateActionButton의 onClick에 Application.OpenURL(그 주소)를 넣으면 된다.
         CreateActionButton(panelRect, "FeedbackButton", Loc.T("settings.feedback_wip"),
-            0.06f, 0.16f, 0.94f, 0.245f, null, false);
+            0.06f, 0.16f, 0.94f, 0.245f, null, false, "settings.feedback_wip");
 
         CreateActionButton(panelRect, "SaveButton", Loc.T("settings.saveclose"), 0.06f, 0.03f, 0.94f, 0.115f,
-            HandleSaveClicked, true);
+            HandleSaveClicked, true, "settings.saveclose");
 
         gameObject.SetActive(false);
     }
@@ -220,9 +223,12 @@ public class SettingsPanelUI : MonoBehaviour
         label.fontSizeMax = 28f;
     }
 
+    /// <param name="key">번역 키. 주면 <see cref="LocalizedText"/>가 붙어 언어가 바뀌어도
+    /// 스스로 다시 채운다. null이면 <paramref name="text"/>를 그대로 쓴다(비율 표기 등).</param>
     private static void CreateLabel(RectTransform parent, string name, string text,
                                     float xMin, float yMin, float xMax, float yMax,
-                                    TextAlignmentOptions alignment, float maxFontSize)
+                                    TextAlignmentOptions alignment, float maxFontSize,
+                                    string key = null)
     {
         var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
         go.transform.SetParent(parent, false);
@@ -238,34 +244,68 @@ public class SettingsPanelUI : MonoBehaviour
         label.color = Color.white;
         label.raycastTarget = false;
         ItemCellUI.ApplyTextSizing(label, maxFontSize);
+        Localize(label, key);
+    }
+
+    /// <summary>
+    /// 코드로 만든 글자에 <see cref="LocalizedText"/>를 붙인다(2026-08-25).
+    ///
+    /// <para><b>왜 필요한가</b>: 이 패널은 <see cref="TitleSceneManager"/>의 Awake에서 <b>한 번만</b>
+    /// 만들어지는데, 언어를 바꾸는 곳도 같은 타이틀 화면이다. 만들 때 <c>Loc.T</c>로 글자를 박아만
+    /// 두면 언어를 바꿔도 설정 창만 옛 언어로 남는다(2026-08-25 사용자 지적 - 실제로 그랬다).</para>
+    ///
+    /// <para><b>왜 이벤트 구독이 아니라 컴포넌트인가</b>: 이 패널은 닫히면
+    /// <c>gameObject.SetActive(false)</c>가 되어 자기 <c>OnDisable</c>에서 구독을 놓는다 -
+    /// 정작 언어가 바뀌는 시점(패널이 닫혀 있을 때)에 이벤트를 못 받는다.
+    /// <see cref="LocalizedText"/>는 <b>다시 켜질 때 OnEnable에서 현재 언어로 채우므로</b>
+    /// 창을 열 때마다 저절로 맞는다.</para>
+    /// </summary>
+    private static void Localize(TMP_Text label, string key)
+    {
+        if (label == null || string.IsNullOrEmpty(key)) return;
+
+        LocalizedText localized = label.gameObject.GetComponent<LocalizedText>();
+        if (localized == null) localized = label.gameObject.AddComponent<LocalizedText>();
+        localized.Key = key;
     }
 
     private static Image CreateRadioButton(RectTransform parent, string name, string label,
                                            float xMin, float yMin, float xMax, float yMax,
-                                           System.Action onClick, out Button button)
+                                           System.Action onClick, out Button button,
+                                           string key = null)
     {
-        Image bg = ItemCellUI.CreateShell(parent, name, NormalColor, onClick, out GameObject cell);
-        button = cell.GetComponent<Button>();
+        // 2026-08-25 사용자 지적: "설정창 UI에서는 왜 테두리 추가했던거야? 등급이 있을때만
+        // 추가하라고 했었는데." - 예전에는 여기서 ItemCellUI.CreateShell(아이템 칸)을 재사용해서
+        // 등급도 없는 화면모드/화면비율 버튼에 등급용 테두리가 따라붙었다. 이 버튼은 아이템이
+        // 아니므로 아이템 칸을 빌려 쓰지 않고 <b>단순 배경 + 버튼</b>으로 직접 만든다.
+        var cell = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        cell.transform.SetParent(parent, false);
 
-        // ItemCellUI.CreateShell은 GridLayoutGroup이 위치를 정해주는 걸 전제로 anchor를 건드리지
-        // 않는다 - 여기는 격자가 아니라 좌표를 직접 지정해야 하므로 만든 뒤에 앵커를 채워 넣는다
-        // (처음에 이걸 빠뜨려 버튼 4개가 전부 (0.5,0.5) 한 점에 뭉쳐 안 보이는 채로 남았었다).
         var rect = (RectTransform)cell.transform;
         rect.anchorMin = new Vector2(xMin, yMin);
         rect.anchorMax = new Vector2(xMax, yMax);
         rect.offsetMin = Vector2.zero;
         rect.offsetMax = Vector2.zero;
 
+        Image bg = cell.GetComponent<Image>();
+        bg.color = NormalColor;
+
+        button = cell.AddComponent<Button>();
+        button.targetGraphic = bg;
+        if (onClick != null) button.onClick.AddListener(() => onClick());
+
         TextMeshProUGUI text = CreateText((RectTransform)cell.transform, "Label", TextAlignmentOptions.Center);
         text.text = label;
         text.fontSizeMax = 22f;
+        Localize(text, key);
 
         return bg;
     }
 
     private static void CreateActionButton(RectTransform parent, string name, string label,
                                            float xMin, float yMin, float xMax, float yMax,
-                                           System.Action onClick, bool interactable)
+                                           System.Action onClick, bool interactable,
+                                           string key = null)
     {
         var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         go.transform.SetParent(parent, false);
@@ -289,6 +329,7 @@ public class SettingsPanelUI : MonoBehaviour
         text.text = label;
         text.color = interactable ? Color.white : new Color(0.7f, 0.7f, 0.7f, 0.7f);
         text.fontSizeMax = 24f;
+        Localize(text, key);
     }
 
     private static TextMeshProUGUI CreateText(RectTransform parent, string name, TextAlignmentOptions alignment)

@@ -39,11 +39,9 @@ public class DamageNumberUI : MonoBehaviour
     private static readonly Color TakenColor = new Color(1f, 0.35f, 0.35f, 1f); // 플레이어가 입은 피해
 
     private static Canvas cached_canvas;
-    private static Sprite crit_icon;
 
     private RectTransform root;
     private TextMeshProUGUI label;
-    private Image icon;
     private Camera cam;
 
     private Vector3 world_pos;
@@ -52,7 +50,8 @@ public class DamageNumberUI : MonoBehaviour
     private float side;         // -1 = 왼쪽으로, +1 = 오른쪽으로 떨어진다(스폰 시 무작위 확정)
     private float fall_velocity; // 매 프레임 FallGravity만큼 누적 - 갈수록 빠르게 떨어진다
 
-    /// <summary>플레이어가 적에게 입힌 피해. isCrit이면 색이 다르고 아이콘이 함께 뜬다.</summary>
+    /// <summary>플레이어가 적에게 입힌 피해. isCrit이면 <b>색과 글자 크기</b>가 달라진다
+    /// (2026-08-25부터 별도 아이콘은 붙이지 않는다 - DamageNumberUI.Build 주석 참고).</summary>
     public static void ShowDealt(Vector3 worldPosition, float damage, bool isCrit)
     {
         Spawn(worldPosition, damage, isCrit ? CritColor : DealtColor, isCrit);
@@ -108,36 +107,16 @@ public class DamageNumberUI : MonoBehaviour
         // 이미 고쳐 뒀으므로 관례를 따른다(앞으로 어떤 패널이 추가돼도 재발하지 않는다).
         root.SetAsFirstSibling();
 
-        const float iconSize = 26f;
-        const float iconGap = 4f;
-        float textOffsetX = 0f;
-
-        if (isCrit)
-        {
-            var iconGo = new GameObject("CritIcon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            iconGo.transform.SetParent(root, false);
-            icon = iconGo.GetComponent<Image>();
-            icon.sprite = ResolveCritIcon();
-            icon.color = color;
-            icon.raycastTarget = false;
-
-            var iconRect = (RectTransform)iconGo.transform;
-            iconRect.anchorMin = new Vector2(0f, 0.5f);
-            iconRect.anchorMax = new Vector2(0f, 0.5f);
-            iconRect.pivot = new Vector2(0f, 0.5f);
-            iconRect.anchoredPosition = new Vector2(iconGap, 0f);
-            iconRect.sizeDelta = new Vector2(iconSize, iconSize);
-
-            textOffsetX = iconGap + iconSize + iconGap;
-        }
-
+        // 2026-08-25 사용자 지시: "치명타 터트릴때 +표시는 없어도 될듯".
+        // 예전에는 숫자 왼쪽에 코드로 그린 4방향 별(sparkle) 아이콘을 붙였는데, 작게 표시되니
+        // 별이 아니라 '+' 기호처럼 읽혔다. 치명타는 <b>색과 글자 크기</b>만으로 구분한다.
         var textGo = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
         textGo.transform.SetParent(root, false);
         label = textGo.GetComponent<TextMeshProUGUI>();
         label.text = FormatDamage(damage);
         label.color = color;
         label.fontStyle = FontStyles.Bold;
-        label.alignment = isCrit ? TextAlignmentOptions.MidlineLeft : TextAlignmentOptions.Midline;
+        label.alignment = TextAlignmentOptions.Midline;
         label.raycastTarget = false;
         label.enableAutoSizing = false;
         label.fontSize = isCrit ? CritFontSize : NormalFontSize;
@@ -145,7 +124,7 @@ public class DamageNumberUI : MonoBehaviour
         var textRect = (RectTransform)textGo.transform;
         textRect.anchorMin = Vector2.zero;
         textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = new Vector2(textOffsetX, 0f);
+        textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
 
         UpdateScreenPosition();
@@ -205,13 +184,6 @@ public class DamageNumberUI : MonoBehaviour
             c.a = alpha;
             label.color = c;
         }
-
-        if (icon != null)
-        {
-            Color c = icon.color;
-            c.a = alpha;
-            icon.color = c;
-        }
     }
 
     /// <summary>0.##로 소수점까지 보여준다(스탯 표시와 같은 관례 - 반올림하면 소수 피해가 숨는다).</summary>
@@ -225,49 +197,5 @@ public class DamageNumberUI : MonoBehaviour
         if (cached_canvas != null) return cached_canvas;
         cached_canvas = FindFirstObjectByType<Canvas>();
         return cached_canvas;
-    }
-
-    // ── 치명타 아이콘 (코드 생성, PartIconLibrary.BuildPlaceholder와 같은 방식) ─────────────
-
-    private static Sprite ResolveCritIcon()
-    {
-        if (crit_icon != null) return crit_icon;
-
-        const int size = 32;
-        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
-        {
-            filterMode = FilterMode.Bilinear,
-            wrapMode = TextureWrapMode.Clamp,
-            name = "DamageNumber_CritIcon"
-        };
-
-        var pixels = new Color32[size * size];
-        float cx = (size - 1) * 0.5f;
-        float cy = (size - 1) * 0.5f;
-        float outerRadius = size * 0.46f;
-
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                float dx = x - cx;
-                float dy = y - cy;
-                float r = Mathf.Sqrt(dx * dx + dy * dy);
-                float angle = Mathf.Atan2(dy, dx);
-
-                // 4방향으로 뻗는 별(sparkle) 모양: r(θ) = R x (0.30 + 0.70 x |cos(2θ)|^0.6).
-                // 극좌표 한 줄로 표현되는 꽃/별 곡선이라 Rect/Disc처럼 별도 헬퍼 없이 이 안에서 끝낸다.
-                float petal = outerRadius * (0.30f + 0.70f * Mathf.Pow(Mathf.Abs(Mathf.Cos(2f * angle)), 0.6f));
-                bool filled = r <= petal;
-
-                pixels[y * size + x] = filled ? new Color32(255, 255, 255, 255) : new Color32(255, 255, 255, 0);
-            }
-        }
-
-        tex.SetPixels32(pixels);
-        tex.Apply(false, false);
-
-        crit_icon = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
-        return crit_icon;
     }
 }

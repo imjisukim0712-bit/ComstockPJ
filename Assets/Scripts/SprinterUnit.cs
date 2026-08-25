@@ -8,6 +8,24 @@ using UnityEngine;
 /// </summary>
 public class SprinterUnit : EnemyUnit
 {
+    /// <summary>
+    /// SprinterMove는 250x250 캔버스 중 실제 몸이 대표 자세 기준 약 70%(폭)만 차지한다.
+    /// 프리팹 전체 배율을 올려 일반 좀비와 실제 그림 높이를 맞추되, 체력바·피격 이펙트는
+    /// 투명 캔버스가 아닌 몸 실루엣을 따라가도록 보정한다.
+    /// </summary>
+    protected override float BodyVisualWidthScale => 0.70f;
+
+    /// <summary>
+    /// 질주 세트는 캔버스 <b>아래쪽에 치우쳐</b> 그려져 있다 - 8프레임 알파 실루엣 실측 결과
+    /// 세로 y 4~110px(250px 캔버스)이라, 가장 높은 자세의 머리 끝도 캔버스 중앙(125)보다 낮다.
+    /// 그래서 상단 비율은 0.5보다 작은 <b>110/250 = 0.44</b>다(하단은 4/250 = 0.02).
+    ///
+    /// <para>예전 곱셈 방식(<c>extents.y × 0.40</c>)은 항상 pivot 위쪽 값만 낼 수 있어
+    /// 체력바가 머리 위로 0.86u 떠 있었다(좀비 0.43u). 가장 높은 프레임(run_5·6, y max 110)을
+    /// 기준으로 잡아 어떤 자세에서도 바가 머리를 덮지 않게 한다.</para>
+    /// </summary>
+    protected override Vector2 BodyVisualVerticalRange => new Vector2(0.02f, 0.44f);
+
     [Header("스프린터 돌진 (전부 밸런스 미확정 임시값)")]
     [Tooltip("돌진이 지속되는 시간(초). 아래 '지나치는 거리'에 먼저 도달하면 그 전에 끝난다")]
     [SerializeField] private float dashDuration = 0.35f;

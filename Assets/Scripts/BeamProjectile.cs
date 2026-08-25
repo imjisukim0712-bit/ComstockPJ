@@ -37,6 +37,18 @@ public class BeamProjectile : MonoBehaviour
     // 빔 비주얼 애니메이션(2026-08-21, 플라즈마캐논 탄환 이펙트 2프레임 적용) - 프레임이 1장뿐이면
     // 정지 이미지처럼 보인다(교체 전 단일 스프라이트 방식과 동일하게 동작).
     private const float VisualFps = 8f;
+
+    /// <summary>
+    /// 빔 그림의 정렬 순서. <b>이 값이 없어서(=기본 0) 이펙트가 안 붙은 것처럼 보였다</b>
+    /// (2026-08-25 사용자 리포트: "플라즈마 캐논 이펙트 적용이 안되어있음. 내가 안올렸었나?" -
+    /// 아트는 <c>Resources/PlasmaCannonBeam</c>에 이미 들어와 있었고 파일도 동일했다).
+    /// 실측 정렬 순서: 지형 0 / 좀비 1 / 로봇 몸통·다리 2~13 / 손에 든 무기 14.
+    /// 0이면 빔이 <b>지형 바로 위·모든 적과 로봇 아래</b>에 깔려서, 반투명(alpha 0.6)까지 겹쳐
+    /// 사실상 보이지 않았다. 총구 화염(PlayerShootManager.muzzle_flash_sorting_order)과 같은
+    /// 20을 써서 발사 연출끼리 같은 층에 둔다.
+    /// </summary>
+    private const int VisualSortingOrder = 20;
+
     private SpriteRenderer visual_renderer;
     private Sprite[] visual_frames;
     private float visual_frame_timer;
@@ -103,6 +115,7 @@ public class BeamProjectile : MonoBehaviour
 
         visual_renderer = visual_obj.AddComponent<SpriteRenderer>();
         visual_renderer.sprite = first;
+        visual_renderer.sortingOrder = VisualSortingOrder;
         visual_renderer.color = new Color(1f, 1f, 1f, 0.6f); // 겹쳐 보여도 눈이 아프지 않도록 반투명
 
         float sprite_length = Mathf.Max(0.0001f, first.bounds.size.x);

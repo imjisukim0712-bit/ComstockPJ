@@ -160,14 +160,27 @@ public class AiCoreManager : MonoBehaviour
         /// <summary>등급 배율까지 적용된 실제 증가량(카드에 적히는 값 = 실제 반영되는 값).</summary>
         public float Amount;
 
-        /// <summary>카드에 표시할 두 줄 문구. 첫 줄은 등급(색상)+이름, 둘째 줄은 실제 효과.</summary>
-        public string BuildLabel()
+        /// <summary>
+        /// 카드는 <b>등급 / 이름 / 설명</b> 세 덩어리를 각각 다른 글자 칸에 그린다
+        /// (2026-08-25 사용자 지시: "등급 \ 이름 \ 설명으로 나눠서 엔터치는게 나을듯" + 레퍼런스 이미지).
+        /// <para>예전에는 세 정보를 한 줄 문자열에 <c>\n</c> 하나로 이어 붙였는데, 이름이 길면
+        /// 등급과 이름이 한 줄에서 제멋대로 접혀 "글자 엔터가 어색"했다. 칸을 나누면 각 줄이
+        /// 자기 칸 안에서만 접히므로 그런 일이 없다. 실제 배치는
+        /// <see cref="GameFlowManager"/>가 맡는다.</para>
+        /// </summary>
+        public string GradeLine() => Grade.ToDisplayName();
+
+        /// <summary>등급색(카드의 등급 줄에 쓰는 색).</summary>
+        public string GradeColorHex() => Grade.ToColorHex();
+
+        public string NameLine() => Option.DisplayName();
+
+        /// <summary>실제 적용값으로 만든 효과 설명(등급마다 수치가 달라지므로 매번 생성한다).</summary>
+        public string EffectLine()
         {
-            string effect = string.IsNullOrWhiteSpace(Option.description)
+            return string.IsNullOrWhiteSpace(Option.description)
                 ? AiCoreUpgradePool.BuildEffectLine(Option.statType, Amount)
                 : Option.description;
-
-            return $"<color={Grade.ToColorHex()}>{Grade.ToDisplayName()}</color> {Option.DisplayName()}\n{effect}";
         }
     }
 

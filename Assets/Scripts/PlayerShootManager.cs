@@ -760,19 +760,44 @@ public class PlayerShootManager : MonoBehaviour
     }
 
     /// <summary>구르는 동안 모든 소켓의 리그 포인트를 머리 위로 옮기고, 캐릭터와 같은 각도로 돌린다.
-    /// 원래 좌/우 위치(x 부호)만큼 살짝 벌려서 두 무기가 완전히 겹쳐 보이지 않게 한다.</summary>
+    /// 원래 좌/우 위치(x 부호)만큼 살짝 벌려서 두 무기가 완전히 겹쳐 보이지 않게 한다.
+    ///
+    /// <para><b>각도 반전(<see cref="ApplyAngleFlip"/>)은 구르는 동안 반드시 꺼야 한다</b>
+    /// (2026-08-25 사용자 지적: "구르기 오른쪽으로 할때 상하가 반전이 되어버려서 어색해").
+    /// 그 기능은 <b>조준할 때</b> 총이 뒤집혀 보이지 않게 하려고 <c>flipY</c>(상하 반전)와
+    /// 추가 회전 ±90도를 얹는 것인데, 구르는 동안에는 이걸 계산하는 <c>UpdateSlot</c>이 통째로
+    /// 건너뛰어진다. 그래서 <b>구르기 직전 조준 상태의 반전이 그대로 얼어붙은 채</b> 무기가
+    /// 몸과 함께 360도 돌아 상하가 뒤집힌 총이 빙글빙글 도는 그림이 됐다. 오른쪽을 보고 구를 때
+    /// 유독 눈에 띄는 이유는 그 각도대가 두 소켓 모두 반전 범위에 들어가기 때문이다.
+    /// 구를 때는 무기가 캐릭터와 한 몸으로 뒹구는 것이므로 "총을 똑바로 보이게" 하는 보정 자체가
+    /// 의미가 없다 - 원래 그림 그대로 돌린다. 구르기가 끝나면 다음 프레임 <c>UpdateSlot</c>이
+    /// 조준 각도로 다시 계산하므로 따로 되돌릴 필요가 없다.</para>
+    /// </summary>
     private void ApplyRollPoseToAllSlots()
     {
         float spin = player_stats.DashSpinDegrees;
         for (int i = 0; i < weapon_slots.Count; i++)
         {
-            Transform pivot = weapon_slots[i].rig_point != null ? weapon_slots[i].rig_point : weapon_slots[i].muzzle_point;
+            WeaponSlot slot = weapon_slots[i];
+
+            Transform pivot = slot.rig_point != null ? slot.rig_point : slot.muzzle_point;
             if (pivot == null) continue;
 
             float side = roll_home_local_position.TryGetValue(i, out Vector3 home) ? Mathf.Sign(home.x) : 0f;
             pivot.localPosition = roll_rig_local_position + new Vector3(side * roll_rig_lateral_spread, 0f, 0f);
             pivot.rotation = Quaternion.Euler(0f, 0f, spin);
+
+            ClearAngleFlip(slot);
         }
+    }
+
+    /// <summary>조준용 상하 반전 보정을 해제해 원래 그림 상태로 되돌린다(구르는 동안 사용).</summary>
+    private static void ClearAngleFlip(WeaponSlot slot)
+    {
+        if (slot.hand_sprite_renderer == null) return;
+
+        slot.hand_sprite_renderer.flipY = false;
+        slot.hand_sprite_renderer.transform.localRotation = Quaternion.identity;
     }
 
     /// <summary>구르기가 끝난 직후 리그 포인트를 원래 위치로 되돌린다(회전은 다음 프레임 UpdateSlot이 알아서 다시 계산한다).</summary>

@@ -84,6 +84,9 @@ public static class MonsterAnimationLibrary
         // 이 세트 대신 "ChargerCharge" 세트로 바뀐다).
         { 200002, new Entry { ResourceFolder = "ChargerMove",   StillFrameIndex = 0, Fps = 8f } },  // 차저
         { 200003, new Entry { ResourceFolder = "SpitterMove",   StillFrameIndex = 0, Fps = 6f } },  // 스피터
+        // 스프린터는 원래 정지 자세(f3)를 유지한다. 일반 좀비보다 작았던 원인은 프레임 선택이
+        // 아니라 같은 PPU에서 불투명 그림 높이가 절반뿐인 원본 아트였으며, 전체 배율은 프리팹과
+        // SprinterUnit의 시각 bounds 보정으로 해결한다(2026-08-25 사용자 정정).
         { 200004, new Entry { ResourceFolder = "SprinterMove",  StillFrameIndex = 3, Fps = 14f } }, // 스프린터
         { 200005, new Entry { ResourceFolder = "DisruptorMove", StillFrameIndex = 0, Fps = 6f } },  // 디스럭터
         { 200006, new Entry { ResourceFolder = "LeaderMove",    StillFrameIndex = 0, Fps = 7f } },  // 리더

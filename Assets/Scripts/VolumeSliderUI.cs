@@ -28,7 +28,8 @@ public class VolumeSliderUI : MonoBehaviour
     public static VolumeSliderUI Attach(RectTransform parent, Vector2 anchorMin, Vector2 anchorMax,
                                         string label, System.Func<float> getValue, System.Action<float> setValue,
                                         System.Action<System.Action<float>> subscribeChanged = null,
-                                        System.Action<System.Action<float>> unsubscribeChanged = null)
+                                        System.Action<System.Action<float>> unsubscribeChanged = null,
+                                        string labelKey = null)
     {
         if (parent == null) return null;
 
@@ -46,15 +47,23 @@ public class VolumeSliderUI : MonoBehaviour
         ui.setValue = setValue;
         ui.subscribe = subscribeChanged;
         ui.unsubscribe = unsubscribeChanged;
-        ui.Build(rootRect, label);
+        ui.Build(rootRect, label, labelKey);
         return ui;
     }
 
-    private void Build(RectTransform rootRect, string label)
+    /// <param name="labelKey">번역 키(선택). 주면 <see cref="LocalizedText"/>가 붙어 언어가
+    /// 바뀌어도 이름표가 스스로 다시 채워진다 - 설정 창은 한 번만 만들어지고 다시 열리기만 하므로
+    /// 이게 없으면 만들 때의 언어에 그대로 굳는다(2026-08-25).</param>
+    private void Build(RectTransform rootRect, string label, string labelKey = null)
     {
         TextMeshProUGUI labelText = CreateText(rootRect, "Label", new Vector2(0f, 0f), new Vector2(0.30f, 1f),
             TextAlignmentOptions.MidlineLeft);
         labelText.text = label;
+
+        if (!string.IsNullOrEmpty(labelKey))
+        {
+            labelText.gameObject.AddComponent<LocalizedText>().Key = labelKey;
+        }
 
         valueText = CreateText(rootRect, "Value", new Vector2(0.90f, 0f), new Vector2(1f, 1f),
             TextAlignmentOptions.MidlineRight);

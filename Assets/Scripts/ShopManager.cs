@@ -155,12 +155,15 @@ public class ShopManager : MonoBehaviour
         if (index < 0 || index >= offers.Count) { reason = Loc.T("shop.err.bad_slot"); return false; }
 
         Offer offer = offers[index];
-        // 악세사리·디스크는 이미 구매했어도 다시 사는 것이 정상 동작(스택형)이라 Purchased
-        // 검사에서 제외한다 - 대신 카드 자체를 "구매 완료" 스탬프로 막지 않고 계속 살 수 있게
-        // TryPurchaseDisc/CreateAccessoryOffer가 Purchased를 절대 true로 두지 않는다.
-        // (디스크는 2026-08-24 사용자 지정으로 합류 - TryPurchaseDisc 주석 참고. 슬롯이 차면
-        //  아래 IsDiscSlotFull이 대신 막는다.)
-        if (!offer.IsAccessory && !offer.IsDisc && offer.Purchased) { reason = Loc.T("shop.err.already_bought"); return false; }
+        // 악세사리는 이미 구매했어도 다시 사는 것이 정상 동작(스택형)이라 Purchased 검사에서
+        // 제외한다 - CreateAccessoryOffer가 Purchased를 절대 true로 두지 않는다.
+        //
+        // <b>디스크는 2026-08-25에 다시 잠그는 쪽으로 확정됐다</b>(사용자: "상점에서 디스크 사도
+        // 판매완료가 안되는 문제가 있음" → 확인 결과 "샀으면 카드 잠김 (중복 구매 불가)").
+        // 2026-08-24에는 반대로 "같은 종류를 여러 개도 살 수 있게" 열어 뒀었는데, 카드가 잠기지
+        // 않으니 구매됐다는 표시가 없어 오히려 버그처럼 보였다. 잠금과 "구매 완료" 스탬프가 같은
+        // 플래그(Purchased)를 쓰므로 둘을 따로 켤 수 없어, 사용자 판단으로 잠금을 택했다.
+        if (!offer.IsAccessory && offer.Purchased) { reason = Loc.T("shop.err.already_bought"); return false; }
         if (RunState.Gold < offer.Price) { reason = Loc.T("shop.err.nogold"); return false; }
         if (offer.IsDisc && IsDiscSlotFull) { reason = Loc.T("shop.err.disc_full"); return false; }
 
@@ -171,12 +174,16 @@ public class ShopManager : MonoBehaviour
     /// 디스크를 구매해 즉시 장착한다. 무기는 어느 소켓에 넣을지 정해야 해서
     /// PurchaseWeaponIntoSocket을 따로 쓴다.
     ///
-    /// <b>같은 종류를 몇 개든 살 수 있다</b>(2026-08-24 사용자 지정: "디스크 같은 종류는 여러개도
-    /// 살 수 있게 만들어줘"). 디스크 효과 코드는 원래부터 중복 장착을 전제로 장 수를 곱하도록
-    /// 되어 있었는데(<see cref="DiscEffectRuntime"/>의 CountCopies, <see cref="RecomputeCritChancePerDisc"/>),
-    /// <b>상점 카드가 한 번 사면 "구매 완료"로 잠겨</b> 같은 칸에서 두 번째를 살 수 없었다.
-    /// 그래서 악세사리와 같은 방식으로 카드를 잠그지 않는다 - 골드와 디스크 슬롯이 남아있는
-    /// 동안 계속 살 수 있고, 슬롯이 차면 <see cref="CanPurchase"/>가 막아준다.
+    /// <b>한 번 사면 카드가 잠긴다</b>(2026-08-25 사용자 확정). 다른 아이템과 같이 "구매 완료"
+    /// 스탬프가 붙고 같은 칸에서 다시 살 수 없다.
+    ///
+    /// <para><b>이력</b>: 2026-08-24에는 "디스크 같은 종류는 여러개도 살 수 있게 만들어줘"로
+    /// 카드를 잠그지 않았다. 그런데 잠기지 않으니 <b>구매됐다는 표시가 전혀 없어</b> 사용자가
+    /// "디스크 사도 판매완료가 안되는 문제"로 리포트했고, 확인 결과 잠그는 쪽을 택했다.
+    /// 잠금과 스탬프가 같은 플래그(<c>Purchased</c>)를 쓰므로 둘을 따로 켤 수 없다.
+    /// 같은 디스크를 여러 장 겹치는 것 자체는 여전히 가능하다 - 상점을 새로고침해 다시 뜨거나
+    /// 다른 칸에 같은 디스크가 나오면 살 수 있고, 효과 코드도 원래부터 장 수를 곱한다
+    /// (<see cref="DiscEffectRuntime"/>의 CountCopies).</para>
     /// </summary>
     public bool TryPurchaseDisc(int index)
     {
@@ -187,6 +194,7 @@ public class ShopManager : MonoBehaviour
 
         RunState.Gold -= offer.Price;
         EquipDisc(offer.Disc);
+        offer.Purchased = true;   // "구매 완료" 스탬프 + 재구매 차단(무기와 같은 처리)
         offer.Locked = false;
 
         // 핫팟(누적 디스크 구매 50) / 염동력(디스크 4개 이상 착용) / 엔드리스 구매 조건들

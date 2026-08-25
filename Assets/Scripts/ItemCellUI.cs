@@ -8,53 +8,38 @@ using UnityEngine.UI;
 /// 2026-08-18 사용자 요청으로 정비 화면과 상점 화면이 같은 규칙을 쓰게 되면서 뽑아냈다.
 ///  - 보유·장착 중인 아이템은 <b>아이콘만</b> 보여준다(아이콘 뒤에 별도 사각형을 깔지 않는다 -
 ///    칸 자체가 배경이다).
-///  - <b>일반 등급이 아니면 등급색으로 강조</b>한다(<see cref="ItemGradeExtensions.ToCellColor"/>).
-///  - 칸은 "테두리 아트(흰색 고정, <see cref="FrameSpriteName"/>) + 색 테두리 링(AccentRing)"
-///    두 겹뿐이다. 캡션·아이콘은 <b>그 위에 바로</b> 그린다 - 사이에 별도로 채색한 사각형을
+///  - <b>등급색은 아트 자체에 들어 있다</b>(<see cref="FrameSpritePath"/>). 칸은 <b>테두리 아트
+///    한 겹</b>뿐이고, 캡션·아이콘은 그 위에 바로 그린다 - 사이에 별도로 채색한 사각형을
 ///    끼워 넣지 않는다(2026-08-21, 사용자 지적: "기존 UI 리소스 위에 회색 사각형을
-///    덮어버리면 안 된다" - 정비 화면 "머리" 칸 스크린샷. 처음엔 안쪽 사각형의 색만
-///    옅게 죽였는데, 그것도 "사각형이 하나 더 있다"는 문제 자체는 그대로였다).
-///    등급/강조색은 테두리 아트에 직접 곱하면 안 보이므로(2026-08-13에 겪은 함정 - 스프라이트가
-///    거의 검정이라 색을 곱하는 순간 죽는다) 전용 흰색 실루엣 링을 테두리 위에 덧그리는 방식으로만
-///    표현한다. 이 링은 <see cref="FrameSpriteName"/>의 실제 베젤 두께·모양을 그대로 따르는
-///    <see cref="UiIconLibrary.DeriveEdgeRing"/>로 만든다(2026-08-25 - 예전엔 캔버스 크기 기준
-///    임의 사각 링(<see cref="UiIconLibrary.Frame"/>)이라 실제 둥근 베젤과 안 맞았다).
-///    <b>임시방편</b>이다 - 사용자가 나중에 등급별로 실제 색이 다른 UI 리소스를 직접 올리면
-///    이 tint 방식 자체가 필요 없어질 수 있다.
+///    덮어버리면 안 된다" - 정비 화면 "머리" 칸 스크린샷).
+///  - <b>2026-08-25: 코드로 테두리를 그리던 방식을 폐기했다.</b> 사용자가 등급별 UI 아트를 직접
+///    올려주면서 "원래는 테두리를 억지로 그렸었는데 이젠 테두리 빼고 저 이미지로 대체하면돼"라고
+///    확정했다. 예전에는 흰색 실루엣 링(AccentRing)을 만들어 등급색으로 칠했는데
+///    (<c>UiIconLibrary.DeriveEdgeRing</c>), 그 방식은 <b>등급이 없는 UI에서도 쓸데없는 테두리를
+///    만들어냈다</b> - 설정 창의 화면모드/화면비율 버튼이 이 칸을 재사용하면서 의미 없는 테두리를
+///    달고 있었고, 사용자가 이를 지적해 함께 걷어냈다.
+///  - 강조(선택 노란색)·흐리기(빈 칸)는 <b>tint</b>로만 표현한다. 등급 아트는 검정이 아니라
+///    등급색이 살아 있어 색을 곱해도 죽지 않는다(옛 검정 아트에서 겪던 2026-08-13 함정이 사라졌다).
+///  - <b>2026-08-25: 칸 안쪽 배치를 <see cref="ItemCellLayout"/>에 넘겼다.</b> 이름표·아이콘의
+///    사각형을 <b>여기서 정규화 앵커 상수로 정하지 않는다</b> - 9-slice 베젤은 rect 크기와 무관하게
+///    고정 픽셀로 그려지므로, 같은 비율이 칸 크기에 따라 전혀 다른 결과가 된다. 1080p 실측에서
+///    파츠 칸(175x98px)의 베젤이 사방 30px이라 아이콘이 아래 테두리에 25px 파묻혀 있었고,
+///    사용자가 "각 파츠들 이미지가 파츠 UI 테두리부분에 안겹쳤으면 하는데 레이아웃 다시 넣어봐"라고
+///    지적했다. 이제 칸 크기가 확정된 뒤 실제 베젤 두께에서 역산해 픽셀 단위로 배치한다.
 /// </summary>
 public static class ItemCellUI
 {
-    private const string FrameSpriteName = "UI/Black_ui03";
-
     /// <summary>테두리 아트를 못 찾았을 때만 쓰는 대체 배경색(정상적인 경우엔 안 쓰인다).</summary>
     private static readonly Color CellBaseColor = new Color(0.10f, 0.10f, 0.12f, 1f);
 
-    private static Vector2? safe_content_inset;
-
     /// <summary>
-    /// <see cref="FrameSpriteName"/>의 <b>실제 9-slice border 두께</b>를 0~1 비율로 환산한 값
-    /// (가로/세로 각각, 셀 한쪽 가장자리 기준). 캡션처럼 셀 바깥쪽 가장자리에 붙는 글자는
-    /// 반드시 이 비율만큼 안쪽에만 놓아야 테두리와 겹치지 않는다("UI 제작 규칙" 참고).
-    /// 임의의 여백 숫자를 쓰지 않고 실제 아트에서 역산한다 - 아트가 바뀌면 자동으로 따라온다.
+    /// 슬롯 이름표 글자 크기 상한. 정비 화면의 "Inventory 5/20"(26pt)과 같게 맞춘 값이다
+    /// (2026-08-25 사용자 기준: "최소 Inventory 라고 써있는 부분의 글씨 만큼의 크기는 가져야해").
     /// </summary>
-    private static Vector2 GetSafeContentInset()
-    {
-        if (safe_content_inset.HasValue) return safe_content_inset.Value;
+    private const float CaptionFontSize = 26f;
 
-        Sprite frameSprite = Resources.Load<Sprite>(FrameSpriteName);
-        if (frameSprite == null)
-        {
-            safe_content_inset = new Vector2(0.06f, 0.06f); // 아트가 없으면 예전 여백으로 대체
-            return safe_content_inset.Value;
-        }
-
-        Vector4 border = frameSprite.border; // (left, bottom, right, top), 텍스처 px 단위
-        Rect rect = frameSprite.textureRect;
-        safe_content_inset = new Vector2(
-            Mathf.Max(border.x, border.z) / rect.width,
-            Mathf.Max(border.y, border.w) / rect.height);
-        return safe_content_inset.Value;
-    }
+    /// <summary>이름표 글자 크기 하한. 칸이 좁아도 이보다 작아지지 않는다.</summary>
+    private const float CaptionMinFontSize = 16f;
 
     /// <summary>
     /// 칸 안 글씨의 자동 크기 조절 설정. Canvas가 ConstantPixelSize라 해상도에 따라 고정 픽셀
@@ -72,49 +57,75 @@ public static class ItemCellUI
     }
 
     /// <summary>
-    /// 칸의 공통 뼈대(테두리 아트 + 색 테두리 링 + 클릭 버튼). 돌려주는 것은 배경 이미지
-    /// (프레임) 그 자체다 - 캡션·아이콘은 이 위에 바로 그려진다.
-    ///
-    /// 등급/강조색(<paramref name="color"/>)은 <see cref="FrameSpriteName"/>(거의 검정이라
-    /// 색을 곱해도 안 보인다 - 2026-08-13에 겪은 함정)에 직접 입히지 않고, <see cref="UiIconLibrary.Frame"/>
-    /// (흰색 실루엣 전용 링)으로 만든 별도 "AccentRing" 레이어에만 입힌다. 이 링은 테두리
-    /// 자리에 겹쳐 그려질 뿐 안쪽 면을 덮지 않으므로, 캡션·아이콘은 항상 프레임 위에 직접
-    /// 놓인다(2026-08-21, 사용자 지적: 캡션 밑에 별도로 채색한 사각형을 깔면 안 된다).
+    /// 등급별 프레임 아트의 Resources 경로. 2026-08-25 사용자가 등급별 UI 아트를 직접 올려주면서
+    /// <b>코드로 테두리를 그리던 방식(<c>UiIconLibrary.DeriveEdgeRing</c>)을 폐기</b>했다 -
+    /// 사용자 지시: "원래는 테두리를 억지로 그렸었는데 이젠 테두리 빼고 저 이미지로 대체하면돼".
+    /// 등급색과 폴더 색의 대응은 <see cref="ItemGradeExtensions.ToColorHex"/>와 같다
+    /// (일반=회색/Black, 희귀=파랑/Blue, 서사=보라/Purple, 유일=주황/Gold, 전설=빨강/Red).
     /// </summary>
-    public static Image CreateShell(RectTransform parent, string name, Color color,
+    public static string FrameSpritePath(ItemGrade grade) => GradeSpritePath(grade, "ui03");
+
+    /// <summary>
+    /// 등급 -> 아트 폴더 이름. <c>Assets/Resources/UI/Grade/&lt;색&gt;/</c> 아래에 같은 세트가
+    /// 색깔별로 들어 있다(2026-08-25 사용자 제공). 대응은 <see cref="ItemGradeExtensions.ToColorHex"/>와 같다.
+    /// </summary>
+    public static string GradeFolder(ItemGrade grade)
+    {
+        switch (grade)
+        {
+            case ItemGrade.Rare: return "Blue";        // 파랑
+            case ItemGrade.Epic: return "Purple";      // 보라
+            case ItemGrade.Unique: return "Gold";      // 주황
+            case ItemGrade.Legendary: return "Red";    // 빨강
+            default: return "Black";                   // 일반 = 등급색 없음
+        }
+    }
+
+    /// <summary>
+    /// 등급별 아트 한 장의 Resources 경로. <paramref name="suffix"/>는 색 접두어 뒤의 이름이다
+    /// (<c>"ui03"</c> = 아이템 칸, <c>"ui01"</c> = 상점 품목 카드 배경 등).
+    /// </summary>
+    public static string GradeSpritePath(ItemGrade grade, string suffix)
+    {
+        string folder = GradeFolder(grade);
+        return $"UI/Grade/{folder}/{folder}_{suffix}";
+    }
+
+    /// <summary>
+    /// 등급별 아트를 불러온다. 없으면 null - 호출부가 기존 아트를 그대로 두면 된다.
+    /// </summary>
+    public static Sprite GradeSprite(ItemGrade grade, string suffix)
+        => Resources.Load<Sprite>(GradeSpritePath(grade, suffix));
+
+    /// <summary>
+    /// 칸의 공통 뼈대(등급별 테두리 아트 + 클릭 버튼). 돌려주는 것은 배경 이미지 그 자체다 -
+    /// 캡션·아이콘은 이 위에 바로 그려진다.
+    ///
+    /// <para><b>더 이상 테두리를 코드로 그리지 않는다</b>(2026-08-25). 등급색은 아트 자체에
+    /// 들어 있으므로 별도 링 레이어가 없다. 예전에는 흰 실루엣 링을 만들어 등급색으로 칠했는데,
+    /// 그 방식은 등급이 없는 UI(설정 창의 라디오 버튼 등)에서도 쓸데없는 테두리를 만들었다.</para>
+    /// </summary>
+    /// <param name="grade">칸의 등급. 일반(Normal)이면 등급색 없는 기본 아트를 쓴다.</param>
+    /// <param name="tint">강조/흐리기 상태일 때만 준다(선택 노란색, 빈 칸 어둡게 등).
+    /// null이면 아트 원색 그대로 그린다.</param>
+    public static Image CreateShell(RectTransform parent, string name, ItemGrade grade, Color? tint,
                                     System.Action onClick, out GameObject cell)
     {
         cell = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         cell.transform.SetParent(parent, false);
 
         Image frame = cell.GetComponent<Image>();
-        Sprite frameSprite = Resources.Load<Sprite>(FrameSpriteName);
+        Sprite frameSprite = Resources.Load<Sprite>(FrameSpritePath(grade));
         if (frameSprite != null)
         {
             frame.sprite = frameSprite;
             frame.type = Image.Type.Sliced;
-            frame.color = Color.white;
+            frame.color = tint ?? Color.white;
         }
         else
         {
-            frame.color = CellBaseColor; // 아트를 못 찾았을 때만 단색 배경으로 대체
+            frame.color = tint ?? CellBaseColor; // 아트를 못 찾았을 때만 단색 배경으로 대체
         }
-
-        var ringGo = new GameObject("AccentRing", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        ringGo.transform.SetParent(cell.transform, false);
-        var ringRect = (RectTransform)ringGo.transform;
-        ringRect.anchorMin = Vector2.zero;
-        ringRect.anchorMax = Vector2.one;
-        ringRect.offsetMin = Vector2.zero;
-        ringRect.offsetMax = Vector2.zero;
-
-        Image ring = ringGo.GetComponent<Image>();
-        // 2026-08-25 사용자 지적: 등급색 테두리가 실제 프레임 아트(둥근 모서리)와 안 맞았다 -
-        // frameSprite의 실제 알파 실루엣·9-slice border 두께를 그대로 따르는 링으로 교체.
-        ring.sprite = frameSprite != null ? UiIconLibrary.DeriveEdgeRing(frameSprite) : UiIconLibrary.Frame();
-        ring.type = Image.Type.Sliced;
-        ring.color = color;
-        ring.raycastTarget = false;
 
         if (onClick != null)
         {
@@ -123,16 +134,24 @@ public static class ItemCellUI
             button.onClick.AddListener(() => onClick());
         }
 
+        // 안쪽 배치는 전부 이 컴포넌트가 담당한다 - 칸 크기가 정해진 뒤에야 실제 테두리 두께를
+        // 알 수 있으므로(9-slice는 rect와 무관하게 고정 픽셀로 그려진다) 생성 시점에 앵커 상수로
+        // 정해 둘 수 없다. 2026-08-25 사용자 지적("파츠 이미지가 테두리에 겹친다")의 근본 수정이다.
+        cell.AddComponent<ItemCellLayout>().SetFrame(frame);
+
         return frame;
     }
 
     /// <summary>아이콘 칸 하나를 만든다.</summary>
     /// <param name="caption">칸 위에 작게 붙일 이름(슬롯 칸용). null이면 아이콘만.</param>
     /// <param name="iconBright">false면 아이콘을 흐리게 그린다(빈 슬롯 표시용).</param>
-    public static Image CreateIconCell(RectTransform parent, string name, Sprite icon, Color color,
-                                       string caption, bool iconBright, System.Action onClick)
+    /// <param name="grade">칸의 등급. 등급별 테두리 아트를 고른다(일반이면 등급색 없는 기본 칸).</param>
+    /// <param name="tint">강조(선택)·흐리기(빈 칸)일 때만 준다. null이면 아트 원색 그대로.</param>
+    public static Image CreateIconCell(RectTransform parent, string name, Sprite icon, ItemGrade grade,
+                                       Color? tint, string caption, bool iconBright, System.Action onClick)
     {
-        Image background = CreateShell(parent, name, color, onClick, out GameObject cell);
+        Image background = CreateShell(parent, name, grade, tint, onClick, out GameObject cell);
+        ItemCellLayout layout = cell.GetComponent<ItemCellLayout>();
 
         bool hasCaption = !string.IsNullOrEmpty(caption);
 
@@ -141,20 +160,31 @@ public static class ItemCellUI
             var capGo = new GameObject("Caption", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
             capGo.transform.SetParent(cell.transform, false);
             var capRect = (RectTransform)capGo.transform;
-            // 좌/우/위쪽은 셀의 바깥 가장자리라 실제 테두리 두께만큼 비운다. 아래쪽(0.66)은
-            // 캡션-아이콘 내부 경계일 뿐 테두리와 무관해 손대지 않는다.
-            Vector2 inset = GetSafeContentInset();
-            capRect.anchorMin = new Vector2(inset.x, 0.66f);
-            capRect.anchorMax = new Vector2(1f - inset.x, 1f - inset.y);
-            capRect.offsetMin = Vector2.zero;
-            capRect.offsetMax = Vector2.zero;
+            // 사각형은 여기서 정하지 않는다 - <see cref="ItemCellLayout"/>가 칸 크기가 확정된 뒤
+            // 실제 테두리 두께에서 역산해 잡는다. 예전에는 이 자리에서 정규화 앵커 상수
+            // (y 0.50~0.90 등)를 박았는데, 9-slice 베젤은 rect 크기와 무관하게 고정 픽셀이라
+            // 1080p 실측에서 이름표가 위 테두리를 20px 침범하고 있었다(칸 175x98, 베젤 30px).
 
             var cap = capGo.GetComponent<TextMeshProUGUI>();
             cap.text = caption;
             cap.alignment = TextAlignmentOptions.Center;
             cap.color = Color.white;
             cap.raycastTarget = false;
-            ApplyTextSizing(cap);
+            // "Inventory 5/20"과 같은 크기(26pt)를 상한으로 두고, 하한도 충분히 올려 더는
+            // 읽을 수 없을 만큼 줄어들지 않게 한다. 다만 "Magnetic Core"처럼 영문이 긴 이름은
+            // 20pt에서도 말줄임표가 생겨, 전체 이름과 테두리 안전 여백을 함께 보장할 수 있도록
+            // 영문 긴 이름에 한해 자동 조절이 16pt까지 내려갈 수 있게 한다.
+            ApplyTextSizing(cap, CaptionFontSize);
+            cap.fontSizeMin = CaptionMinFontSize;
+            // ItemCellLayout의 2px 안쪽 여백에 더해 글리프 자체도 베젤에서 8px 떨어지게 한다.
+            // 좌우 6px만 TMP margin으로 추가하면 아이콘 영역은 줄이지 않고 영문 이름만 안전하다.
+            cap.margin = new Vector4(6f, 0f, 6f, 0f);
+            // 슬롯 이름은 한 줄짜리 제목이다 - 줄바꿈을 켜 두면 좁은 칸에서 두 줄로 접혀
+            // 이름표 띠를 위아래로 삐져나간다("UI 제작 규칙" 3번). NoWrap이면 자동 조절이
+            // 폭에 맞춰 크기만 줄인다.
+            cap.textWrappingMode = TextWrappingModes.NoWrap;
+
+            if (layout != null) layout.SetCaption(capRect);
         }
 
         if (icon != null)
@@ -162,16 +192,17 @@ public static class ItemCellUI
             var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             iconGo.transform.SetParent(cell.transform, false);
             var iconRect = (RectTransform)iconGo.transform;
-            iconRect.anchorMin = hasCaption ? new Vector2(0.22f, 0.06f) : new Vector2(0.16f, 0.16f);
-            iconRect.anchorMax = hasCaption ? new Vector2(0.78f, 0.62f) : new Vector2(0.84f, 0.84f);
-            iconRect.offsetMin = Vector2.zero;
-            iconRect.offsetMax = Vector2.zero;
+            // 아이콘 사각형도 ItemCellLayout이 잡는다(이름표가 있으면 그 아래 띠의 정사각형,
+            // 없으면 안전 영역 가운데의 정사각형). 예전의 y 0.05~0.48 앵커는 아래 베젤(0~30px)에
+            // 25px이 파묻혀 있었다 - 사용자가 지적한 "파츠 이미지가 테두리에 겹친다"의 원인이다.
 
             var img = iconGo.GetComponent<Image>();
             img.sprite = icon;
             img.preserveAspect = true;
             img.raycastTarget = false;
             img.color = iconBright ? Color.white : new Color(1f, 1f, 1f, 0.28f);
+
+            if (layout != null) layout.SetIcon(iconRect);
         }
 
         return background;

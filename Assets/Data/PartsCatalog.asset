@@ -18,7 +18,7 @@ MonoBehaviour:
     slot: 0
     grade: 0
     isDefaultStarter: 1
-    iconName: 
+    iconName: Socket_Standard
     restrictsWeaponType: 0
     allowedWeaponType: 0
     socketAttackSpeedPercent: 0
@@ -49,7 +49,7 @@ MonoBehaviour:
     slot: 1
     grade: 0
     isDefaultStarter: 1
-    iconName: 
+    iconName: ArmArmor_Standard
     restrictsWeaponType: 0
     allowedWeaponType: 0
     socketAttackSpeedPercent: 0
@@ -142,7 +142,7 @@ MonoBehaviour:
     slot: 4
     grade: 0
     isDefaultStarter: 1
-    iconName: 
+    iconName: LegArmor_Standard
     restrictsWeaponType: 0
     allowedWeaponType: 0
     socketAttackSpeedPercent: 0
@@ -173,7 +173,7 @@ MonoBehaviour:
     slot: 6
     grade: 0
     isDefaultStarter: 1
-    iconName: 
+    iconName: Helmet_Standard
     restrictsWeaponType: 0
     allowedWeaponType: 0
     socketAttackSpeedPercent: 0
@@ -204,7 +204,7 @@ MonoBehaviour:
     slot: 7
     grade: 0
     isDefaultStarter: 1
-    iconName: 
+    iconName: DiscSlot_Standard
     restrictsWeaponType: 0
     allowedWeaponType: 0
     socketAttackSpeedPercent: 0
@@ -855,7 +855,7 @@ MonoBehaviour:
     slot: 8
     grade: 0
     isDefaultStarter: 1
-    iconName: 
+    iconName: Memory_Standard
     restrictsWeaponType: 0
     allowedWeaponType: 0
     socketAttackSpeedPercent: 0

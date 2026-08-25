@@ -512,12 +512,13 @@ public class ModdingPanelUI : MonoBehaviour
             // 섞으면 희귀(파랑)·서사(보라) 등급색과 구분이 안 된다(실측에서 헷갈렸다).
             // 노란색은 어떤 등급색과도 겹치지 않고, "이 파츠가 저 노란 슬롯에 들어간다"는
             // 짝도 눈으로 바로 이어진다.
-            Color cellColor = isSelected
-                ? slotHighlightColor
-                : part.grade.ToCellColor(cellNormalColor);
+            // 등급색은 이제 칸 아트 자체가 갖고 있다(ItemCellUI.FrameSpritePath). 여기서는
+            // <b>선택 표시만</b> tint로 얹는다 - 노란색은 어떤 등급색과도 겹치지 않아
+            // "이 파츠가 저 노란 슬롯에 들어간다"는 짝이 눈으로 바로 이어진다.
+            Color? cellTint = isSelected ? slotHighlightColor : (Color?)null;
 
             Image cellImage = CreateIconCell(inventoryContent, $"InventoryCell_{index}",
-                                             PartIconLibrary.Get(part), cellColor, null, true,
+                                             PartIconLibrary.Get(part), part.grade, cellTint, null, true,
                                              () => HandleInventoryCellClicked(index));
             inventoryCellImages.Add(cellImage);
         }
@@ -529,7 +530,7 @@ public class ModdingPanelUI : MonoBehaviour
 
         for (int i = 0; i < emptyCells; i++)
         {
-            CreateIconCell(inventoryContent, $"InventoryEmpty_{i}", null, cellNormalColor * 0.6f, null, false, null);
+            CreateIconCell(inventoryContent, $"InventoryEmpty_{i}", null, ItemGrade.Normal, EmptyCellTint, null, false, null);
         }
     }
 
@@ -565,7 +566,7 @@ public class ModdingPanelUI : MonoBehaviour
         // 아이콘은 <b>지금 선택된 머리</b>의 실제 아트다(2026-08-19 머리 12종 적용 이전에는
         // 리그 기본 몸통 Parts/Body를 하드코딩하고 있어 어떤 머리를 골라도 원통 얼굴이 나왔다).
         CreateIconCell(headRow, "Slot_Head", HeadSpriteLibrary.GetCurrentIcon(),
-                       slotReadOnlyColor, Loc.T("modding.head"), true, null);
+                       ItemGrade.Normal, null, Loc.T("modding.head"), true, null);
 
         // 슬롯 칸도 인벤토리와 같은 규칙으로 그린다 - 슬롯 이름(작게) + 아이콘 + 등급색.
         // 예전에는 칸 안에 이름과 설명까지 밀어 넣어 글씨가 칸 밖으로 삐져나왔다(사용자 지적).
@@ -578,12 +579,11 @@ public class ModdingPanelUI : MonoBehaviour
             bool equipped = moddingManager != null && moddingManager.TryGetEquippedWeaponSocketPart(i, out socketPart);
             ItemGrade grade = equipped ? socketPart.grade : ItemGrade.Normal;
 
-            Color color = highlightWeaponSockets
-                ? slotHighlightColor
-                : grade.ToCellColor(slotNormalColor);
+            Color? tint = highlightWeaponSockets ? slotHighlightColor : (Color?)null;
 
             CreateIconCell(headRow, $"Slot_WeaponSocket_{i}",
-                           equipped ? PartIconLibrary.Get(socketPart) : PartIconLibrary.Get(PartSlot.ArmWeaponSocket), color,
+                           equipped ? PartIconLibrary.Get(socketPart) : PartIconLibrary.Get(PartSlot.ArmWeaponSocket),
+                           grade, tint,
                            Loc.T("modding.weaponsocket_n", i + 1), equipped,
                            () => HandleWeaponSocketCellClicked(socketIndex));
         }
@@ -597,12 +597,10 @@ public class ModdingPanelUI : MonoBehaviour
             bool equipped = moddingManager != null && moddingManager.TryGetEquippedPart(slot, out part);
             ItemGrade grade = equipped ? part.grade : ItemGrade.Normal;
 
-            Color color = isHighlighted
-                ? slotHighlightColor
-                : grade.ToCellColor(slotNormalColor);
+            Color? tint = isHighlighted ? slotHighlightColor : (Color?)null;
 
             CreateIconCell(slotContent, $"Slot_{slot}",
-                           equipped ? PartIconLibrary.Get(part) : PartIconLibrary.Get(slot), color,
+                           equipped ? PartIconLibrary.Get(part) : PartIconLibrary.Get(slot), grade, tint,
                            slot.ToDisplayName(), equipped,
                            () => HandleSlotClicked(captured));
         }
@@ -711,14 +709,16 @@ public class ModdingPanelUI : MonoBehaviour
         // 2026-08-25 - yMax를 0.98에서 0.962로 더 내렸다. Black_ui03의 실제 테두리(30px)가
         // 이 패널 높이에서 약 3.4%라 0.98은 여전히 테두리 띠 안이었다("UI 제작 규칙").
         // yMin도 함께 내려 칸 높이(약 22px)는 유지한다 - 바로 아래 SelectedIcon(~0.935)과는 안 겹친다.
-        CreateDetailLabel(detailPanel, "Title", Loc.T("modding.part_detail"), 0.06f, 0.937f, 0.94f, 0.962f, TextAlignmentOptions.Center, 20f);
+        CreateDetailLabel(detailPanel, "Title", Loc.T("modding.part_detail"), 0.06f, 0.937f, 0.94f, 0.962f,
+                          TextAlignmentOptions.Center, 20f, "modding.part_detail");
 
         detailSelectedIcon = CreateDetailIcon(detailPanel, "SelectedIcon", 0.30f, 0.775f, 0.70f, 0.935f);
         detailSelectedText = CreateDetailLabel(detailPanel, "SelectedText", string.Empty,
                                                0.07f, 0.45f, 0.93f, 0.765f, TextAlignmentOptions.Top);
 
         detailTargetTitle = CreateDetailLabel(detailPanel, "TargetTitle", Loc.T("modding.swap_target"),
-                                              0.06f, 0.385f, 0.94f, 0.435f, TextAlignmentOptions.Center, 28f);
+                                              0.06f, 0.385f, 0.94f, 0.435f, TextAlignmentOptions.Center, 28f,
+                                              "modding.swap_target");
 
         detailTargetIcon = CreateDetailIcon(detailPanel, "TargetIcon", 0.30f, 0.215f, 0.70f, 0.375f);
         detailTargetText = CreateDetailLabel(detailPanel, "TargetText", string.Empty,
@@ -727,9 +727,17 @@ public class ModdingPanelUI : MonoBehaviour
 
     /// <param name="maxFontSize">설명 칸은 폭이 좁아 칸 글씨(42)와 같은 상한을 쓰면 몇 글자만으로
     /// 여러 줄이 되어 넘친다(실측). 제목 28 / 본문 22 정도가 적당하다.</param>
+    /// <param name="localizationKey">
+    /// 값이 있으면 <see cref="LocalizedText"/>를 붙여 <b>언어가 바뀔 때 스스로 다시 그리게</b> 한다.
+    /// 이 패널은 <see cref="EnsureDetailPanel"/>이 한 번 만들고 조기 반환하므로, 제목을
+    /// <c>Loc.T()</c>로 한 번만 찍어 두면 런 중에 언어를 바꿔도 처음 언어에 그대로 굳는다
+    /// (2026-08-25 검수에서 발견 - 영문 화면에 "파츠 설명"이 한글로 남아 있었다).
+    /// 매 프레임 코드가 값을 덮어쓰는 본문 라벨에는 붙이지 않는다(LocalizedText 주석의 금지 사항).
+    /// </param>
     private static TextMeshProUGUI CreateDetailLabel(RectTransform parent, string name, string content,
                                                      float xMin, float yMin, float xMax, float yMax,
-                                                     TextAlignmentOptions alignment, float maxFontSize = 22f)
+                                                     TextAlignmentOptions alignment, float maxFontSize = 22f,
+                                                     string localizationKey = null)
     {
         var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
         go.transform.SetParent(parent, false);
@@ -745,6 +753,10 @@ public class ModdingPanelUI : MonoBehaviour
         text.color = Color.white;
         text.raycastTarget = false;
         ApplyCellTextSizing(text, maxFontSize);
+
+        // 고정 문구는 키를 물려 언어 변경을 스스로 따라가게 한다(위 localizationKey 주석 참고).
+        if (!string.IsNullOrEmpty(localizationKey)) go.AddComponent<LocalizedText>().Key = localizationKey;
+
         return text;
     }
 
@@ -890,7 +902,7 @@ public class ModdingPanelUI : MonoBehaviour
     /// </summary>
     private Image CreateCell(RectTransform parent, string name, string label, Color color, System.Action onClick)
     {
-        Image image = ItemCellUI.CreateShell(parent, name, color, onClick, out GameObject cell);
+        Image image = ItemCellUI.CreateShell(parent, name, ItemGrade.Normal, color, onClick, out GameObject cell);
 
         var textGo = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
         textGo.transform.SetParent(cell.transform, false);
@@ -918,9 +930,12 @@ public class ModdingPanelUI : MonoBehaviour
     /// <param name="caption">칸 위에 작게 붙일 이름(슬롯 칸용). null이면 아이콘만.</param>
     /// <param name="iconBright">false면 아이콘을 흐리게 그린다(빈 슬롯 표시용).</param>
     // 칸 생김새는 상점 화면과 공유한다(ItemCellUI). 여기서는 얇게 감싸기만 한다.
-    private Image CreateIconCell(RectTransform parent, string name, Sprite icon, Color color,
-                                 string caption, bool iconBright, System.Action onClick)
-        => ItemCellUI.CreateIconCell(parent, name, icon, color, caption, iconBright, onClick);
+    private Image CreateIconCell(RectTransform parent, string name, Sprite icon, ItemGrade grade,
+                                 Color? tint, string caption, bool iconBright, System.Action onClick)
+        => ItemCellUI.CreateIconCell(parent, name, icon, grade, tint, caption, iconBright, onClick);
+
+    /// <summary>빈 칸을 흐리게 보이게 하는 tint(등급 아트를 어둡게 곱한다).</summary>
+    private static readonly Color EmptyCellTint = new Color(0.55f, 0.55f, 0.55f, 1f);
 
     private static void ApplyCellTextSizing(TextMeshProUGUI text, float maxFontSize = 42f)
         => ItemCellUI.ApplyTextSizing(text, maxFontSize);

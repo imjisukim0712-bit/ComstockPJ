@@ -632,7 +632,8 @@ public class GameFlowManager : MonoBehaviour
             {
                 // 등급까지 확정된 카드다(2026-08-13) - 문구도 등급 색상 + 그 등급의 실제 증가량으로 만든다
                 AiCoreManager.UpgradeChoice choice = choices[i];
-                if (texts[i] != null) texts[i].text = choice.BuildLabel();
+                RenderUpgradeCard(texts[i], choice);
+                ApplyGradeCardBackground(button, choice.Grade);
                 button.gameObject.SetActive(true);
                 button.onClick.AddListener(() => HandleUpgradeChosen(choice));
             }
@@ -644,6 +645,108 @@ public class GameFlowManager : MonoBehaviour
 
         RefreshAiCoreExtraButtons();
     }
+
+    /// <summary>
+    /// AI 코어 카드 하나를 <b>등급 / 이름 / 구분선 / 설명</b> 네 요소로 그린다
+    /// (2026-08-25 사용자 지시 + 레퍼런스 이미지).
+    ///
+    /// <para><b>왜 한 줄 문자열을 쪼갰나</b>: 예전에는 세 정보를 <c>\n</c> 하나로 이어 붙인 한
+    /// 덩어리였다. 그러면 이름이 길 때 등급과 이름이 한 줄에서 제멋대로 접혀 "글자 엔터가
+    /// 어색"했다(사용자 지적). 칸을 나누면 각 부분이 자기 칸 안에서만 접힌다.</para>
+    ///
+    /// <para><b>구분선은 글자가 아니라 Image다.</b> '─' 같은 괘선 문자는 폰트에 글리프가 없으면
+    /// 깨진다 - 지금 기본 폰트인 Orbitron은 라틴 207자뿐이라 특히 위험하다. 이미지로 그리면
+    /// 폰트와 무관하게 항상 같은 모양이 나온다.</para>
+    ///
+    /// <para>요소들은 씬의 기존 카드 글자(<paramref name="slotText"/>)의 <b>사각형 안</b>에 만든다 -
+    /// 그 칸이 이미 카드 안쪽 여백까지 맞춰져 있어서 좌표를 새로 잡을 필요가 없다. 원래 글자는
+    /// 비워 두고 컨테이너로만 쓴다. 리롤할 때마다 다시 만들지 않고 이름으로 찾아 재사용한다.</para>
+    /// </summary>
+    private static void RenderUpgradeCard(TextMeshProUGUI slotText, AiCoreManager.UpgradeChoice choice)
+    {
+        if (slotText == null) return;
+
+        slotText.text = string.Empty; // 컨테이너로만 쓴다
+        var root = (RectTransform)slotText.transform;
+
+        TextMeshProUGUI grade = EnsureCardText(root, "CardGrade", 0.74f, 0.96f, 26f, FontStyles.Bold);
+        TextMeshProUGUI name = EnsureCardText(root, "CardName", 0.44f, 0.73f, 34f, FontStyles.Bold);
+        EnsureCardDivider(root, 0.405f, 0.425f);
+        TextMeshProUGUI desc = EnsureCardText(root, "CardDesc", 0.05f, 0.38f, 24f, FontStyles.Normal);
+
+        grade.text = choice.GradeLine();
+        grade.color = ParseHex(choice.GradeColorHex(), Color.white);
+        name.text = choice.NameLine();
+        desc.text = choice.EffectLine();
+    }
+
+    /// <summary>
+    /// 카드 배경을 등급별 아트로 바꾼다(2026-08-25 - "등급이 존재하는 모든 아이템 카드 ui를
+    /// 교체하면돼"). 씬은 <c>Black_ui01</c>을 물고 있고 같은 세트의 색깔 변형이
+    /// <c>UI/Grade/&lt;색&gt;/</c> 아래에 있다. 아트를 못 찾으면 씬의 원래 배경을 그대로 둔다.
+    /// </summary>
+    private static void ApplyGradeCardBackground(Button card, ItemGrade grade)
+    {
+        if (card == null) return;
+
+        Image background = card.GetComponent<Image>();
+        Sprite gradeCard = ItemCellUI.GradeSprite(grade, "ui01");
+        if (background != null && gradeCard != null) background.sprite = gradeCard;
+    }
+
+    /// <summary>카드 안의 글자 칸 하나를 찾거나 만든다(리롤 때 재사용).</summary>
+    private static TextMeshProUGUI EnsureCardText(RectTransform parent, string name,
+                                                  float yMin, float yMax, float maxFontSize, FontStyles style)
+    {
+        Transform found = parent.Find(name);
+        TextMeshProUGUI text = found != null ? found.GetComponent<TextMeshProUGUI>() : null;
+
+        if (text == null)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            go.transform.SetParent(parent, false);
+            text = go.GetComponent<TextMeshProUGUI>();
+        }
+
+        var rect = (RectTransform)text.transform;
+        rect.anchorMin = new Vector2(0.06f, yMin);
+        rect.anchorMax = new Vector2(0.94f, yMax);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        text.alignment = TextAlignmentOptions.Center;
+        text.fontStyle = style;
+        text.color = Color.white;
+        text.raycastTarget = false;
+        ItemCellUI.ApplyTextSizing(text, maxFontSize); // 자동 축소 + 넘치면 잘라내기(UI 제작 규칙)
+        return text;
+    }
+
+    /// <summary>이름과 설명 사이의 가로 구분선(레퍼런스 이미지).</summary>
+    private static void EnsureCardDivider(RectTransform parent, float yMin, float yMax)
+    {
+        Transform found = parent.Find("CardDivider");
+        Image line = found != null ? found.GetComponent<Image>() : null;
+
+        if (line == null)
+        {
+            var go = new GameObject("CardDivider", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(parent, false);
+            line = go.GetComponent<Image>();
+        }
+
+        var rect = (RectTransform)line.transform;
+        rect.anchorMin = new Vector2(0.16f, yMin);
+        rect.anchorMax = new Vector2(0.84f, yMax);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        line.color = new Color(0.85f, 0.87f, 0.90f, 0.9f);
+        line.raycastTarget = false;
+    }
+
+    private static Color ParseHex(string hex, Color fallback)
+        => ColorUtility.TryParseHtmlString(hex, out Color c) ? c : fallback;
 
     private void RefreshAiCoreExtraButtons()
     {
