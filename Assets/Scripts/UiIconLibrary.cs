@@ -63,6 +63,82 @@ public static class UiIconLibrary
         lock_icon = null;
         stamp_frame = null;
         settings_icon = null;
+        edgeRingCache.Clear();
+    }
+
+    private static readonly System.Collections.Generic.Dictionary<Sprite, Sprite> edgeRingCache = new();
+
+    /// <summary>
+    /// 기본 프레임 스프라이트(<paramref name="baseSprite"/>)의 <b>실제 9-slice border 두께와
+    /// 알파 실루엣</b>을 그대로 따르는 색칠 가능한 테두리 링을 만든다.
+    ///
+    /// <see cref="Frame()"/>(고정 6px 사각 링, 64px 캔버스 기준)은 실제 프레임 아트와 무관하게
+    /// 임의로 그린 도형이라, 실제 아트(예: `UI/Black_ui03`, border=30/133 ≈ 22%, 모서리가 둥글다)
+    /// 보다 훨씬 얇고 모서리도 각져서 등급색 테두리가 실제 베젤과 안 맞았다(2026-08-25 사용자 지적:
+    /// "이미지를 무시하고 전체 리소스 사이즈를 기준으로 테두리를 만들어버렸음. 이미지의 두꺼운
+    /// 부분을 테두리라 치고 그 색을 바꿨어야 맞는데").
+    ///
+    /// 원본과 <b>완전히 같은 픽셀 크기·border 메타데이터</b>로 결과 스프라이트를 만들기 때문에
+    /// 9-slice 코너/엣지 영역이 원본과 1:1로 겹친다 - 그래서 "border 두께 안쪽" 픽셀만 남기면
+    /// 둥근 모서리를 포함한 실제 베젤 모양을 그대로 따라간다.
+    /// </summary>
+    public static Sprite DeriveEdgeRing(Sprite baseSprite)
+    {
+        if (baseSprite == null) return Frame();
+        if (edgeRingCache.TryGetValue(baseSprite, out Sprite cached) && cached != null) return cached;
+
+        Texture2D readable = MakeReadableCopy(baseSprite.texture);
+        Rect rect = baseSprite.textureRect;
+        int rx = Mathf.RoundToInt(rect.x), ry = Mathf.RoundToInt(rect.y);
+        int w = Mathf.RoundToInt(rect.width), h = Mathf.RoundToInt(rect.height);
+        Vector4 border = baseSprite.border; // (left, bottom, right, top)
+
+        Color32[] src = readable.GetPixels32();
+        int texWidth = readable.width;
+        var outPixels = new Color32[w * h];
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                byte a = src[(ry + y) * texWidth + (rx + x)].a;
+                bool nearEdge = x < border.x || (w - 1 - x) < border.z || y < border.y || (h - 1 - y) < border.w;
+                outPixels[y * w + x] = new Color32(255, 255, 255, nearEdge ? a : (byte)0);
+            }
+        }
+        Object.DestroyImmediate(readable);
+
+        var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
+        {
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp,
+            name = baseSprite.name + "_EdgeRing"
+        };
+        tex.SetPixels32(outPixels);
+        tex.Apply(false, false);
+
+        Vector2 normalizedPivot = new Vector2(baseSprite.pivot.x / w, baseSprite.pivot.y / h);
+        Sprite result = Sprite.Create(tex, new Rect(0, 0, w, h), normalizedPivot,
+                                       baseSprite.pixelsPerUnit, 0, SpriteMeshType.FullRect, border);
+        edgeRingCache[baseSprite] = result;
+        return result;
+    }
+
+    /// <summary>Read/Write가 꺼진 텍스처(대부분의 UI 스프라이트)도 픽셀을 읽을 수 있도록 GPU
+    /// 경유(Blit → RenderTexture → ReadPixels)로 읽기 가능한 사본을 만든다.</summary>
+    private static Texture2D MakeReadableCopy(Texture2D source)
+    {
+        RenderTexture rt = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGB32);
+        Graphics.Blit(source, rt);
+        RenderTexture prev = RenderTexture.active;
+        RenderTexture.active = rt;
+
+        var copy = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
+        copy.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
+        copy.Apply();
+
+        RenderTexture.active = prev;
+        RenderTexture.ReleaseTemporary(rt);
+        return copy;
     }
 
     // ------------------------------------------------------------------

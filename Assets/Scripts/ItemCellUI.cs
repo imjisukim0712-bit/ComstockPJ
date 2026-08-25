@@ -15,8 +15,12 @@ using UnityEngine.UI;
 ///    덮어버리면 안 된다" - 정비 화면 "머리" 칸 스크린샷. 처음엔 안쪽 사각형의 색만
 ///    옅게 죽였는데, 그것도 "사각형이 하나 더 있다"는 문제 자체는 그대로였다).
 ///    등급/강조색은 테두리 아트에 직접 곱하면 안 보이므로(2026-08-13에 겪은 함정 - 스프라이트가
-///    거의 검정이라 색을 곱하는 순간 죽는다) 전용 흰색 실루엣 링(<see cref="UiIconLibrary.Frame"/>)을
-///    테두리 위에 덧그리는 방식으로만 표현한다.
+///    거의 검정이라 색을 곱하는 순간 죽는다) 전용 흰색 실루엣 링을 테두리 위에 덧그리는 방식으로만
+///    표현한다. 이 링은 <see cref="FrameSpriteName"/>의 실제 베젤 두께·모양을 그대로 따르는
+///    <see cref="UiIconLibrary.DeriveEdgeRing"/>로 만든다(2026-08-25 - 예전엔 캔버스 크기 기준
+///    임의 사각 링(<see cref="UiIconLibrary.Frame"/>)이라 실제 둥근 베젤과 안 맞았다).
+///    <b>임시방편</b>이다 - 사용자가 나중에 등급별로 실제 색이 다른 UI 리소스를 직접 올리면
+///    이 tint 방식 자체가 필요 없어질 수 있다.
 /// </summary>
 public static class ItemCellUI
 {
@@ -78,7 +82,9 @@ public static class ItemCellUI
         ringRect.offsetMax = Vector2.zero;
 
         Image ring = ringGo.GetComponent<Image>();
-        ring.sprite = UiIconLibrary.Frame();
+        // 2026-08-25 사용자 지적: 등급색 테두리가 실제 프레임 아트(둥근 모서리)와 안 맞았다 -
+        // frameSprite의 실제 알파 실루엣·9-slice border 두께를 그대로 따르는 링으로 교체.
+        ring.sprite = frameSprite != null ? UiIconLibrary.DeriveEdgeRing(frameSprite) : UiIconLibrary.Frame();
         ring.type = Image.Type.Sliced;
         ring.color = color;
         ring.raycastTarget = false;
