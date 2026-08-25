@@ -70,7 +70,7 @@ public class DebugPartBox : MonoBehaviour
         options.Sort((a, b) => a.partId.CompareTo(b.partId));
 
         if (options.Count == 0)
-            Debug.LogWarning($"[디버그 부품상자] {slot.ToKorean()} 슬롯에 파츠가 없습니다.");
+            Debug.LogWarning($"[디버그 부품상자] {slot.ToDisplayName()} 슬롯에 파츠가 없습니다.");
     }
 
     private void ApplyCurrent()
@@ -80,8 +80,8 @@ public class DebugPartBox : MonoBehaviour
 
         PartData part = options[partIndex];
         ModdingManager.Instance?.EquipPart(part);
-        Debug.Log($"[디버그 부품상자] {slot.ToKorean()} 슬롯 {partIndex + 1}/{options.Count} -> " +
-                  $"'{part.partName}'(id {part.partId}) 장착");
+        Debug.Log($"[디버그 부품상자] {slot.ToDisplayName()} 슬롯 {partIndex + 1}/{options.Count} -> " +
+                  $"'{part.Part()}'(id {part.partId}) 장착");
     }
 
 #if UNITY_EDITOR
@@ -89,7 +89,7 @@ public class DebugPartBox : MonoBehaviour
     {
         Gizmos.color = new Color(1f, 0.65f, 0f, 0.9f);
         Gizmos.DrawWireCube(transform.position, Vector3.one * 0.8f);
-        UnityEditor.Handles.Label(transform.position + Vector3.up * 0.6f, "디버그 부품상자\n" + slot.ToKorean());
+        UnityEditor.Handles.Label(transform.position + Vector3.up * 0.6f, "디버그 부품상자\n" + slot.ToDisplayName());
     }
 #endif
 }

@@ -153,14 +153,126 @@ public class ModdingPanelUI : MonoBehaviour
         int opened = moddingManager != null ? moddingManager.OpenAllBoxesIntoInventory() : 0;
 
         SetHint(opened > 0
-            ? $"부품 상자 {opened}개를 열어 인벤토리에 담았습니다. 장착할 파츠를 선택하세요."
-            : "인벤토리에서 파츠를 선택하면 장착할 수 있는 슬롯이 노란색으로 표시됩니다.");
+            ? Loc.T("modding.hint.opened_boxes", opened)
+            : Loc.T("modding.hint.select_part"));
 
         // 방금 켠 패널은 아직 레이아웃이 계산되지 않아 컨테이너 폭이 0이다. 그대로 두면
         // EnsureGrid가 폴백 칸 크기를 쓰게 되므로, 폭을 확정시킨 뒤에 칸을 만든다.
         Canvas.ForceUpdateCanvases();
 
+        // 폭이 확정된 뒤라야 배경 아트의 테두리 두께를 비율로 환산할 수 있다(UiSafeArea 주석 참고).
+        ApplyTextSafeArea();
+
         Refresh();
+    }
+
+    /// <summary>
+    /// 패널 위 글자들이 <b>배경 아트의 테두리를 침범하지 않도록</b> 앵커를 안쪽으로 밀고,
+    /// 넘칠 때 밖으로 흘러나가지 않도록 넘침 처리를 바꾼다(2026-08-25 다국어 폴리싱).
+    ///
+    /// <para><b>왜 생긴 문제인가</b>: 씬의 글자들이 전부 <c>overflowMode = Overflow</c>였다.
+    /// 이 모드에서는 자동 크기 조절이 <b>세로 맞춤을 강제하지 않아</b>, 줄 수가 늘어나면
+    /// 그대로 패널 밖으로 흘러나간다. 한글은 짧아서 안 드러났지만 영어로 바꾸자 제목·골드·
+    /// 능력치·힌트·파츠 설명 다섯 곳이 한꺼번에 테두리를 넘었다(2026-08-25 사용자 지적).</para>
+    ///
+    /// <para><b>왜 씬에 숫자를 박지 않고 런타임에 계산하나</b>: "UI 제작 규칙"이 여백을 임의의
+    /// 숫자로 정하지 말라고 한다. <see cref="UiSafeArea"/>가 배경 스프라이트의 실제 9-slice
+    /// border에서 역산하므로, 나중에 배경 아트가 바뀌어도 이 코드를 고칠 필요가 없다.</para>
+    ///
+    /// <para>상단 배너(<c>Purple_ui02</c>)는 좌우 끝이 뾰족한 모양이라 <b>좌우만</b> 맞춘다 -
+    /// 세로 테두리(25px)는 장식용 베벨이라 그만큼 안쪽으로 밀면 글자가 불필요하게 작아진다.</para>
+    /// </summary>
+    private void ApplyTextSafeArea()
+    {
+        // 한 줄짜리 제목·수치 - 좌우만 맞추고 <b>줄바꿈을 끈다</b>.
+        // 줄바꿈을 켜둔 채 폭만 좁히면 "Robot Loadout"이 두 줄로 접혀 배너 아래로 삐져나온다
+        // (2026-08-25에 한 번 그렇게 만들었다가 고쳤다). 한 줄로 두면 자동 크기 조절이
+        // 폭에 맞춰 글자를 줄여준다.
+        TextMeshProUGUI topTitle = FindPanelText("TopBar/TitleText");
+        ClampText(topTitle, false, true);
+        ClampText(waveText, false, true);
+        ClampText(goldText, false, true);
+
+        // 제목과 웨이브 표시는 같은 배너 안에 좌우로 나란히 놓인 <b>별개의 칸</b>이고 둘 다
+        // 왼쪽 정렬이다. 한글 제목("로봇 정비")은 짧아서 칸을 다 못 채워 저절로 간격이 생겼지만,
+        // 영어("Robot Loadout")는 칸을 꽉 채워 두 글자가 맞붙어 한 문장처럼 읽힌다.
+        // 칸 경계에 기대지 말고 여백을 명시적으로 준다(골드 표시가 코인 아이콘 자리를
+        // margin.x=58로 비워두는 것과 같은 방식).
+        // 여백은 <b>한 번만</b> 더한다. Open()은 웨이브마다 불리므로 매번 더하면 누적돼서
+        // 20웨이브째엔 제목이 사라진다(앵커 클램프는 안쪽으로만 좁히므로 여러 번 불려도 안전하다).
+        if (!text_gutters_applied)
+        {
+            text_gutters_applied = true;
+            AddSideMargin(topTitle, 0f, TitleRightGutter);
+            AddSideMargin(waveText, WaveLeftGutter, 0f);
+        }
+        ClampText(inventoryTitleText, false, true);
+        ClampText(FindPanelText("SlotPanel/SlotTitleText"), false, true);
+
+        // 여러 줄 본문 - 위아래로도 넘쳤으므로 사방을 다 맞춘다.
+        ClampText(statsText, true, false);
+        ClampText(hintText, true, false);
+
+        // 코드로 만든 "파츠 설명" 패널. <b>세로는 건드리지 않는다</b> - 제목/아이콘/본문이
+        // 정해진 비율로 쌓여 있어서 세로로 밀면 제목 칸이 9px까지 찌그러진다(실제로 그랬다).
+        if (detailPanel != null)
+        {
+            foreach (TextMeshProUGUI label in detailPanel.GetComponentsInChildren<TextMeshProUGUI>(true))
+            {
+                bool isHeading = label.name == "Title" || label.name == "TargetTitle";
+                ClampText(label, false, isHeading);
+            }
+        }
+    }
+
+    /// <summary>상단 배너 좌우 여백을 이미 더했는지(누적 방지).</summary>
+    private bool text_gutters_applied;
+
+    /// <summary>상단 배너에서 제목 오른쪽에 두는 여백(픽셀).</summary>
+    private const float TitleRightGutter = 20f;
+
+    /// <summary>상단 배너에서 웨이브 표시 왼쪽에 두는 여백(픽셀).</summary>
+    private const float WaveLeftGutter = 28f;
+
+    /// <summary>글자의 좌우 여백만 더한다(세로 여백과 기존 값은 건드리지 않는다).</summary>
+    private static void AddSideMargin(TextMeshProUGUI label, float left, float right)
+    {
+        if (label == null) return;
+
+        Vector4 m = label.margin;
+        label.margin = new Vector4(m.x + left, m.y, m.z + right, m.w);
+    }
+
+    /// <summary>글자 하나를 배경 테두리 안쪽으로 밀고, 넘치면 밖으로 새지 않게 한다.</summary>
+    /// <param name="singleLine">제목처럼 한 줄로 둬야 하는 글자. 줄바꿈을 끄고 크기로만 맞춘다.</param>
+    private static void ClampText(TextMeshProUGUI label, bool vertical, bool singleLine)
+    {
+        if (label == null) return;
+
+        UiSafeArea.ClampIntoBackground((RectTransform)label.transform, 0.01f, vertical);
+
+        if (singleLine) label.textWrappingMode = TextWrappingModes.NoWrap;
+
+        // Overflow면 자동 크기 조절이 세로 맞춤을 포기한다 - 반드시 다른 모드로 둔다.
+        if (label.overflowMode == TextOverflowModes.Overflow)
+        {
+            label.overflowMode = TextOverflowModes.Ellipsis;
+        }
+        if (!label.enableAutoSizing)
+        {
+            label.enableAutoSizing = true;
+            label.fontSizeMin = 6f;
+        }
+    }
+
+    /// <summary>씬에 배치돼 있지만 인스펙터에 연결되지 않은 글자를 경로로 찾는다.</summary>
+    private TextMeshProUGUI FindPanelText(string relativePath)
+    {
+        Transform root = transform.Find("Root");
+        if (root == null) return null;
+
+        Transform found = root.Find(relativePath);
+        return found == null ? null : found.GetComponent<TextMeshProUGUI>();
     }
 
     public void Close()
@@ -211,11 +323,11 @@ public class ModdingPanelUI : MonoBehaviour
             moddingManager != null &&
             moddingManager.TryGetEquipableSlot(selectedInventoryIndex, out PartSlot slot))
         {
-            SetHint($"<color=#F2BF26>{slot.ToKorean()}</color> 슬롯을 누르면 교체됩니다. (다시 누르면 선택 해제)");
+            SetHint(Loc.T("modding.hint.press_slot", $"<color=#F2BF26>{slot.ToDisplayName()}</color>"));
         }
         else
         {
-            SetHint("인벤토리에서 파츠를 선택하면 장착할 수 있는 슬롯이 노란색으로 표시됩니다.");
+            SetHint(Loc.T("modding.hint.select_part"));
         }
 
         Refresh();
@@ -241,8 +353,8 @@ public class ModdingPanelUI : MonoBehaviour
             }
 
             SetHint(moddingManager.TryGetEquippedPart(slot, out PartData _)
-                ? $"{slot.ToKorean()} 장착 파츠의 설명입니다. 교체하려면 인벤토리에서 파츠를 선택하세요."
-                : $"{slot.ToKorean()} 슬롯이 비어 있습니다. 인벤토리에서 파츠를 선택하면 장착할 수 있습니다.");
+                ? Loc.T("modding.hint.slot_filled", slot.ToDisplayName())
+                : Loc.T("modding.hint.slot_empty", slot.ToDisplayName()));
 
             Refresh();
             return;
@@ -250,25 +362,25 @@ public class ModdingPanelUI : MonoBehaviour
 
         if (!moddingManager.TryGetEquipableSlot(selectedInventoryIndex, out PartSlot allowed) || allowed != slot)
         {
-            SetHint($"이 파츠는 {slot.ToKorean()} 슬롯에 장착할 수 없습니다.");
+            SetHint(Loc.T("modding.hint.cannot_equip", slot.ToDisplayName()));
             return;
         }
 
         // 교체 전 이름을 기억해둔다 - 교체하고 나면 슬롯에는 새 파츠가 들어가 있다.
-        string previousName = moddingManager.TryGetEquippedPart(slot, out PartData previous) ? previous.partName : "(비어 있음)";
+        string previousName = moddingManager.TryGetEquippedPart(slot, out PartData previous) ? previous.Part() : Loc.T("common.empty");
         List<PartData> before = moddingManager.GetInventoryParts();
-        string incomingName = selectedInventoryIndex < before.Count ? before[selectedInventoryIndex].partName : "파츠";
+        string incomingName = selectedInventoryIndex < before.Count ? before[selectedInventoryIndex].Part() : Loc.T("modding.part");
 
         if (!moddingManager.TrySwapInventoryWithSlot(selectedInventoryIndex, slot, out string reason))
         {
             // 무게 초과처럼 이유가 분명한 경우에는 그대로 보여준다(그냥 "실패"만 뜨면 원인을 알 수 없다).
-            SetHint(reason.Length > 0 ? $"교체하지 못했습니다 - {reason}" : "교체하지 못했습니다.");
+            SetHint(reason.Length > 0 ? Loc.T("modding.swap_failed_reason", reason) : Loc.T("modding.swap_failed"));
             return;
         }
 
         selectedInventoryIndex = -1;
         ClearEquippedInspection();
-        SetHint($"{slot.ToKorean()} 교체 완료: {previousName} → {incomingName}");
+        SetHint(Loc.T("modding.swap_done", slot.ToDisplayName(), previousName, incomingName));
 
         // TrySwapInventoryWithSlot이 RunState.NotifyChanged()를 부르므로 Refresh는 이미 돌았지만,
         // 위에서 바꾼 안내 문구와 선택 해제 상태를 반영하려면 한 번 더 갱신해야 한다.
@@ -295,8 +407,8 @@ public class ModdingPanelUI : MonoBehaviour
             }
 
             SetHint(moddingManager.TryGetEquippedWeaponSocketPart(socketIndex, out PartData _)
-                ? $"무기 소켓 {socketIndex + 1} 장착 파츠의 설명입니다. 교체하려면 인벤토리에서 파츠를 선택하세요."
-                : $"무기 소켓 {socketIndex + 1}이(가) 비어 있습니다. 인벤토리에서 파츠를 선택하면 장착할 수 있습니다.");
+                ? Loc.T("modding.hint.slot_filled", Loc.T("modding.weaponsocket_n", socketIndex + 1))
+                : Loc.T("modding.hint.slot_empty", Loc.T("modding.weaponsocket_n", socketIndex + 1)));
 
             Refresh();
             return;
@@ -304,23 +416,23 @@ public class ModdingPanelUI : MonoBehaviour
 
         if (!moddingManager.TryGetEquipableSlot(selectedInventoryIndex, out PartSlot allowed) || allowed != PartSlot.ArmWeaponSocket)
         {
-            SetHint("이 파츠는 무기 소켓에 장착할 수 없습니다.");
+            SetHint(Loc.T("modding.hint.cannot_equip", Loc.T("partslot.weaponsocket")));
             return;
         }
 
-        string previousName = moddingManager.TryGetEquippedWeaponSocketPart(socketIndex, out PartData previous) ? previous.partName : "(비어 있음)";
+        string previousName = moddingManager.TryGetEquippedWeaponSocketPart(socketIndex, out PartData previous) ? previous.Part() : Loc.T("common.empty");
         List<PartData> before = moddingManager.GetInventoryParts();
-        string incomingName = selectedInventoryIndex < before.Count ? before[selectedInventoryIndex].partName : "파츠";
+        string incomingName = selectedInventoryIndex < before.Count ? before[selectedInventoryIndex].Part() : Loc.T("modding.part");
 
         if (!moddingManager.TrySwapInventoryWithWeaponSocket(selectedInventoryIndex, socketIndex, out string reason))
         {
-            SetHint(reason.Length > 0 ? $"교체하지 못했습니다 - {reason}" : "교체하지 못했습니다.");
+            SetHint(reason.Length > 0 ? Loc.T("modding.swap_failed_reason", reason) : Loc.T("modding.swap_failed"));
             return;
         }
 
         selectedInventoryIndex = -1;
         ClearEquippedInspection();
-        SetHint($"무기 소켓 {socketIndex + 1} 교체 완료: {previousName} → {incomingName}");
+        SetHint(Loc.T("modding.swap_done", Loc.T("modding.weaponsocket_n", socketIndex + 1), previousName, incomingName));
 
         Refresh();
     }
@@ -355,7 +467,7 @@ public class ModdingPanelUI : MonoBehaviour
             int finalWave = waveManager != null ? waveManager.FinalWaveNumber : 0;
             // 엔드리스 모드(2026-08-19)에서는 20이 더 이상 진짜 끝이 아니므로 분모를 숨긴다.
             waveText.text = RunState.IsEndless
-                ? $"WAVE {RunState.WaveNumber:00} / 무한"
+                ? $"WAVE {RunState.WaveNumber:00} / {Loc.T("common.endless")}"
                 : finalWave > 0
                     ? $"WAVE {RunState.WaveNumber:00} / {finalWave}"
                     : $"WAVE {RunState.WaveNumber:00}";
@@ -373,7 +485,7 @@ public class ModdingPanelUI : MonoBehaviour
         if (inventoryTitleText != null)
         {
             int capacity = moddingManager != null ? moddingManager.PartBoxCapacity : 0;
-            inventoryTitleText.text = $"인벤토리 {RunState.ModdingInventory.Count}/{capacity}";
+            inventoryTitleText.text = $"{Loc.T("modding.inventory")} {RunState.ModdingInventory.Count}/{capacity}";
         }
     }
 
@@ -453,7 +565,7 @@ public class ModdingPanelUI : MonoBehaviour
         // 아이콘은 <b>지금 선택된 머리</b>의 실제 아트다(2026-08-19 머리 12종 적용 이전에는
         // 리그 기본 몸통 Parts/Body를 하드코딩하고 있어 어떤 머리를 골라도 원통 얼굴이 나왔다).
         CreateIconCell(headRow, "Slot_Head", HeadSpriteLibrary.GetCurrentIcon(),
-                       slotReadOnlyColor, "머리", true, null);
+                       slotReadOnlyColor, Loc.T("modding.head"), true, null);
 
         // 슬롯 칸도 인벤토리와 같은 규칙으로 그린다 - 슬롯 이름(작게) + 아이콘 + 등급색.
         // 예전에는 칸 안에 이름과 설명까지 밀어 넣어 글씨가 칸 밖으로 삐져나왔다(사용자 지적).
@@ -472,7 +584,7 @@ public class ModdingPanelUI : MonoBehaviour
 
             CreateIconCell(headRow, $"Slot_WeaponSocket_{i}",
                            equipped ? PartIconLibrary.Get(socketPart) : PartIconLibrary.Get(PartSlot.ArmWeaponSocket), color,
-                           $"무기 소켓 {i + 1}", equipped,
+                           Loc.T("modding.weaponsocket_n", i + 1), equipped,
                            () => HandleWeaponSocketCellClicked(socketIndex));
         }
 
@@ -491,7 +603,7 @@ public class ModdingPanelUI : MonoBehaviour
 
             CreateIconCell(slotContent, $"Slot_{slot}",
                            equipped ? PartIconLibrary.Get(part) : PartIconLibrary.Get(slot), color,
-                           slot.ToKorean(), equipped,
+                           slot.ToDisplayName(), equipped,
                            () => HandleSlotClicked(captured));
         }
     }
@@ -503,7 +615,7 @@ public class ModdingPanelUI : MonoBehaviour
         if (player == null) player = FindFirstObjectByType<PlayerRobotController>();
         if (player == null)
         {
-            statsText.text = "[능력치]\n(플레이어를 찾을 수 없음)";
+            statsText.text = $"{Loc.T("stats.header_short")}\n{Loc.T("stats.no_player")}";
             return;
         }
 
@@ -518,35 +630,35 @@ public class ModdingPanelUI : MonoBehaviour
         // 최대 레벨(AiCoreManager.MaxLevel)과 함께 보여준다(기획서 "레벨: 26 (MAX:50)" 표기).
         if (aiCoreManager == null) aiCoreManager = FindFirstObjectByType<AiCoreManager>();
         string levelLine = aiCoreManager != null
-            ? $"레벨: {RunState.CoreLevel} (MAX:{aiCoreManager.MaxLevel})\n"
+            ? $"{Loc.T("modding.level", RunState.CoreLevel, aiCoreManager.MaxLevel)}\n"
             : string.Empty;
 
         statsText.text =
             levelLine +
-            "[능력치]\n" +
+            $"{Loc.T("stats.header_short")}\n" +
             // 2026-08-24 사용자 지정 표기 규칙 - 정수/소수/퍼센트 구분은 StatFormat 참고.
-            $"체력 {StatFormat.Int(player.CurrentHp)}/{StatFormat.Int(player.MaxHp)}\n" +
-            $"공격력 {StatFormat.Int(player.Atk)}\n" +
-            $"방어력 {StatFormat.Int(player.Def)}\n" +
-            $"치명타 확률 {StatFormat.Percent(player.Cc)}\n" +
-            $"치명타 데미지 {StatFormat.RatioPercent(player.Cd)}\n" +
-            $"이동속도 {StatFormat.Decimal(player.MoveSpeed)}\n" +
-            $"회피율 {StatFormat.Percent(player.Avoid)}\n" +
-            $"행운 {StatFormat.Int(player.Luck)}\n" +
-            $"질량 {StatFormat.Decimal(player.Mess)}\n" +
-            $"디스크 슬롯 {RunState.EquippedDiscIds.Count}/{discSlots}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.MaxHp)} {StatFormat.Int(player.CurrentHp)}/{StatFormat.Int(player.MaxHp)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.Atk)} {StatFormat.Int(player.Atk)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.Def)} {StatFormat.Int(player.Def)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.CritChance)} {StatFormat.Percent(player.Cc)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.CritDamage)} {StatFormat.RatioPercent(player.Cd)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.MoveSpeed)} {StatFormat.Decimal(player.MoveSpeed)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.Avoid)} {StatFormat.Percent(player.Avoid)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.Luck)} {StatFormat.Int(player.Luck)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.Mass)} {StatFormat.Decimal(player.Mess)}\n" +
+            $"{Loc.T("partslot.discslot")} {RunState.EquippedDiscIds.Count}/{discSlots}\n" +
             (overweight
-                ? $"<color=#FF5555>무기 무게 {weightSum:0.#} / {weightCapacity:0.#} (초과)</color>"
-                : $"무기 무게 {weightSum:0.#} / {weightCapacity:0.#}");
+                ? $"<color=#FF5555>{Loc.T("modding.weapon_weight_over", weightSum.ToString("0.#"), weightCapacity.ToString("0.#"))}</color>"
+                : Loc.T("modding.weapon_weight", weightSum.ToString("0.#"), weightCapacity.ToString("0.#")));
     }
 
     private string GetRobotName()
     {
         if (player == null) player = FindFirstObjectByType<PlayerRobotController>();
-        if (player == null || GameDataManager.Instance == null) return "(알 수 없음)";
+        if (player == null || GameDataManager.Instance == null) return Loc.T("common.unknown");
 
         return GameDataManager.Instance.Robots.TryGetValue(player.RobotId, out RobotData data)
-            ? data.robot_name
+            ? data.Robot()
             : $"ID {player.RobotId}";
     }
 
@@ -596,13 +708,16 @@ public class ModdingPanelUI : MonoBehaviour
         // 둬서 바로 아래 SelectedIcon(~0.935까지)과는 여전히 안 겹치게 하고, yMax만 낮춰
         // (0.995→0.98) 위쪽 여백을 만들었다. 글자 최대 크기도 28→20으로 낮춰 좁아진 세로
         // 폭 안에서도 테두리에 닿지 않을 여유를 더 뒀다.
-        CreateDetailLabel(detailPanel, "Title", "파츠 설명", 0.06f, 0.945f, 0.94f, 0.98f, TextAlignmentOptions.Center, 20f);
+        // 2026-08-25 - yMax를 0.98에서 0.962로 더 내렸다. Black_ui03의 실제 테두리(30px)가
+        // 이 패널 높이에서 약 3.4%라 0.98은 여전히 테두리 띠 안이었다("UI 제작 규칙").
+        // yMin도 함께 내려 칸 높이(약 22px)는 유지한다 - 바로 아래 SelectedIcon(~0.935)과는 안 겹친다.
+        CreateDetailLabel(detailPanel, "Title", Loc.T("modding.part_detail"), 0.06f, 0.937f, 0.94f, 0.962f, TextAlignmentOptions.Center, 20f);
 
         detailSelectedIcon = CreateDetailIcon(detailPanel, "SelectedIcon", 0.30f, 0.775f, 0.70f, 0.935f);
         detailSelectedText = CreateDetailLabel(detailPanel, "SelectedText", string.Empty,
                                                0.07f, 0.45f, 0.93f, 0.765f, TextAlignmentOptions.Top);
 
-        detailTargetTitle = CreateDetailLabel(detailPanel, "TargetTitle", "교체 대상",
+        detailTargetTitle = CreateDetailLabel(detailPanel, "TargetTitle", Loc.T("modding.swap_target"),
                                               0.06f, 0.385f, 0.94f, 0.435f, TextAlignmentOptions.Center, 28f);
 
         detailTargetIcon = CreateDetailIcon(detailPanel, "TargetIcon", 0.30f, 0.215f, 0.70f, 0.375f);
@@ -669,7 +784,7 @@ public class ModdingPanelUI : MonoBehaviour
         if (!hasSelection)
         {
             detailSelectedIcon.enabled = false;
-            detailSelectedText.text = "<color=#9AA3AB>인벤토리에서 파츠를 누르면\n여기에 설명이 나옵니다.\n장착된 슬롯을 눌러도\n설명을 볼 수 있습니다.</color>";
+            detailSelectedText.text = $"<color=#9AA3AB>{Loc.T("modding.detail.placeholder")}</color>";
             detailTargetTitle.gameObject.SetActive(false);
             detailTargetIcon.enabled = false;
             detailTargetText.text = string.Empty;
@@ -696,8 +811,8 @@ public class ModdingPanelUI : MonoBehaviour
                 PartData socketPart = default;
                 bool has = moddingManager != null && moddingManager.TryGetEquippedWeaponSocketPart(i, out socketPart);
                 sb.AppendLine(has
-                    ? $"소켓 {i + 1}: <color={socketPart.grade.ToColorHex()}>{socketPart.partName}</color>"
-                    : $"소켓 {i + 1}: <color=#7B858E>(비어 있음)</color>");
+                    ? $"{Loc.T("shop.socket_n", i + 1)}: <color={socketPart.grade.ToColorHex()}>{socketPart.Part()}</color>"
+                    : $"{Loc.T("shop.socket_n", i + 1)}: <color=#7B858E>{Loc.T("common.empty")}</color>");
             }
             detailTargetIcon.color = new Color(1f, 1f, 1f, 0.55f);
             detailTargetText.text = sb.ToString().TrimEnd();
@@ -713,7 +828,7 @@ public class ModdingPanelUI : MonoBehaviour
         else
         {
             detailTargetIcon.color = new Color(1f, 1f, 1f, 0.28f);
-            detailTargetText.text = $"<color=#7B858E>{selected.slot.ToKorean()} 슬롯이 비어 있습니다.</color>";
+            detailTargetText.text = $"<color=#7B858E>{Loc.T("modding.slot_is_empty", selected.slot.ToDisplayName())}</color>";
         }
     }
 
@@ -737,25 +852,25 @@ public class ModdingPanelUI : MonoBehaviour
         detailTargetIcon.enabled = false;
         detailTargetText.text = string.Empty;
 
-        string header = isWeaponSocket ? $"무기 소켓 {inspectedWeaponSocket + 1}" : slot.ToKorean();
+        string header = isWeaponSocket ? Loc.T("modding.weaponsocket_n", inspectedWeaponSocket + 1) : slot.ToDisplayName();
 
         if (!has)
         {
             detailSelectedIcon.enabled = false;
-            detailSelectedText.text = $"<color=#9AA3AB>{header} 슬롯이 비어 있습니다.</color>";
+            detailSelectedText.text = $"<color=#9AA3AB>{Loc.T("modding.slot_is_empty", header)}</color>";
             return;
         }
 
         detailSelectedIcon.enabled = true;
         detailSelectedIcon.sprite = PartIconLibrary.Get(equipped);
         detailSelectedIcon.color = Color.white;
-        detailSelectedText.text = $"<size=85%><color=#F2BF26>[장착 중] {header}</color></size>\n" + BuildPartDetail(equipped);
+        detailSelectedText.text = $"<size=85%><color=#F2BF26>{Loc.T("modding.equipped_now", header)}</color></size>\n" + BuildPartDetail(equipped);
     }
 
     private static string BuildPartDetail(PartData part)
     {
-        return $"<color={part.grade.ToColorHex()}>{part.grade.ToKorean()}</color> {part.partName}\n" +
-               $"<size=85%><color=#9AA3AB>{part.slot.ToKorean()}</color></size>\n" +
+        return $"<color={part.grade.ToColorHex()}>{part.grade.ToDisplayName()}</color> {part.Part()}\n" +
+               $"<size=85%><color=#9AA3AB>{part.slot.ToDisplayName()}</color></size>\n" +
                $"<size=90%>{part.BuildDescription()}</size>";
     }
 

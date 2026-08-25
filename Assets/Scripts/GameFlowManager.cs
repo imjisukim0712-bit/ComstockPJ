@@ -660,7 +660,7 @@ public class GameFlowManager : MonoBehaviour
         if (!aiCoreManager.TryReroll())
         {
             if (aiCoreExtraButtons != null)
-                aiCoreExtraButtons.SetMessage($"골드가 부족합니다 (리롤 {aiCoreManager.CurrentRerollCost}골드)");
+                aiCoreExtraButtons.SetMessage(Loc.T("aicore.msg.nogold_reroll", aiCoreManager.CurrentRerollCost));
             return;
         }
 

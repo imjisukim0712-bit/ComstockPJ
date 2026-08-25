@@ -167,7 +167,7 @@ public class AiCoreManager : MonoBehaviour
                 ? AiCoreUpgradePool.BuildEffectLine(Option.statType, Amount)
                 : Option.description;
 
-            return $"<color={Grade.ToColorHex()}>{Grade.ToKorean()}</color> {Option.displayName}\n{effect}";
+            return $"<color={Grade.ToColorHex()}>{Grade.ToDisplayName()}</color> {Option.DisplayName()}\n{effect}";
         }
     }
 

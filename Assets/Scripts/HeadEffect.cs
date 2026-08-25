@@ -62,23 +62,24 @@ public enum HeadEffect
 
 public static class HeadEffectExtensions
 {
-    public static string ToKorean(this HeadEffect effect)
+    /// <summary>머리 고유 효과의 짧은 표시명(2026-08-25 다국어 도입으로 ToKorean에서 개명).</summary>
+    public static string ToDisplayName(this HeadEffect effect)
     {
         switch (effect)
         {
-            case HeadEffect.ComstockMk01: return "연사 특화";
-            case HeadEffect.Guardman: return "산탄 특화";
-            case HeadEffect.Meteus: return "폭발 특화";
-            case HeadEffect.Berserker: return "광폭화";
-            case HeadEffect.HappyPixel: return "행운 중첩";
-            case HeadEffect.NeonEye: return "화력 vs 생존";
-            case HeadEffect.HotPot: return "디스크 공명";
-            case HeadEffect.Pixie: return "근접 전념";
-            case HeadEffect.FanBot: return "무한 구르기";
-            case HeadEffect.SodaCan: return "가속 폭주";
-            case HeadEffect.PrivateComstock: return "정밀 관통";
-            case HeadEffect.MiniPixie: return "속성 성장";
-            default: return "없음";
+            case HeadEffect.ComstockMk01: return Loc.T("headeffect.comstockmk01.name");
+            case HeadEffect.Guardman: return Loc.T("headeffect.guardman.name");
+            case HeadEffect.Meteus: return Loc.T("headeffect.meteus.name");
+            case HeadEffect.Berserker: return Loc.T("headeffect.berserker.name");
+            case HeadEffect.HappyPixel: return Loc.T("headeffect.happypixel.name");
+            case HeadEffect.NeonEye: return Loc.T("headeffect.neoneye.name");
+            case HeadEffect.HotPot: return Loc.T("headeffect.hotpot.name");
+            case HeadEffect.Pixie: return Loc.T("headeffect.pixie.name");
+            case HeadEffect.FanBot: return Loc.T("headeffect.fanbot.name");
+            case HeadEffect.SodaCan: return Loc.T("headeffect.sodacan.name");
+            case HeadEffect.PrivateComstock: return Loc.T("headeffect.privatecomstock.name");
+            case HeadEffect.MiniPixie: return Loc.T("headeffect.minipixie.name");
+            default: return Loc.T("common.none");
         }
     }
 
@@ -89,58 +90,73 @@ public static class HeadEffectExtensions
     /// AI 코어 3택 카드에서 이미 겪은 함정이다(2026-08-13) - 수치를 바꿀 때 문구를 같이
     /// 고치는 걸 잊으면 화면이 거짓말을 하게 된다. 여기서는 <see cref="HeadEffects"/>의
     /// 실제 상수를 문구에 끼워 넣으므로 밸런스를 조정하면 설명이 저절로 따라온다.
+    ///
+    /// <b>다국어(2026-08-25)</b>: 번역문의 <c>{0}</c>,<c>{1}</c>… 자리에 그 상수들이 들어간다.
+    /// 그래서 번역문을 고쳐도 수치는 여전히 코드 상수에서 나온다(위 원칙이 그대로 유지된다).
+    /// 자리 수가 안 맞으면 <see cref="Loc.T(string, object[])"/>가 예외 대신 서식 전 원문을 돌려준다.
     /// </summary>
     public static string ToDescription(this HeadEffect effect)
     {
         switch (effect)
         {
             case HeadEffect.ComstockMk01:
-                return $"[연사] 무기 사용 시 공격속도 +{Pct(HeadEffects.ComstockRapidFireAttackSpeed)}";
+                return Loc.T("headeffect.comstockmk01.desc", Pct(HeadEffects.ComstockRapidFireAttackSpeed));
 
             case HeadEffect.Guardman:
-                return $"[산탄] 무기 사용 시 피해량 +{Pct(HeadEffects.GuardmanShotgunDamage)}, 연속 2회 발사";
+                return Loc.T("headeffect.guardman.desc", Pct(HeadEffects.GuardmanShotgunDamage));
 
             case HeadEffect.Meteus:
-                return $"[폭발] 무기 사용 시 폭발 범위 +{Pct(HeadEffects.MeteusSplashRadius)}, " +
-                       $"공격속도 +{Pct(HeadEffects.MeteusAttackSpeed)}";
+                return Loc.T("headeffect.meteus.desc",
+                    Pct(HeadEffects.MeteusSplashRadius), Pct(HeadEffects.MeteusAttackSpeed));
 
             case HeadEffect.Berserker:
-                return $"체력 {HeadEffects.BerserkerHpThreshold * 100f:0}% 이하일 때 " +
-                       $"공격력 x{HeadEffects.BerserkerDamage:0.##}, 공격속도 x{HeadEffects.BerserkerAttackSpeed:0.##}";
+                return Loc.T("headeffect.berserker.desc",
+                    (HeadEffects.BerserkerHpThreshold * 100f).ToString("0"),
+                    HeadEffects.BerserkerDamage.ToString("0.##"),
+                    HeadEffects.BerserkerAttackSpeed.ToString("0.##"));
 
             case HeadEffect.HappyPixel:
-                return $"행운 {HeadEffects.HappyPixelLuckPerStack:0}당 이동속도 +{HeadEffects.HappyPixelMoveSpeedPerStack:0.##}, " +
-                       $"공격속도 x{HeadEffects.HappyPixelAttackSpeedPerStack:0.##} (최대 {HeadEffects.HappyPixelMaxStacks}중첩)";
+                return Loc.T("headeffect.happypixel.desc",
+                    HeadEffects.HappyPixelLuckPerStack.ToString("0"),
+                    HeadEffects.HappyPixelMoveSpeedPerStack.ToString("0.##"),
+                    HeadEffects.HappyPixelAttackSpeedPerStack.ToString("0.##"),
+                    HeadEffects.HappyPixelMaxStacks);
 
             case HeadEffect.NeonEye:
-                return $"공격력 +{HeadEffects.NeonEyeBaseBonus:0.##}, 공격속도 +{Pct(HeadEffects.NeonEyeBaseBonus / HeadEffects.NeonEyeAttackSpeedDivisor)}\n" +
-                       $"장착 무기 1정당 그 보너스가 {HeadEffects.NeonEyePenaltyPerWeapon:0.##}씩 깎이고, " +
-                       $"대신 체력 +{HeadEffects.NeonEyeHpPerWeapon:0}·방어력 +{HeadEffects.NeonEyeDefPerWeapon:0}";
+                return Loc.T("headeffect.neoneye.desc",
+                    HeadEffects.NeonEyeBaseBonus.ToString("0.##"),
+                    Pct(HeadEffects.NeonEyeBaseBonus / HeadEffects.NeonEyeAttackSpeedDivisor),
+                    HeadEffects.NeonEyePenaltyPerWeapon.ToString("0.##"),
+                    HeadEffects.NeonEyeHpPerWeapon.ToString("0"),
+                    HeadEffects.NeonEyeDefPerWeapon.ToString("0"));
 
             case HeadEffect.HotPot:
-                return $"보유 디스크 1개당 공격력·방어력·이동속도 +{HeadEffects.HotPotBonusPerDisc:0.##}, " +
-                       $"공격속도 +{Pct(HeadEffects.HotPotBonusPerDisc)}";
+                return Loc.T("headeffect.hotpot.desc",
+                    HeadEffects.HotPotBonusPerDisc.ToString("0.##"), Pct(HeadEffects.HotPotBonusPerDisc));
 
             case HeadEffect.Pixie:
-                return $"모든 소켓에 [근접] 무기를 끼우면 사거리 x{HeadEffects.PixieAllMeleeRange:0.##}\n" +
-                       $"[원거리] 무기를 끼우면 그 무기 사거리가 {HeadEffects.PixieRangedPenaltyRange:0.##}유닛(근접급)으로 떨어진다";
+                return Loc.T("headeffect.pixie.desc",
+                    HeadEffects.PixieAllMeleeRange.ToString("0.##"),
+                    HeadEffects.PixieRangedPenaltyRange.ToString("0.##"));
 
             case HeadEffect.FanBot:
-                return "기본 다리만 장착 가능\n구르기 쿨다운 없음, 구르기 무적 효과 제거";
+                return Loc.T("headeffect.fanbot.desc");
 
             case HeadEffect.SodaCan:
-                return $"로켓 엔진 장착 + 최대 추가 이동속도 유지 시 공격력 x{HeadEffects.SodaCanDamage:0.##}\n" +
-                       "(로켓 엔진 다리 파츠 미구현 - 현재 효과 없음)";
+                return Loc.T("headeffect.sodacan.desc", HeadEffects.SodaCanDamage.ToString("0.##"));
 
             case HeadEffect.PrivateComstock:
-                return $"[정밀] 무기 자체 공격력 x{HeadEffects.PrivateComstockDamage:0.##}(로봇 공격력 분배분 제외), " +
-                       $"공격속도 x{HeadEffects.PrivateComstockAttackSpeed:0.##}, 관통 +{HeadEffects.PrivateComstockPierce}";
+                return Loc.T("headeffect.privatecomstock.desc",
+                    HeadEffects.PrivateComstockDamage.ToString("0.##"),
+                    HeadEffects.PrivateComstockAttackSpeed.ToString("0.##"),
+                    HeadEffects.PrivateComstockPierce);
 
             case HeadEffect.MiniPixie:
-                return $"경험치 획득량 {Signed(HeadEffects.MiniPixieExpBonus)}, 골드 수급량 {Signed(HeadEffects.MiniPixieGoldBonus)}";
+                return Loc.T("headeffect.minipixie.desc",
+                    Signed(HeadEffects.MiniPixieExpBonus), Signed(HeadEffects.MiniPixieGoldBonus));
 
             default:
-                return "고유 효과 없음";
+                return Loc.T("headeffect.none.desc");
         }
     }
 

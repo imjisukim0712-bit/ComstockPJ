@@ -114,7 +114,7 @@ public class GameHUD : MonoBehaviour
         }
 
         // 항목명("웨이브"/"골드")은 상단 중앙 패널 위치와 골드 아이콘이 대신하므로 숫자만 쓴다
-        if (waveText != null) waveText.text = $"웨이브 {RunState.WaveNumber}";
+        if (waveText != null) waveText.text = Loc.T("hud.wave", RunState.WaveNumber);
         if (goldText != null) goldText.text = RunState.Gold.ToString();
 
         UpdateWaveTime();
@@ -232,7 +232,7 @@ public class GameHUD : MonoBehaviour
 
         if (waveManager.IsWaitingForBossDefeat)
         {
-            waveTimeText.text = "보스 처치";
+            waveTimeText.text = Loc.T("hud.defeatboss");
             return;
         }
 

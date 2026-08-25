@@ -68,7 +68,7 @@ public class ScoreHudUI : MonoBehaviour
         if (content.activeSelf != visible) content.SetActive(visible);
         if (!visible) return;
 
-        if (label != null) label.text = $"점수 {RunScore.ComputeTotal():N0}";
+        if (label != null) label.text = Loc.T("hud.score", RunScore.ComputeTotal().ToString("N0"));
     }
 
     private static void Stretch(RectTransform rect, Vector2 anchorMin, Vector2 anchorMax)

@@ -79,7 +79,7 @@ public class CollectionPanelUI : MonoBehaviour
 
         TextMeshProUGUI title = CreateText(rootRect, "Title", new Vector2(0.05f, 0.915f), new Vector2(0.95f, 0.985f),
                                            TextAlignmentOptions.Midline, 40f);
-        title.text = "도감";
+        title.text = Loc.T("title.codex");
         title.color = AccentColor;
 
         BuildTabs(rootRect);
@@ -92,7 +92,7 @@ public class CollectionPanelUI : MonoBehaviour
         BuildDetail(rootRect);
 
         Button close = CreateButton(rootRect, "CloseButton", new Vector2(0.70f, 0.045f), new Vector2(0.955f, 0.115f),
-                                    "닫기", out _);
+                                    Loc.T("common.close"), out _);
         close.onClick.AddListener(Close);
 
         ShowCategory(UnlockCategory.Head);
@@ -258,7 +258,7 @@ public class CollectionPanelUI : MonoBehaviour
 
         detailConditionTitle = CreateText(panelRect, "ConditionTitle", new Vector2(0.06f, 0.44f),
                                           new Vector2(0.94f, 0.51f), TextAlignmentOptions.Midline, 17f);
-        detailConditionTitle.text = "해금 조건";
+        detailConditionTitle.text = Loc.T("codex.unlock_condition");
         detailConditionTitle.color = MutedTextColor;
 
         detailCondition = CreateText(panelRect, "Condition", new Vector2(0.06f, 0.24f), new Vector2(0.94f, 0.43f),
@@ -294,10 +294,10 @@ public class CollectionPanelUI : MonoBehaviour
         // 무기는 해금 조건이 없다(2026-08-20 사용자 확정) - "해금 조건" 칸에 실제 무기 스탯을
         // 보여준다. 다른 카테고리는 기존 그대로 조건 문구를 보여준다.
         bool isWeapon = entry.category == UnlockCategory.Weapon;
-        if (detailConditionTitle != null) detailConditionTitle.text = isWeapon ? "무기 정보" : "해금 조건";
+        if (detailConditionTitle != null) detailConditionTitle.text = isWeapon ? Loc.T("codex.weapon_info") : Loc.T("codex.unlock_condition");
         if (detailCondition != null)
         {
-            detailCondition.text = isWeapon ? BuildWeaponSpecText(entry.itemId) : entry.conditionText;
+            detailCondition.text = isWeapon ? BuildWeaponSpecText(entry.itemId) : entry.UnlockCondition();
             detailCondition.color = unlocked ? Color.white : MutedTextColor;
         }
 
@@ -310,20 +310,20 @@ public class CollectionPanelUI : MonoBehaviour
     {
         if (GameDataManager.Instance == null ||
             !GameDataManager.Instance.Weapons.TryGetValue(weaponId, out WeaponData weapon))
-            return "정보를 불러올 수 없습니다";
+            return Loc.T("codex.load_failed");
 
         var lines = new List<string>();
 
         if (partsCatalog != null && partsCatalog.TryGetWeaponMeta(weaponId, out PartsCatalog.WeaponMetaEntry meta))
-            lines.Add($"{meta.weaponClass.ToKorean()} · {meta.type.ToKorean()}");
+            lines.Add($"{meta.weaponClass.ToDisplayName()} · {meta.type.ToDisplayName()}");
 
-        lines.Add($"공격력 {weapon.weapon_atk:0.##}  공격속도 {weapon.weapon_atsp:0.##}/초");
-        lines.Add($"사거리 {weapon.weapon_range:0.##}  감지거리 {weapon.weapon_detect:0.##}");
-        lines.Add($"발사 방식 {FireModeName(weapon.weapon_firemode)}");
+        lines.Add(Loc.T("codex.weapon.atk_atsp", weapon.weapon_atk.ToString("0.##"), weapon.weapon_atsp.ToString("0.##")));
+        lines.Add(Loc.T("codex.weapon.range_detect", weapon.weapon_range.ToString("0.##"), weapon.weapon_detect.ToString("0.##")));
+        lines.Add($"{Loc.T("detail.weapon.firemode")} {FireModeName(weapon.weapon_firemode)}");
 
-        if (weapon.ProjectileCount > 1) lines.Add($"동시 발사 {weapon.ProjectileCount}발");
-        if (weapon.weapon_splash > 0f) lines.Add($"스플래시 반경 {weapon.weapon_splash:0.##}");
-        if (weapon.weapon_defignore > 0f) lines.Add($"방어력 무시 {weapon.weapon_defignore * 100f:0.##}%");
+        if (weapon.ProjectileCount > 1) lines.Add(Loc.T("codex.weapon.multishot", weapon.ProjectileCount));
+        if (weapon.weapon_splash > 0f) lines.Add($"{Loc.T("detail.splash_radius")} {weapon.weapon_splash:0.##}");
+        if (weapon.weapon_defignore > 0f) lines.Add($"{Loc.T("detail.defignore")} {weapon.weapon_defignore * 100f:0.##}%");
 
         return string.Join("\n", lines);
     }
@@ -332,9 +332,9 @@ public class CollectionPanelUI : MonoBehaviour
     {
         switch (mode)
         {
-            case WeaponFireMode.Projectile: return "투사체";
-            case WeaponFireMode.Beam: return "지속 빔";
-            case WeaponFireMode.MeleeSwing: return "근접 휘두르기";
+            case WeaponFireMode.Projectile: return Loc.T("firemode.projectile");
+            case WeaponFireMode.Beam: return Loc.T("firemode.beam");
+            case WeaponFireMode.MeleeSwing: return Loc.T("firemode.melee");
             default: return mode.ToString();
         }
     }
@@ -345,13 +345,13 @@ public class CollectionPanelUI : MonoBehaviour
 
         if (entry.UnlockedFromStart)
         {
-            detailProgress.text = "기본 제공";
+            detailProgress.text = Loc.T("codex.default_unlocked");
             SetFillRatio(1f);
             return;
         }
 
         int current = Mathf.Min(UnlockState.GetProgress(entry), entry.requiredAmount);
-        detailProgress.text = unlocked ? $"해금 완료 ({entry.requiredAmount} / {entry.requiredAmount})"
+        detailProgress.text = unlocked ? Loc.T("codex.unlocked", entry.requiredAmount, entry.requiredAmount)
                                        : $"{current} / {entry.requiredAmount}";
         SetFillRatio(entry.requiredAmount > 0 ? (float)current / entry.requiredAmount : 0f);
     }
@@ -380,25 +380,25 @@ public class CollectionPanelUI : MonoBehaviour
             case UnlockCategory.Head:
                 if (GameDataManager.Instance != null &&
                     GameDataManager.Instance.Robots.TryGetValue(entry.itemId, out RobotData robot))
-                    return robot.robot_name;
+                    return robot.Robot();
                 break;
 
             case UnlockCategory.Disc:
-                if (TryGetDisc(entry.itemId, out DiscData disc)) return disc.discName;
+                if (TryGetDisc(entry.itemId, out DiscData disc)) return disc.Disc();
                 break;
 
             case UnlockCategory.Accessory:
-                if (AccessoryCatalog.TryGet(entry.itemId, out AccessoryData accessory)) return accessory.accessoryName;
+                if (AccessoryCatalog.TryGet(entry.itemId, out AccessoryData accessory)) return accessory.Accessory();
                 break;
 
             case UnlockCategory.Weapon:
                 if (GameDataManager.Instance != null &&
                     GameDataManager.Instance.Weapons.TryGetValue(entry.itemId, out WeaponData weapon))
-                    return weapon.weapon_name;
+                    return weapon.Weapon();
                 break;
         }
 
-        return entry.fallbackName;
+        return entry.UnlockFallbackName();
     }
 
     private Sprite ResolveIcon(UnlockEntry entry)
@@ -449,10 +449,10 @@ public class CollectionPanelUI : MonoBehaviour
     {
         switch (category)
         {
-            case UnlockCategory.Head: return "머리";
-            case UnlockCategory.Disc: return "디스크";
-            case UnlockCategory.Weapon: return "무기";
-            default: return "악세사리";
+            case UnlockCategory.Head: return Loc.T("codex.cat.head");
+            case UnlockCategory.Disc: return Loc.T("codex.cat.disc");
+            case UnlockCategory.Weapon: return Loc.T("codex.cat.weapon");
+            default: return Loc.T("codex.cat.accessory");
         }
     }
 

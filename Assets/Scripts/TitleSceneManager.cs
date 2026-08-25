@@ -47,6 +47,16 @@ public class TitleSceneManager : MonoBehaviour
     private RankingPanelUI rankingPanel;
     private Button rankingButton;
 
+    // 언어 선택(2026-08-25). 사용자 확정: "타이틀에 별도 버튼".
+    private LanguageSelectPanelUI languagePanel;
+    private Button languageButton;
+
+    // 코드로 만든 버튼의 글자들 - 언어가 바뀌면 이 참조로 다시 채운다.
+    // (씬에 배치된 시작/종료/설정 버튼의 글자는 LocalizedText 컴포넌트가 스스로 갱신한다)
+    private TMPro.TextMeshProUGUI collectionLabel;
+    private TMPro.TextMeshProUGUI rankingLabel;
+    private TMPro.TextMeshProUGUI languageLabel;
+
     private void Awake()
     {
         if (startButton != null) startButton.onClick.AddListener(OnStartClicked);
@@ -59,6 +69,27 @@ public class TitleSceneManager : MonoBehaviour
         AttachSettingsButton();
         AttachCollectionButton();
         AttachRankingButton();
+        AttachLanguageButton();
+
+        Loc.OnLanguageChanged += RefreshLabels;
+        RefreshLabels();
+    }
+
+    /// <summary>
+    /// static 이벤트 구독은 스스로 해제한다(프로젝트 규칙 - <see cref="Loc.OnLanguageChanged"/>를
+    /// 관리자 쪽에서 null로 밀지 않는다).
+    /// </summary>
+    private void OnDestroy()
+    {
+        Loc.OnLanguageChanged -= RefreshLabels;
+    }
+
+    /// <summary>코드로 만든 버튼 글자를 현재 언어로 다시 채운다.</summary>
+    private void RefreshLabels()
+    {
+        if (collectionLabel != null) collectionLabel.text = Loc.T("title.codex");
+        if (rankingLabel != null) rankingLabel.text = Loc.T("title.ranking");
+        if (languageLabel != null) languageLabel.text = Loc.T("title.language");
     }
 
     /// <summary>
@@ -82,7 +113,9 @@ public class TitleSceneManager : MonoBehaviour
 
         var image = go.GetComponent<Image>();
         image.color = Color.white;
-        Sprite art = Resources.Load<Sprite>("UI/Purple_ui02");
+        // 사각형 버튼(2026-08-25 사용자 지시: "타이틀 기본 UI는 다 사각형으로, 마름모꼴은 보기 힘들다").
+        // 씬에 배치된 종료·설정 버튼과 같은 스프라이트라 세 버튼이 한 벌로 보인다.
+        Sprite art = Resources.Load<Sprite>("UI/Purple_button01");
         if (art != null)
         {
             image.sprite = art;
@@ -102,16 +135,87 @@ public class TitleSceneManager : MonoBehaviour
         labelRect.offsetMax = Vector2.zero;
 
         var label = labelGo.GetComponent<TMPro.TextMeshProUGUI>();
-        label.text = "도감";
+        label.text = Loc.T("title.codex");
         label.alignment = TMPro.TextAlignmentOptions.Midline;
         label.color = Color.white;
         label.raycastTarget = false;
         label.enableAutoSizing = true;
         label.fontSizeMin = 8f;
         label.fontSizeMax = 24f;
+        collectionLabel = label;
 
         collectionButton = go.AddComponent<Button>();
         collectionButton.onClick.AddListener(OnCollectionClicked);
+    }
+
+    /// <summary>
+    /// 타이틀 우하단(랭킹 버튼 바로 위)에 "언어" 버튼을 붙인다(2026-08-25).
+    /// 도감·랭킹 버튼과 같은 관례로 씬을 건드리지 않고 코드로 만든다.
+    /// 시작/종료 버튼은 화면 가운데(x=0.5)에 있어 이 오른쪽 세로줄과 겹치지 않는다.
+    /// </summary>
+    private void AttachLanguageButton()
+    {
+        RectTransform parent = ResolveCanvasRect();
+        if (parent == null) return;
+
+        var go = new GameObject("LanguageButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+
+        var rect = (RectTransform)go.transform;
+        rect.anchorMin = new Vector2(0.80f, 0.105f);
+        rect.anchorMax = new Vector2(0.965f, 0.175f);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        var image = go.GetComponent<Image>();
+        image.color = Color.white;
+        // 사각형 버튼(2026-08-25 사용자 지시: "타이틀 기본 UI는 다 사각형으로, 마름모꼴은 보기 힘들다").
+        // 씬에 배치된 종료·설정 버튼과 같은 스프라이트라 세 버튼이 한 벌로 보인다.
+        Sprite art = Resources.Load<Sprite>("UI/Purple_button01");
+        if (art != null)
+        {
+            image.sprite = art;
+            image.type = Image.Type.Sliced;
+        }
+        else
+        {
+            image.color = new Color(0.30f, 0.24f, 0.52f, 1f);
+        }
+
+        var labelGo = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TMPro.TextMeshProUGUI));
+        labelGo.transform.SetParent(rect, false);
+        var labelRect = (RectTransform)labelGo.transform;
+        labelRect.anchorMin = Vector2.zero;
+        labelRect.anchorMax = Vector2.one;
+        labelRect.offsetMin = Vector2.zero;
+        labelRect.offsetMax = Vector2.zero;
+
+        var label = labelGo.GetComponent<TMPro.TextMeshProUGUI>();
+        label.text = Loc.T("title.language");
+        label.alignment = TMPro.TextAlignmentOptions.Midline;
+        label.color = Color.white;
+        label.raycastTarget = false;
+        label.enableAutoSizing = true;
+        label.fontSizeMin = 8f;
+        label.fontSizeMax = 24f;
+        languageLabel = label;
+
+        languageButton = go.AddComponent<Button>();
+        languageButton.onClick.AddListener(OnLanguageClicked);
+    }
+
+    /// <summary>
+    /// "언어" - 언어 선택 모달을 연다. 도감·랭킹과 달리 <b>타이틀 UI를 숨기지 않는다</b> -
+    /// 반투명 암막 위에 뜨는 작은 모달이라 뒤가 보이는 편이 어느 화면에서 눌렀는지 알기 쉽고,
+    /// 언어를 바꾸는 즉시 뒤의 "게임 시작"/"종료" 글자가 바뀌는 것이 그대로 보인다.
+    /// </summary>
+    private void OnLanguageClicked()
+    {
+        RectTransform parent = ResolveCanvasRect();
+        if (parent == null) return;
+
+        if (languagePanel == null) languagePanel = LanguageSelectPanelUI.Attach(parent);
+        if (languagePanel != null) languagePanel.Open();
     }
 
     /// <summary>"도감" - 해금 목록을 연다. 닫으면 타이틀 UI가 다시 보인다.</summary>
@@ -171,7 +275,9 @@ public class TitleSceneManager : MonoBehaviour
 
         var image = go.GetComponent<Image>();
         image.color = Color.white;
-        Sprite art = Resources.Load<Sprite>("UI/Purple_ui02");
+        // 사각형 버튼(2026-08-25 사용자 지시: "타이틀 기본 UI는 다 사각형으로, 마름모꼴은 보기 힘들다").
+        // 씬에 배치된 종료·설정 버튼과 같은 스프라이트라 세 버튼이 한 벌로 보인다.
+        Sprite art = Resources.Load<Sprite>("UI/Purple_button01");
         if (art != null)
         {
             image.sprite = art;
@@ -191,13 +297,14 @@ public class TitleSceneManager : MonoBehaviour
         labelRect.offsetMax = Vector2.zero;
 
         var label = labelGo.GetComponent<TMPro.TextMeshProUGUI>();
-        label.text = "랭킹";
+        label.text = Loc.T("title.ranking");
         label.alignment = TMPro.TextAlignmentOptions.Midline;
         label.color = Color.white;
         label.raycastTarget = false;
         label.enableAutoSizing = true;
         label.fontSizeMin = 8f;
         label.fontSizeMax = 24f;
+        rankingLabel = label;
 
         rankingButton = go.AddComponent<Button>();
         rankingButton.onClick.AddListener(OnRankingClicked);
@@ -272,6 +379,7 @@ public class TitleSceneManager : MonoBehaviour
         if (settingsButton != null) settingsButton.gameObject.SetActive(visible);
         if (collectionButton != null) collectionButton.gameObject.SetActive(visible);
         if (rankingButton != null) rankingButton.gameObject.SetActive(visible);
+        if (languageButton != null) languageButton.gameObject.SetActive(visible);
 
         // 제목 텍스트와 그 뒤 판때기는 인스펙터에 연결돼 있지 않아 이름으로 찾는다.
         // 못 찾아도(이름이 바뀌었어도) 조용히 넘어간다 - 암막이 있어 치명적이지 않다.

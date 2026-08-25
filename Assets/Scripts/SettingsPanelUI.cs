@@ -20,7 +20,9 @@ public class SettingsPanelUI : MonoBehaviour
     private const string ScreenModeKey = "comstock_screen_mode";
     private const string AspectKey = "comstock_aspect_ratio";
 
-    private static readonly string[] ScreenModeLabels = { "전체화면", "경계없는 창모드", "창모드" };
+    // 화면 모드 이름은 언어에 따라 달라지므로 static 배열에 문자열을 굳혀두면 안 된다
+    // (static 초기화는 언어 결정 전에 한 번만 돌기 때문). 필요할 때마다 조회한다.
+    private static readonly string[] ScreenModeKeys = { "settings.screen.fullscreen", "settings.screen.borderless", "settings.screen.windowed" };
     private static readonly FullScreenMode[] ScreenModes =
     {
         FullScreenMode.ExclusiveFullScreen,
@@ -62,7 +64,7 @@ public class SettingsPanelUI : MonoBehaviour
 
     public void Open()
     {
-        screenModeIndex = Mathf.Clamp(PlayerPrefs.GetInt(ScreenModeKey, 2), 0, ScreenModeLabels.Length - 1);
+        screenModeIndex = Mathf.Clamp(PlayerPrefs.GetInt(ScreenModeKey, 2), 0, ScreenModeKeys.Length - 1);
         aspectIndex = Mathf.Clamp(PlayerPrefs.GetInt(AspectKey, 1), 0, AspectLabels.Length - 1);
         RefreshScreenButtons();
         gameObject.SetActive(true);
@@ -92,25 +94,25 @@ public class SettingsPanelUI : MonoBehaviour
 
         // 세로 배치는 패널 안쪽(0~1 로컬)을 빈틈없이 채운다 - 처음엔 화면비율 아래로 패널의
         // 1/3 넘게 빈 공간이 남고 저장 버튼은 패널 밖(y<0)으로 튀어나가 있었다(실측으로 발견).
-        CreateLabel(panelRect, "Title", "환경 설정", 0.05f, 0.90f, 0.80f, 0.965f, TextAlignmentOptions.MidlineLeft, 32f);
+        CreateLabel(panelRect, "Title", Loc.T("settings.title"), 0.05f, 0.90f, 0.80f, 0.965f, TextAlignmentOptions.MidlineLeft, 32f);
         CreateCloseButton(panelRect);
 
         VolumeSliderUI.Attach(panelRect, new Vector2(0.06f, 0.78f), new Vector2(0.94f, 0.865f),
-            "배경음", () => MusicManager.Volume, v => MusicManager.Volume = v,
+            Loc.T("settings.music"), () => MusicManager.Volume, v => MusicManager.Volume = v,
             h => MusicManager.OnVolumeChanged += h, h => MusicManager.OnVolumeChanged -= h);
 
         VolumeSliderUI.Attach(panelRect, new Vector2(0.06f, 0.665f), new Vector2(0.94f, 0.75f),
-            "효과음", () => SFXManager.Volume, v => SFXManager.Volume = v,
+            Loc.T("settings.sfx"), () => SFXManager.Volume, v => SFXManager.Volume = v,
             h => SFXManager.OnVolumeChanged += h, h => SFXManager.OnVolumeChanged -= h);
 
-        CreateLabel(panelRect, "ScreenLabel", "화면 조정", 0.06f, 0.565f, 0.5f, 0.625f, TextAlignmentOptions.MidlineLeft, 24f);
+        CreateLabel(panelRect, "ScreenLabel", Loc.T("settings.screen"), 0.06f, 0.565f, 0.5f, 0.625f, TextAlignmentOptions.MidlineLeft, 24f);
 
-        float modeWidth = 0.88f / ScreenModeLabels.Length;
-        for (int i = 0; i < ScreenModeLabels.Length; i++)
+        float modeWidth = 0.88f / ScreenModeKeys.Length;
+        for (int i = 0; i < ScreenModeKeys.Length; i++)
         {
             int index = i;
             float x = 0.06f + modeWidth * i;
-            screenModeBgs[i] = CreateRadioButton(panelRect, $"ScreenMode_{i}", ScreenModeLabels[i],
+            screenModeBgs[i] = CreateRadioButton(panelRect, $"ScreenMode_{i}", Loc.T(ScreenModeKeys[i]),
                 x, 0.45f, x + modeWidth - 0.01f, 0.545f, () => SelectScreenMode(index), out screenModeButtons[i]);
         }
 
@@ -125,10 +127,10 @@ public class SettingsPanelUI : MonoBehaviour
 
         // 피드백 웹사이트 버튼 - 열람할 URL을 아직 받지 못해 비활성으로 둔다(2026-08-18).
         // URL이 정해지면 CreateActionButton의 onClick에 Application.OpenURL(그 주소)를 넣으면 된다.
-        CreateActionButton(panelRect, "FeedbackButton", "피드백 (URL 미정 - 비활성)",
+        CreateActionButton(panelRect, "FeedbackButton", Loc.T("settings.feedback_wip"),
             0.06f, 0.16f, 0.94f, 0.245f, null, false);
 
-        CreateActionButton(panelRect, "SaveButton", "저장 후 닫기", 0.06f, 0.03f, 0.94f, 0.115f,
+        CreateActionButton(panelRect, "SaveButton", Loc.T("settings.saveclose"), 0.06f, 0.03f, 0.94f, 0.115f,
             HandleSaveClicked, true);
 
         gameObject.SetActive(false);

@@ -17,15 +17,19 @@ public enum ItemGrade
 /// <summary>등급의 한글 표시명과 표시 색상을 제공한다.</summary>
 public static class ItemGradeExtensions
 {
-    public static string ToKorean(this ItemGrade grade)
+    /// <summary>
+    /// 등급의 표시명. 2026-08-25 다국어 도입으로 <c>ToKorean()</c>에서 이름을 바꿨다 -
+    /// 영어를 돌려주는 메서드가 "ToKorean"이면 읽는 사람이 오해한다.
+    /// </summary>
+    public static string ToDisplayName(this ItemGrade grade)
     {
         switch (grade)
         {
-            case ItemGrade.Normal: return "일반";
-            case ItemGrade.Rare: return "희귀";
-            case ItemGrade.Epic: return "서사";
-            case ItemGrade.Unique: return "유일";
-            case ItemGrade.Legendary: return "전설";
+            case ItemGrade.Normal: return Loc.T("grade.normal");
+            case ItemGrade.Rare: return Loc.T("grade.rare");
+            case ItemGrade.Epic: return Loc.T("grade.epic");
+            case ItemGrade.Unique: return Loc.T("grade.unique");
+            case ItemGrade.Legendary: return Loc.T("grade.legendary");
             default: return grade.ToString();
         }
     }

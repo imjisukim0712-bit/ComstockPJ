@@ -56,7 +56,7 @@ public class MusicVolumeSliderUI : MonoBehaviour
 
         TextMeshProUGUI label = CreateText(rootRect, "Label", new Vector2(0.03f, 0f), new Vector2(0.33f, 1f),
             TextAlignmentOptions.MidlineLeft);
-        label.text = "음악 볼륨";
+        label.text = Loc.T("settings.music_volume");
 
         value_text = CreateText(rootRect, "Value", new Vector2(0.85f, 0f), new Vector2(0.97f, 1f),
             TextAlignmentOptions.MidlineRight);

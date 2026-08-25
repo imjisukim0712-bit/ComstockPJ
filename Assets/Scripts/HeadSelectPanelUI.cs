@@ -91,12 +91,12 @@ public class HeadSelectPanelUI : MonoBehaviour
 
         TextMeshProUGUI title = CreateText(rootRect, "Title", new Vector2(0.05f, 0.905f), new Vector2(0.95f, 0.975f),
                                            TextAlignmentOptions.Midline, 40f);
-        title.text = "머리 선택";
+        title.text = Loc.T("headselect.title");
         title.color = SelectedColor;
 
         TextMeshProUGUI hint = CreateText(rootRect, "Hint", new Vector2(0.05f, 0.862f), new Vector2(0.95f, 0.902f),
                                           TextAlignmentOptions.Midline, 17f);
-        hint.text = "머리는 게임 시작 시 한 번만 고르며 런 중에는 바꿀 수 없습니다";
+        hint.text = Loc.T("headselect.hint");
         hint.color = new Color(0.72f, 0.74f, 0.78f, 1f);
 
         BuildGrid(rootRect);
@@ -260,7 +260,7 @@ public class HeadSelectPanelUI : MonoBehaviour
     private void BuildButtons(RectTransform rootRect)
     {
         confirm_button = CreateButton(rootRect, "ConfirmButton", new Vector2(0.60f, 0.065f), new Vector2(0.80f, 0.145f),
-                                      "출발", out confirm_label);
+                                      Loc.T("headselect.start"), out confirm_label);
         confirm_button.onClick.AddListener(() =>
         {
             if (selected_robot_id < 0) return;
@@ -268,7 +268,7 @@ public class HeadSelectPanelUI : MonoBehaviour
         });
 
         Button back = CreateButton(rootRect, "BackButton", new Vector2(0.815f, 0.065f), new Vector2(0.955f, 0.145f),
-                                   "뒤로", out _);
+                                   Loc.T("common.back"), out _);
         back.onClick.AddListener(() => on_cancel?.Invoke());
     }
 
@@ -294,7 +294,7 @@ public class HeadSelectPanelUI : MonoBehaviour
         if (detail_icon != null) detail_icon.sprite = HeadSpriteLibrary.GetIcon(info);
         if (detail_name != null) detail_name.text = GetHeadName(robotId);
 
-        if (detail_effect_title != null) detail_effect_title.text = $"[{info.effect.ToKorean()}]";
+        if (detail_effect_title != null) detail_effect_title.text = $"[{info.effect.ToDisplayName()}]";
         if (detail_effect_body != null) detail_effect_body.text = info.effect.ToDescription();
 
         if (detail_stats == null) return;
@@ -310,10 +310,10 @@ public class HeadSelectPanelUI : MonoBehaviour
         }
 
         detail_stats.text =
-            $"체력  <b>{hp}</b>      질량  <b>{mass}</b>\n" +
-            $"무기 소켓  <b>{info.weaponSocketCount}</b>      디스크 슬롯  <b>{info.discSlotCount}</b>\n" +
-            $"적재량  <b>{info.partBoxCapacity}</b>\n" +
-            $"기본 무기  <b>{DescribeDefaultWeapons(info)}</b>\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.MaxHp)}  <b>{hp}</b>      {StatTypeNames.ToDisplayName(StatType.Mass)}  <b>{mass}</b>\n" +
+            $"{Loc.T("partslot.weaponsocket")}  <b>{info.weaponSocketCount}</b>      {Loc.T("partslot.discslot")}  <b>{info.discSlotCount}</b>\n" +
+            $"{Loc.T("headselect.capacity")}  <b>{info.partBoxCapacity}</b>\n" +
+            $"{Loc.T("headselect.default_weapon")}  <b>{DescribeDefaultWeapons(info)}</b>\n" +
             BuildRecordLine(robotId);
     }
 
@@ -325,14 +325,14 @@ public class HeadSelectPanelUI : MonoBehaviour
     private static string BuildRecordLine(int robotId)
     {
         if (!HeadRecords.HasRecord(robotId))
-            return "<color=#8A93A6>이 머리로 완주한 기록이 없습니다</color>";
+            return $"<color=#8A93A6>{Loc.T("headselect.no_record")}</color>";
 
         int score = HeadRecords.GetBestScore(robotId);
         int wave = HeadRecords.GetBestWave(robotId);
         int plays = HeadRecords.GetPlayCount(robotId);
 
-        return $"<color=#FFD37A>최고 점수  <b>{score:N0}</b>      최고 웨이브  <b>{wave}</b>" +
-               $"      <size=85%>플레이 {plays}회</size></color>";
+        return $"<color=#FFD37A>{Loc.T("headselect.best_score")}  <b>{score:N0}</b>      {Loc.T("headselect.best_wave")}  <b>{wave}</b>" +
+               $"      <size=85%>{Loc.T("headselect.plays", plays)}</size></color>";
     }
 
     /// <summary>기본 장착 무기 이름 목록. 데이터가 없으면 "-".</summary>
@@ -346,7 +346,7 @@ public class HeadSelectPanelUI : MonoBehaviour
             if (GameDataManager.Instance != null &&
                 GameDataManager.Instance.Weapons.TryGetValue(weaponId, out WeaponData weapon))
             {
-                names.Add(weapon.weapon_name);
+                names.Add(weapon.Weapon());
             }
             else
             {
@@ -361,7 +361,7 @@ public class HeadSelectPanelUI : MonoBehaviour
     {
         if (GameDataManager.Instance != null && GameDataManager.Instance.Robots.TryGetValue(robotId, out RobotData data))
         {
-            return data.robot_name;
+            return data.Robot();
         }
         return robotId.ToString();
     }

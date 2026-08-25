@@ -183,7 +183,7 @@ public class ShopPanelUI : MonoBehaviour
 
         if (!shopManager.TryRefresh())
         {
-            SetMessage($"골드가 부족합니다 (상점 초기화 {shopManager.CurrentRefreshCost}골드)");
+            SetMessage(Loc.T("shop.msg.nogold_refresh", shopManager.CurrentRefreshCost));
             return;
         }
 
@@ -218,14 +218,14 @@ public class ShopPanelUI : MonoBehaviour
         {
             // 악세사리는 소켓 선택도, 구매 완료 잠금도 없다 - 즉시 사고 즉시 다시 살 수 있다
             // (ShopManager.TryPurchaseAccessory 참고).
-            if (shopManager.TryPurchaseAccessory(index)) SetMessage($"{offer.DisplayName} 구매 완료 (점수 +{offer.Accessory.score})");
+            if (shopManager.TryPurchaseAccessory(index)) SetMessage(Loc.T("shop.msg.bought_accessory", offer.DisplayName, offer.Accessory.score));
             Refresh();
             return;
         }
 
         if (offer.IsDisc)
         {
-            if (shopManager.TryPurchaseDisc(index)) SetMessage($"{offer.DisplayName} 구매 완료");
+            if (shopManager.TryPurchaseDisc(index)) SetMessage(Loc.T("shop.msg.bought", offer.DisplayName));
             Refresh();
             return;
         }
@@ -324,7 +324,7 @@ public class ShopPanelUI : MonoBehaviour
         PlayerShootManager shootManager = FindFirstObjectByType<PlayerShootManager>();
         if (shootManager == null)
         {
-            SetMessage("무기를 장착할 대상을 찾을 수 없습니다");
+            SetMessage(Loc.T("shop.msg.no_equip_target"));
             return;
         }
 
@@ -333,7 +333,7 @@ public class ShopPanelUI : MonoBehaviour
         ShopManager.Offer offer = shopManager.Offers[offerIndex];
         if (socketPickerTitleText != null)
         {
-            socketPickerTitleText.text = $"'{offer.DisplayName}'({offer.Grade.ToKorean()})을(를) 어느 소켓에 장착할까요?";
+            socketPickerTitleText.text = Loc.T("shop.socketpicker.title", offer.DisplayName, offer.Grade.ToDisplayName());
         }
 
         EnsureSocketButtons(shootManager.SocketCount);
@@ -346,8 +346,8 @@ public class ShopPanelUI : MonoBehaviour
             if (!exists || socketButtonTexts[i] == null) continue;
 
             string current = shootManager.TryGetSocketInfo(i, out WeaponData weapon, out ItemGrade currentGrade)
-                ? $"{weapon.weapon_name} ({currentGrade.ToKorean()})"
-                : "(비어 있음)";
+                ? $"{weapon.Weapon()} ({currentGrade.ToDisplayName()})"
+                : Loc.T("common.empty");
 
             // 2026-08-12 "무기 소켓 개별화" 플랜부터 타입 불일치/무게 초과는 더 이상 버튼을
             // 막지 않는다(언제나 장착 가능) - 대신 비차단 경고 문구로 어떤 패널티가 붙는지 보여준다.
@@ -356,14 +356,14 @@ public class ShopPanelUI : MonoBehaviour
 
             if (!allowed)
             {
-                socketButtonTexts[i].text = $"소켓 {i + 1}\n{current}\n<color=#FF8080>{reason}</color>";
+                socketButtonTexts[i].text = $"{Loc.T("shop.socket_n", i + 1)}\n{current}\n<color=#FF8080>{reason}</color>";
                 continue;
             }
 
             string warning = shopManager.BuildSocketWarning(offerIndex, i);
             socketButtonTexts[i].text = warning.Length > 0
-                ? $"소켓 {i + 1}\n{current}\n<color=#F2BF26>{warning}</color>"
-                : $"소켓 {i + 1}\n{current}";
+                ? $"{Loc.T("shop.socket_n", i + 1)}\n{current}\n<color=#F2BF26>{warning}</color>"
+                : $"{Loc.T("shop.socket_n", i + 1)}\n{current}";
         }
 
         if (socketPickerRoot != null)
@@ -392,12 +392,12 @@ public class ShopPanelUI : MonoBehaviour
 
         if (shopManager.TryPurchaseWeaponIntoSocket(offerIndex, socketIndex))
         {
-            SetMessage($"소켓 {socketIndex + 1}에 {offer.DisplayName}({offer.Grade.ToKorean()}) 장착 완료");
+            SetMessage(Loc.T("shop.msg.equipped", socketIndex + 1, offer.DisplayName, offer.Grade.ToDisplayName()));
         }
         else
         {
             shopManager.CanPurchaseWeaponIntoSocket(offerIndex, socketIndex, out string reason);
-            SetMessage(string.IsNullOrEmpty(reason) ? "구매에 실패했습니다" : reason);
+            SetMessage(string.IsNullOrEmpty(reason) ? Loc.T("shop.msg.buy_failed") : reason);
         }
 
         CloseSocketPicker();
@@ -430,7 +430,7 @@ public class ShopPanelUI : MonoBehaviour
             int finalWave = waveManager != null ? waveManager.FinalWaveNumber : 0;
             // 엔드리스 모드(2026-08-19)에서는 20이 더 이상 진짜 끝이 아니므로 분모를 숨긴다.
             waveText.text = RunState.IsEndless
-                ? $"WAVE {RunState.WaveNumber:00} / 무한"
+                ? $"WAVE {RunState.WaveNumber:00} / {Loc.T("common.endless")}"
                 : finalWave > 0
                     ? $"WAVE {RunState.WaveNumber:00} / {finalWave}"
                     : $"WAVE {RunState.WaveNumber:00}";
@@ -447,7 +447,7 @@ public class ShopPanelUI : MonoBehaviour
 
         if (refreshText != null && shopManager != null)
         {
-            refreshText.text = $"상점 초기화 - {shopManager.CurrentRefreshCost}";
+            refreshText.text = Loc.T("shop.refresh_cost", shopManager.CurrentRefreshCost);
         }
     }
 
@@ -481,7 +481,7 @@ public class ShopPanelUI : MonoBehaviour
             // ② 종류 - 기획서 표기 형식: "전설 · 무기"
             if (ui.headerText != null)
             {
-                ui.headerText.text = $"<color={offer.Grade.ToColorHex()}>{offer.Grade.ToKorean()}</color> · {offer.CategoryName}";
+                ui.headerText.text = $"<color={offer.Grade.ToColorHex()}>{offer.Grade.ToDisplayName()}</color> · {offer.CategoryName}";
             }
 
             // ③ 이름 - 등급색으로 칠해 카드 안에서 가장 먼저 눈에 들어오게 한다.
@@ -496,7 +496,7 @@ public class ShopPanelUI : MonoBehaviour
             // ⑤ 가격 - 카드 하단 박스. 이미 산 카드는 가격 대신 "구매함"이라 코인도 숨긴다.
             if (decor.priceText != null)
             {
-                decor.priceText.text = offer.Purchased ? "구매함" : offer.Price.ToString();
+                decor.priceText.text = offer.Purchased ? Loc.T("shop.purchased_short") : offer.Price.ToString();
                 decor.priceText.color = offer.Purchased ? PurchasedGray : Color.white;
             }
             if (decor.priceCoin != null) decor.priceCoin.enabled = !offer.Purchased && decor.priceCoin.sprite != null;
@@ -508,7 +508,7 @@ public class ShopPanelUI : MonoBehaviour
 
             if (ui.cardButton != null) ui.cardButton.interactable = !offer.Purchased;
             if (ui.lockButton != null) ui.lockButton.interactable = !offer.Purchased;
-            if (ui.lockText != null) ui.lockText.text = offer.Locked ? "잠금 해제" : "잠금";
+            if (ui.lockText != null) ui.lockText.text = offer.Locked ? Loc.T("shop.unlock") : Loc.T("shop.lock");
         }
     }
 
@@ -655,7 +655,7 @@ public class ShopPanelUI : MonoBehaviour
 
         TextMeshProUGUI stampText = MakeText(badge, "Label", 0.05f, 0.05f, 0.95f, 0.95f, 44f,
                                               TextAlignmentOptions.Center);
-        stampText.text = "구매 완료";
+        stampText.text = Loc.T("shop.purchased_stamp");
         stampText.color = StampRed;
         stampText.fontStyle = FontStyles.Bold;
 
@@ -839,7 +839,7 @@ public class ShopPanelUI : MonoBehaviour
         image.color = Color.white;
 
         weapon_swap_label = MakeText(rect, "Label", 0.05f, 0.05f, 0.95f, 0.95f, 20f, TextAlignmentOptions.Center);
-        weapon_swap_label.text = "위치 교체";
+        weapon_swap_label.text = Loc.T("shop.swap");
 
         weapon_swap_button = rect.GetComponent<Button>();
         weapon_swap_button.onClick.AddListener(ToggleWeaponSwapMode);
@@ -851,8 +851,8 @@ public class ShopPanelUI : MonoBehaviour
         weapon_swap_source = -1;
 
         SetMessage(weapon_swap_mode
-            ? "무기 위치 교체: 옮길 무기 칸을 누르고, 이어서 바꿀 소켓 칸을 누르세요."
-            : "무기 위치 교체를 취소했습니다.");
+            ? Loc.T("shop.swap.begin")
+            : Loc.T("shop.swap.cancelled"));
 
         RefreshEquipment();
     }
@@ -874,12 +874,12 @@ public class ShopPanelUI : MonoBehaviour
             // 빈 소켓을 출발점으로 고르면 옮길 것이 없다.
             if (!shootManager.TryGetSocketInfo(socketIndex, out _, out _))
             {
-                SetMessage($"소켓 {socketIndex + 1}은(는) 비어 있어 옮길 무기가 없습니다.");
+                SetMessage(Loc.T("shop.swap.socket_empty", socketIndex + 1));
                 return;
             }
 
             weapon_swap_source = socketIndex;
-            SetMessage($"소켓 {socketIndex + 1}의 무기를 고름 - 바꿀 소켓 칸을 누르세요(다시 누르면 취소).");
+            SetMessage(Loc.T("shop.swap.picked", socketIndex + 1));
             RefreshEquipment();
             return;
         }
@@ -887,7 +887,7 @@ public class ShopPanelUI : MonoBehaviour
         if (weapon_swap_source == socketIndex)
         {
             weapon_swap_source = -1;
-            SetMessage("선택을 취소했습니다. 옮길 무기 칸을 다시 누르세요.");
+            SetMessage(Loc.T("shop.swap.deselected"));
             RefreshEquipment();
             return;
         }
@@ -898,11 +898,11 @@ public class ShopPanelUI : MonoBehaviour
         if (shootManager.SwapWeapons(from, socketIndex))
         {
             weapon_swap_mode = false;
-            SetMessage($"소켓 {from + 1} ↔ 소켓 {socketIndex + 1} 무기 위치를 바꿨습니다.");
+            SetMessage(Loc.T("shop.swap.done", from + 1, socketIndex + 1));
         }
         else
         {
-            SetMessage("무기 위치를 바꾸지 못했습니다.");
+            SetMessage(Loc.T("shop.swap.failed"));
         }
 
         RefreshEquipment();
@@ -969,12 +969,12 @@ public class ShopPanelUI : MonoBehaviour
             string weightLine = weight > capacity
                 ? $"<color=#FF5555>{weight:0.#}/{capacity:0.#}</color>"
                 : $"{weight:0.#}/{capacity:0.#}";
-            moddingStatusText.text = $"[장착 파츠] <size=75%>AI 코어 Lv {RunState.CoreLevel} · 무게 {weightLine} {DetailHint}</size>";
+            moddingStatusText.text = $"{Loc.T("modding.equipped_parts")} <size=75%>{Loc.T("modding.core_lv", RunState.CoreLevel)} · {Loc.T("modding.weight")} {weightLine} {DetailHint}</size>";
         }
 
         // 아이콘은 지금 선택된 머리의 실제 아트다(2026-08-19 - 이전에는 Parts/Body 하드코딩).
         ItemCellUI.CreateIconCell(partsGrid, "Cell_Head", HeadSpriteLibrary.GetCurrentIcon(),
-                                  new Color(0.16f, 0.17f, 0.19f, 1f), "머리", true, () => ShowDetail("head"));
+                                  new Color(0.16f, 0.17f, 0.19f, 1f), Loc.T("modding.head"), true, () => ShowDetail("head"));
 
         for (int i = 0; i < socketCount; i++)
         {
@@ -985,7 +985,7 @@ public class ShopPanelUI : MonoBehaviour
 
             ItemCellUI.CreateIconCell(partsGrid, $"Cell_SocketPart_{i}",
                                       has ? PartIconLibrary.Get(socketPart) : PartIconLibrary.Get(PartSlot.ArmWeaponSocket),
-                                      grade.ToCellColor(CellPlainColor), $"소켓 {i + 1}", has,
+                                      grade.ToCellColor(CellPlainColor), $"{Loc.T("shop.socket_n", i + 1)}", has,
                                       () => ShowDetail($"ws:{index}"));
         }
 
@@ -998,7 +998,7 @@ public class ShopPanelUI : MonoBehaviour
 
             ItemCellUI.CreateIconCell(partsGrid, $"Cell_Part_{slot}",
                                       has ? PartIconLibrary.Get(part) : PartIconLibrary.Get(slot),
-                                      grade.ToCellColor(CellPlainColor), slot.ToKorean(), has,
+                                      grade.ToCellColor(CellPlainColor), slot.ToDisplayName(), has,
                                       () => ShowDetail($"p:{captured}"));
         }
     }
@@ -1030,12 +1030,12 @@ public class ShopPanelUI : MonoBehaviour
             // 제목 영역이 "위치 교체" 버튼 자리만큼 좁아졌으므로 이 줄만 짧은 안내를 쓴다.
             // 교체 모드에서는 문구를 바꿔 "지금 무엇을 하는 중인지" 제목 줄에서 바로 보이게 한다.
             string hint = weapon_swap_mode
-                ? "<size=70%><color=#FFD37A>(교체 선택)</color></size>"
-                : "<size=70%><color=#8FB8FF>(상세)</color></size>";
-            equippedWeaponsText.text = $"[장착 무기] {equippedWeapons}/{socketCount} {hint}";
+                ? $"<size=70%><color=#FFD37A>({Loc.T("shop.swap.pick_hint")})</color></size>"
+                : $"<size=70%><color=#8FB8FF>({Loc.T("common.detail")})</color></size>";
+            equippedWeaponsText.text = $"{Loc.T("modding.equipped_weapons")} {equippedWeapons}/{socketCount} {hint}";
         }
 
-        if (weapon_swap_label != null) weapon_swap_label.text = weapon_swap_mode ? "교체 취소" : "위치 교체";
+        if (weapon_swap_label != null) weapon_swap_label.text = Loc.T(weapon_swap_mode ? "shop.swap.cancel" : "shop.swap");
         if (weapon_swap_button != null) weapon_swap_button.gameObject.SetActive(socketCount >= 2);
 
         if (shootManager == null) return;
@@ -1059,7 +1059,7 @@ public class ShopPanelUI : MonoBehaviour
                 : null;
 
             ItemCellUI.CreateIconCell(weaponsGrid, $"Cell_Weapon_{i}", icon, cellColor,
-                                      $"소켓 {i + 1}", has, onClick);
+                                      $"{Loc.T("shop.socket_n", i + 1)}", has, onClick);
         }
     }
 
@@ -1080,7 +1080,7 @@ public class ShopPanelUI : MonoBehaviour
         ItemCellUI.ClearChildren(discsGrid);
 
         if (equippedDiscsText != null)
-            equippedDiscsText.text = $"[디스크] {RunState.EquippedDiscIds.Count}/{slotCount} {DetailHint}";
+            equippedDiscsText.text = $"{Loc.T("modding.discs")} {RunState.EquippedDiscIds.Count}/{slotCount} {DetailHint}";
 
         for (int i = 0; i < cellCount; i++)
         {
@@ -1120,10 +1120,10 @@ public class ShopPanelUI : MonoBehaviour
     // 상세 능력치를 볼 수 있도록 링크로 감싼다.
     private static string PartLine(ModdingManager modding, PartSlot slot)
     {
-        if (modding == null || !modding.TryGetEquippedPart(slot, out PartData part)) return "(없음)";
+        if (modding == null || !modding.TryGetEquippedPart(slot, out PartData part)) return Loc.T("common.none_paren");
 
         return Clickable($"p:{slot}",
-            $"<color={part.grade.ToColorHex()}>{part.grade.ToKorean()}</color> {part.partName}");
+            $"<color={part.grade.ToColorHex()}>{part.grade.ToDisplayName()}</color> {part.Part()}");
     }
 
     /// <summary>
@@ -1139,22 +1139,22 @@ public class ShopPanelUI : MonoBehaviour
         {
             string part = modding != null && modding.TryGetEquippedWeaponSocketPart(i, out PartData socketPart)
                 ? Clickable($"ws:{i}",
-                    $"<color={socketPart.grade.ToColorHex()}>{socketPart.grade.ToKorean()}</color> {socketPart.partName}")
-                : "(없음)";
+                    $"<color={socketPart.grade.ToColorHex()}>{socketPart.grade.ToDisplayName()}</color> {socketPart.Part()}")
+                : Loc.T("common.none_paren");
 
-            lines.Add($"무기 소켓 {i + 1}: {part}");
+            lines.Add($"{Loc.T("modding.weaponsocket_n", i + 1)}: {part}");
         }
 
-        return lines.Count > 0 ? string.Join("\n", lines) : "무기 소켓: (없음)";
+        return lines.Count > 0 ? string.Join("\n", lines) : $"{Loc.T("partslot.weaponsocket")}: {Loc.T("common.none_paren")}";
     }
 
     private string GetRobotName()
     {
         if (player == null) player = FindFirstObjectByType<PlayerRobotController>();
-        if (player == null || GameDataManager.Instance == null) return "(알 수 없음)";
+        if (player == null || GameDataManager.Instance == null) return Loc.T("common.unknown");
 
         return GameDataManager.Instance.Robots.TryGetValue(player.RobotId, out RobotData data)
-            ? data.robot_name
+            ? data.Robot()
             : $"ID {player.RobotId}";
     }
 
@@ -1166,22 +1166,22 @@ public class ShopPanelUI : MonoBehaviour
         if (player == null) player = FindFirstObjectByType<PlayerRobotController>();
         if (player == null)
         {
-            statsText.text = "[현재 능력치]\n(플레이어를 찾을 수 없음)";
+            statsText.text = $"{Loc.T("stats.header")}\n{Loc.T("stats.no_player")}";
             return;
         }
 
         statsText.text =
-            "[현재 능력치]\n" +
+            $"{Loc.T("stats.header")}\n" +
             // 2026-08-24 사용자 지정 표기 규칙(StatFormat 참고).
-            $"체력 {StatFormat.Int(player.CurrentHp)}/{StatFormat.Int(player.MaxHp)}\n" +
-            $"공격력 {StatFormat.Int(player.Atk)}\n" +
-            $"방어력 {StatFormat.Int(player.Def)}\n" +
-            $"치명타 확률 {StatFormat.Percent(player.Cc)}\n" +
-            $"치명타 피해 {StatFormat.RatioPercent(player.Cd)}\n" +
-            $"이동속도 {StatFormat.Decimal(player.MoveSpeed)}\n" +
-            $"회피율 {StatFormat.Percent(player.Avoid)}\n" +
-            $"행운 {StatFormat.Int(player.Luck)}\n" +
-            $"질량 {StatFormat.Decimal(player.Mess)}";
+            $"{StatTypeNames.ToDisplayName(StatType.MaxHp)} {StatFormat.Int(player.CurrentHp)}/{StatFormat.Int(player.MaxHp)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.Atk)} {StatFormat.Int(player.Atk)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.Def)} {StatFormat.Int(player.Def)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.CritChance)} {StatFormat.Percent(player.Cc)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.CritDamage)} {StatFormat.RatioPercent(player.Cd)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.MoveSpeed)} {StatFormat.Decimal(player.MoveSpeed)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.Avoid)} {StatFormat.Percent(player.Avoid)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.Luck)} {StatFormat.Int(player.Luck)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.Mass)} {StatFormat.Decimal(player.Mess)}";
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -1189,7 +1189,9 @@ public class ShopPanelUI : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────
 
     /// <summary>목록 제목 옆에 붙이는 "클릭하면 상세를 볼 수 있다"는 안내.</summary>
-    private const string DetailHint = "<size=70%><color=#8FB8FF>(클릭 = 상세)</color></size>";
+    // 언어가 바뀌면 문구도 바뀌어야 하므로 const 가 아니라 조회식으로 둔다
+    // (const 는 컴파일 타임에 굳어 번역이 안 붙는다).
+    private static string DetailHint => $"<size=70%><color=#8FB8FF>({Loc.T("common.click_detail")})</color></size>";
 
     /// <summary>클릭 가능한 항목으로 감싼다. 밑줄은 "여기 누를 수 있다"는 시각 신호다.</summary>
     private static string Clickable(string linkId, string label) => $"<link=\"{linkId}\"><u>{label}</u></link>";
@@ -1246,7 +1248,7 @@ public class ShopPanelUI : MonoBehaviour
         if (modding != null && modding.Catalog != null &&
             modding.Catalog.TryGetWeaponMeta(weapon.weapon_id, out PartsCatalog.WeaponMetaEntry meta))
         {
-            lines.Add($"분류: {meta.weaponClass.ToKorean()} / {meta.type.ToKorean()}");
+            lines.Add($"{Loc.T("detail.category")}: {meta.weaponClass.ToDisplayName()} / {meta.type.ToDisplayName()}");
         }
 
         // 실제로 적에게 들어가는 1발 데미지 = weapon_atk + (로봇 공격력 / 발수). 치명타는 별도.
@@ -1254,32 +1256,32 @@ public class ShopPanelUI : MonoBehaviour
         float perShot = weapon.weapon_atk + robotAtk / weapon.ProjectileCount;
         float dps = perShot * weapon.ProjectileCount * weapon.weapon_atsp;
 
-        lines.Add($"공격력 {weapon.weapon_atk:0.##} (+로봇 {robotAtk:0.##} 분배 → 1발 {perShot:0.##})");
-        lines.Add($"공격속도 {weapon.weapon_atsp:0.##}회/초 · 초당 피해 약 {dps:0.#}");
+        lines.Add(Loc.T("detail.weapon.atk", weapon.weapon_atk.ToString("0.##"), robotAtk.ToString("0.##"), perShot.ToString("0.##")));
+        lines.Add(Loc.T("detail.weapon.atsp", weapon.weapon_atsp.ToString("0.##"), dps.ToString("0.#")));
 
         // 사거리/감지거리는 값 하나만 보여준다(2026-08-12 사용자 요청 - "데이터값 → 실제값"
         // 두 개를 나란히 쓰던 것을 없앴다). 남긴 값은 소켓 파츠 배율까지 먹은 최종 적용값이라
         // 화면에 적힌 숫자가 곧 게임에서 나가는 거리다.
-        lines.Add($"사거리 {shootManager.GetEffectiveTravelRange(socketIndex):0.##}");
-        lines.Add($"감지거리 {shootManager.GetEffectiveDetectRange(socketIndex):0.##}");
+        lines.Add(Loc.T("detail.weapon.range", shootManager.GetEffectiveTravelRange(socketIndex).ToString("0.##")));
+        lines.Add(Loc.T("detail.weapon.detect", shootManager.GetEffectiveDetectRange(socketIndex).ToString("0.##")));
 
-        lines.Add($"발사 방식: {FireModeName(weapon.weapon_firemode)}");
-        if (weapon.ProjectileCount > 1) lines.Add($"동시 발사 {weapon.ProjectileCount}발 (탄퍼짐 {weapon.weapon_aim:0.##}도)");
-        if (weapon.weapon_speed > 0f) lines.Add($"탄속 {weapon.ProjectileSpeed:0.##}");
-        if (weapon.weapon_duration > 0f) lines.Add($"지속시간 {weapon.weapon_duration:0.##}초");
-        if (weapon.weapon_splash > 0f) lines.Add($"폭발 반경 {weapon.weapon_splash:0.##}");
+        lines.Add($"{Loc.T("detail.weapon.firemode")}: {FireModeName(weapon.weapon_firemode)}");
+        if (weapon.ProjectileCount > 1) lines.Add(Loc.T("detail.weapon.multishot", weapon.ProjectileCount, weapon.weapon_aim.ToString("0.##")));
+        if (weapon.weapon_speed > 0f) lines.Add(Loc.T("detail.weapon.speed", weapon.ProjectileSpeed.ToString("0.##")));
+        if (weapon.weapon_duration > 0f) lines.Add(Loc.T("detail.weapon.duration", weapon.weapon_duration.ToString("0.##")));
+        if (weapon.weapon_splash > 0f) lines.Add(Loc.T("detail.weapon.splash", weapon.weapon_splash.ToString("0.##")));
         if (weapon.weapon_pierce != 0)
         {
-            string pierce = weapon.weapon_pierce < 0 ? "무제한" : $"{weapon.weapon_pierce}회";
+            string pierce = weapon.weapon_pierce < 0 ? Loc.T("common.unlimited") : Loc.T("common.times", weapon.weapon_pierce);
             if (weapon.weapon_pierce_chance > 0f && weapon.weapon_pierce_chance < 1f)
             {
-                pierce += $" (확률 {weapon.weapon_pierce_chance * 100f:0}%)";
+                pierce += $" ({Loc.T("detail.weapon.pierce_chance", (weapon.weapon_pierce_chance * 100f).ToString("0"))})";
             }
-            lines.Add($"관통 {pierce}");
+            lines.Add(Loc.T("detail.weapon.pierce", pierce));
         }
-        if (weapon.weapon_defignore > 0f) lines.Add($"방어력 무시 {weapon.weapon_defignore * 100f:0}%");
-        if (weapon.weapon_knockback > 0f) lines.Add($"넉백 {weapon.weapon_knockback:0.##}");
-        lines.Add($"조준 회전속도 {weapon.RotationSpeed:0.#}도/초");
+        if (weapon.weapon_defignore > 0f) lines.Add(Loc.T("detail.weapon.defignore", (weapon.weapon_defignore * 100f).ToString("0")));
+        if (weapon.weapon_knockback > 0f) lines.Add(Loc.T("detail.weapon.knockback", weapon.weapon_knockback.ToString("0.##")));
+        lines.Add(Loc.T("detail.weapon.rotspeed", weapon.RotationSpeed.ToString("0.#")));
 
         // 무게는 소켓 타입이 안 맞으면 배율이 붙는다(장착은 되지만 이동속도가 깎인다).
         if (modding != null)
@@ -1287,12 +1289,12 @@ public class ShopPanelUI : MonoBehaviour
             float baseWeight = modding.GetWeaponWeight(weapon.weapon_id);
             float effective = modding.GetEffectiveWeaponWeight(socketIndex, weapon.weapon_id);
             lines.Add(Mathf.Approximately(baseWeight, effective)
-                ? $"무게 {baseWeight:0.##}"
-                : $"무게 {baseWeight:0.##} → <color=#F2BF26>{effective:0.##} (소켓 타입 불일치 x{modding.MismatchWeightMultiplier:0.##})</color>");
+                ? Loc.T("detail.weight", baseWeight.ToString("0.##"))
+                : $"{Loc.T("detail.weight", baseWeight.ToString("0.##"))} → <color=#F2BF26>{effective:0.##} ({Loc.T("detail.weight.mismatch", modding.MismatchWeightMultiplier.ToString("0.##"))})</color>");
         }
 
         detail_popup.Show(
-            $"소켓 {socketIndex + 1} · <color={grade.ToColorHex()}>{grade.ToKorean()}</color> {weapon.weapon_name}",
+            $"{Loc.T("shop.socket_n", socketIndex + 1)} · <color={grade.ToColorHex()}>{grade.ToDisplayName()}</color> {weapon.Weapon()}",
             string.Join("\n", lines),
             ResolveWeaponIcon(weapon));
     }
@@ -1302,9 +1304,9 @@ public class ShopPanelUI : MonoBehaviour
     {
         switch (mode)
         {
-            case WeaponFireMode.Projectile: return "투사체";
-            case WeaponFireMode.Beam: return "지속 빔";
-            case WeaponFireMode.MeleeSwing: return "근접 휘두르기";
+            case WeaponFireMode.Projectile: return Loc.T("firemode.projectile");
+            case WeaponFireMode.Beam: return Loc.T("firemode.beam");
+            case WeaponFireMode.MeleeSwing: return Loc.T("firemode.melee");
             default: return mode.ToString();
         }
     }
@@ -1316,31 +1318,31 @@ public class ShopPanelUI : MonoBehaviour
 
         var lines = new List<string>
         {
-            $"부위: 무기 소켓 {socketIndex + 1}",
-            $"장착 가능 카테고리: {(part.restrictsWeaponType ? part.allowedWeaponType.ToKorean() : "전체(범용)")}"
+            $"{Loc.T("detail.slot")}: {Loc.T("modding.weaponsocket_n", socketIndex + 1)}",
+            $"{Loc.T("detail.allowed_category")}: {(part.restrictsWeaponType ? part.allowedWeaponType.ToDisplayName() : Loc.T("common.all_generic"))}"
         };
 
         // 2026-08-20 소켓 명세 - 등급 효과가 사거리/감지/회전 배율에서 아래 5종으로 바뀌었다.
-        if (part.socketAttackSpeedPercent != 0f) lines.Add($"공격 속도 +{part.socketAttackSpeedPercent:0.##}%");
-        if (part.socketDamageFlat != 0f) lines.Add($"공격력 +{part.socketDamageFlat:0.##}");
-        if (part.socketDamagePercent != 0f) lines.Add($"공격력 +{part.socketDamagePercent:0.##}%");
-        if (part.socketCritChancePercent != 0f) lines.Add($"치명타 확률 +{part.socketCritChancePercent:0.##}%");
-        if (part.socketSplashPercent != 0f) lines.Add($"스플래시 범위 +{part.socketSplashPercent:0.##}%");
-        if (part.socketDefIgnorePercent != 0f) lines.Add($"방어력 무시 +{part.socketDefIgnorePercent:0.##}%p");
+        if (part.socketAttackSpeedPercent != 0f) lines.Add($"{StatTypeNames.ToDisplayName(StatType.Atk)} +{part.socketAttackSpeedPercent:0.##}%");
+        if (part.socketDamageFlat != 0f) lines.Add($"{StatTypeNames.ToDisplayName(StatType.Atk)} +{part.socketDamageFlat:0.##}");
+        if (part.socketDamagePercent != 0f) lines.Add($"{StatTypeNames.ToDisplayName(StatType.Atk)} +{part.socketDamagePercent:0.##}%");
+        if (part.socketCritChancePercent != 0f) lines.Add($"{StatTypeNames.ToDisplayName(StatType.CritChance)} +{part.socketCritChancePercent:0.##}%");
+        if (part.socketSplashPercent != 0f) lines.Add($"{Loc.T("detail.splash_radius")} +{part.socketSplashPercent:0.##}%");
+        if (part.socketDefIgnorePercent != 0f) lines.Add($"{Loc.T("detail.defignore")} +{part.socketDefIgnorePercent:0.##}%p");
 
-        if (part.weight != 0f) lines.Add($"무게 {part.weight:0.##}");
+        if (part.weight != 0f) lines.Add(Loc.T("detail.weight", part.weight.ToString("0.##")));
 
         // 이 소켓에 실제로 낀 무기와 타입이 맞는지까지 같이 보여준다(불일치면 무게 배율이 붙는다).
         PlayerShootManager shootManager = FindFirstObjectByType<PlayerShootManager>();
         if (shootManager != null && shootManager.TryGetSocketInfo(socketIndex, out WeaponData weapon, out _))
         {
             lines.Add(modding.IsWeaponMismatched(socketIndex, weapon.weapon_id)
-                ? $"<color=#F2BF26>현재 장착 '{weapon.weapon_name}' - 카테고리 불일치 (무게 x{modding.MismatchWeightMultiplier:0.##}, 소켓 보정 없음)</color>"
-                : $"현재 장착 '{weapon.weapon_name}' - 카테고리 일치");
+                ? $"<color=#F2BF26>{Loc.T("detail.equipped_mismatch", weapon.Weapon(), modding.MismatchWeightMultiplier.ToString("0.##"))}</color>"
+                : Loc.T("detail.equipped_match", weapon.Weapon()));
         }
 
         detail_popup.Show(
-            $"<color={part.grade.ToColorHex()}>{part.grade.ToKorean()}</color> {part.partName}",
+            $"<color={part.grade.ToColorHex()}>{part.grade.ToDisplayName()}</color> {part.Part()}",
             string.Join("\n", lines),
             null);
     }
@@ -1355,7 +1357,7 @@ public class ShopPanelUI : MonoBehaviour
         // 어긋날 수 없다(정비 화면도 같은 함수를 쓴다).
         var lines = new List<string>
         {
-            $"부위: {slot.ToKorean()}",
+            $"{Loc.T("detail.slot")}: {slot.ToDisplayName()}",
             part.BuildDescription()
         };
 
@@ -1363,14 +1365,14 @@ public class ShopPanelUI : MonoBehaviour
         float total = modding.GetTotalWeight();
         float capacity = modding.GetTotalWeightCapacity();
         float over = Mathf.Max(0f, total - capacity);
-        lines.Add($"\n로봇 전체 무게 {total:0.##} / 지탱력 {capacity:0.##}");
+        lines.Add($"\n{Loc.T("detail.total_weight", total.ToString("0.##"), capacity.ToString("0.##"))}");
         if (over > 0f)
         {
-            lines.Add($"<color=#F2BF26>초과 {over:0.##} → 이동속도 -{over * modding.OverweightSpeedPenaltyPerUnit:0.##}</color>");
+            lines.Add($"<color=#F2BF26>{Loc.T("detail.overweight", over.ToString("0.##"), (over * modding.OverweightSpeedPenaltyPerUnit).ToString("0.##"))}</color>");
         }
 
         detail_popup.Show(
-            $"<color={part.grade.ToColorHex()}>{part.grade.ToKorean()}</color> {part.partName}",
+            $"<color={part.grade.ToColorHex()}>{part.grade.ToDisplayName()}</color> {part.Part()}",
             string.Join("\n", lines),
             PartIconLibrary.Get(part));
     }
@@ -1385,21 +1387,21 @@ public class ShopPanelUI : MonoBehaviour
 
             var lines = new List<string>
             {
-                "분류: 디스크",
+                $"{Loc.T("detail.category")}: {Loc.T("detail.category.disc")}",
                 disc.BuildDescription()
             };
 
             // 기획서 21종은 효과 종류가 제각각이라(처치 시 발동·시간제·확률형…) 실제 파라미터를
             // 값이 들어있는 것만 골라 덧붙인다.
             var numbers = new List<string>();
-            if (disc.chance01 > 0f) numbers.Add($"발동 확률 {disc.chance01 * 100f:0.##}%");
-            if (disc.flatValue != 0f) numbers.Add($"수치 {disc.flatValue:0.##}");
-            if (disc.multiplier != 0f) numbers.Add($"배율 x{disc.multiplier:0.##}");
-            if (disc.duration > 0f) numbers.Add($"지속 {disc.duration:0.##}초");
-            if (disc.interval > 0f) numbers.Add($"주기 {disc.interval:0.##}초");
-            if (disc.radius > 0f) numbers.Add($"범위 {disc.radius:0.##}");
-            if (disc.cap > 0f) numbers.Add($"상한 {disc.cap:0.##}");
-            if (disc.maxUses > 0) numbers.Add($"최대 {disc.maxUses}회");
+            if (disc.chance01 > 0f) numbers.Add($"{Loc.T("detail.disc.chance")} {disc.chance01 * 100f:0.##}%");
+            if (disc.flatValue != 0f) numbers.Add($"{Loc.T("detail.disc.value")} {disc.flatValue:0.##}");
+            if (disc.multiplier != 0f) numbers.Add($"{Loc.T("detail.disc.multiplier")} x{disc.multiplier:0.##}");
+            if (disc.duration > 0f) numbers.Add(Loc.T("detail.disc.duration", disc.duration.ToString("0.##")));
+            if (disc.interval > 0f) numbers.Add(Loc.T("detail.disc.interval", disc.interval.ToString("0.##")));
+            if (disc.radius > 0f) numbers.Add($"{Loc.T("detail.disc.radius")} {disc.radius:0.##}");
+            if (disc.cap > 0f) numbers.Add($"{Loc.T("detail.disc.cap")} {disc.cap:0.##}");
+            if (disc.maxUses > 0) numbers.Add(Loc.T("detail.disc.maxuses", disc.maxUses));
             if (numbers.Count > 0) lines.Add(string.Join(" · ", numbers));
 
             AppendDiscStat(lines, disc, disc.statA, disc.amountA, isStackStat: true);
@@ -1407,7 +1409,7 @@ public class ShopPanelUI : MonoBehaviour
             AppendDiscStat(lines, disc, disc.statC, disc.amountC);
 
             detail_popup.Show(
-                $"<color={disc.grade.ToColorHex()}>{disc.grade.ToKorean()}</color> {disc.discName}",
+                $"<color={disc.grade.ToColorHex()}>{disc.grade.ToDisplayName()}</color> {disc.Disc()}",
                 string.Join("\n", lines),
                 disc.LoadIcon());
             return;
@@ -1440,14 +1442,14 @@ public class ShopPanelUI : MonoBehaviour
             // 장 수만큼 상한도 함께 늘어난다(DiscData.BuildDescription/ApplyKillStack과 같은 규칙).
             float totalCap = disc.cap * Mathf.Max(1, copies);
 
-            lines.Add($"<color=#88FF88>{StatTypeNames.ToKorean(stat)} +{progress:0.##}</color>" +
-                      $"<size=80%><color=#9AA3AB> (처치당 +{amount:0.###} · 최대 +{totalCap:0.##})</color></size>");
+            lines.Add($"<color=#88FF88>{StatTypeNames.ToDisplayName(stat)} +{progress:0.##}</color>" +
+                      $"<size=80%><color=#9AA3AB> ({Loc.T("detail.disc.perkill", amount.ToString("0.###"), totalCap.ToString("0.##"))})</color></size>");
             return;
         }
 
         string sign = amount > 0f ? "+" : string.Empty;
         string color = amount > 0f ? "#88FF88" : "#FF8080";
-        lines.Add($"<color={color}>{StatTypeNames.ToKorean(stat)} {sign}{amount:0.##}</color>");
+        lines.Add($"<color={color}>{StatTypeNames.ToDisplayName(stat)} {sign}{amount:0.##}</color>");
     }
 
     private void ShowRobotDetail()
@@ -1460,19 +1462,19 @@ public class ShopPanelUI : MonoBehaviour
 
         var lines = new List<string>
         {
-            "분류: 로봇(머리) - 런 중 교체 불가",
-            $"기본 체력 {data.robot_hp} / 공격력 {data.robot_atk} / 방어력 {data.robot_def}",
-            $"기본 이동속도 {data.robot_speed:0.##} / 회피 {data.robot_avoid:0.##} / 행운 {data.robot_luck:0.##}",
-            $"치명타 {data.robot_cc:0.##}% · 배율 {data.robot_cd:0.##}",
-            $"질량 {data.robot_mess:0.##}"
+            $"{Loc.T("detail.category")}: {Loc.T("detail.category.robot")}",
+            Loc.T("detail.robot.base1", data.robot_hp, data.robot_atk, data.robot_def),
+            Loc.T("detail.robot.base2", data.robot_speed.ToString("0.##"), data.robot_avoid.ToString("0.##"), data.robot_luck.ToString("0.##")),
+            Loc.T("detail.robot.crit", data.robot_cc.ToString("0.##"), data.robot_cd.ToString("0.##")),
+            $"{StatTypeNames.ToDisplayName(StatType.Mass)} {data.robot_mess:0.##}"
         };
 
         if (modding != null)
         {
-            lines.Add($"\n무기 소켓 {modding.ActiveSocketCount}칸 · 디스크 슬롯 {modding.DiscSlotCount}칸");
-            lines.Add($"부품 상자 적재량 {RunState.UnopenedPartBoxCount}/{modding.PartBoxCapacity}");
+            lines.Add($"\n{Loc.T("detail.robot.sockets", modding.ActiveSocketCount, modding.DiscSlotCount)}");
+            lines.Add(Loc.T("detail.robot.capacity", RunState.UnopenedPartBoxCount, modding.PartBoxCapacity));
         }
 
-        detail_popup.Show(data.robot_name, string.Join("\n", lines), null);
+        detail_popup.Show(data.Robot(), string.Join("\n", lines), null);
     }
 }

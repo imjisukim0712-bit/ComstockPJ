@@ -73,8 +73,8 @@ public class ScoreSummaryPopup : MonoBehaviour
         breakdownText.fontSize = 26f;
         breakdownText.overflowMode = TextOverflowModes.Overflow;
 
-        continueButton = CreateButton(panelRect, "ContinueButton", "계속 진행", 0.10f, 0.155f, 0.90f, 0.26f);
-        declineButton = CreateButton(panelRect, "DeclineButton", "타이틀로", 0.10f, 0.04f, 0.90f, 0.145f);
+        continueButton = CreateButton(panelRect, "ContinueButton", Loc.T("score.continue"), 0.10f, 0.155f, 0.90f, 0.26f);
+        declineButton = CreateButton(panelRect, "DeclineButton", Loc.T("common.to_title"), 0.10f, 0.04f, 0.90f, 0.145f);
 
         content.SetActive(false);
     }
@@ -86,7 +86,7 @@ public class ScoreSummaryPopup : MonoBehaviour
     {
         RunScore.Breakdown b = RunScore.ComputeBreakdown();
 
-        if (headerText != null) headerText.text = $"웨이브 {clearedWave} 클리어!";
+        if (headerText != null) headerText.text = Loc.T("score.wave_cleared", clearedWave);
 
         if (breakdownText != null)
         {
@@ -94,13 +94,13 @@ public class ScoreSummaryPopup : MonoBehaviour
                 // 2026-08-20: WaveNumber/CoreLevel은 "현재 값"(1부터 시작)이라 그대로 곱하면
                 // 시작하자마자 기본점수가 붙는다(RunScore.ComputeBreakdown 참고) - 실제 계산과
                 // 똑같이 1을 뺀 값을 곱셈식으로 보여준다.
-                $"클리어한 웨이브 {Mathf.Max(0, RunState.WaveNumber - 1)} x {RunScore.WaveWeight}  = {b.WaveScore:N0}\n" +
-                $"적 처치 수    {RunScore.KillCount} x {RunScore.KillWeight}    = {b.KillScore:N0}\n" +
-                $"AI 코어 레벨업 {Mathf.Max(0, RunState.CoreLevel - 1)} x {RunScore.CoreLevelWeight}  = {b.CoreLevelScore:N0}\n" +
-                $"보유 골드     {RunState.Gold} x {RunScore.GoldWeight}    = {b.GoldScore:N0}\n" +
-                $"악세사리 점수 = {b.AccessoryScore:N0}\n\n" +
-                $"<b>총점 {b.Total:N0}</b>\n\n" +
-                "계속 진행하면 엔드리스 모드로 이어집니다.\n(같은 20웨이브 구성이 반복되며 점점 강해집니다)";
+                $"{Loc.T("score.line.wave")} {Mathf.Max(0, RunState.WaveNumber - 1)} x {RunScore.WaveWeight}  = {b.WaveScore:N0}\n" +
+                $"{Loc.T("score.line.kills")} {RunScore.KillCount} x {RunScore.KillWeight}    = {b.KillScore:N0}\n" +
+                $"{Loc.T("score.line.corelevel")} {Mathf.Max(0, RunState.CoreLevel - 1)} x {RunScore.CoreLevelWeight}  = {b.CoreLevelScore:N0}\n" +
+                $"{Loc.T("score.line.gold")} {RunState.Gold} x {RunScore.GoldWeight}    = {b.GoldScore:N0}\n" +
+                $"{Loc.T("score.line.accessory")} = {b.AccessoryScore:N0}\n\n" +
+                $"<b>{Loc.T("score.total", b.Total.ToString("N0"))}</b>\n\n" +
+                Loc.T("score.endless_note");
         }
 
         continueButton.onClick.RemoveAllListeners();

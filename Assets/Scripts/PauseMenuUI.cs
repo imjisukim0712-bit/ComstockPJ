@@ -99,13 +99,13 @@ public class PauseMenuUI : MonoBehaviour
         if (panelSprite != null) { panelImg.sprite = panelSprite; panelImg.type = Image.Type.Sliced; panelImg.color = Color.white; }
         else panelImg.color = new Color(0.10f, 0.11f, 0.13f, 0.97f);
 
-        CreateLabel(panelRect, "Title", "옵션", 0.06f, 0.87f, 0.94f, 0.97f);
+        CreateLabel(panelRect, "Title", Loc.T("pause.title"), 0.06f, 0.87f, 0.94f, 0.97f);
 
-        CreateButton(panelRect, "ReturnButton", "돌아가기", 0.10f, 0.685f, 0.90f, 0.80f, ClosePause, true);
-        CreateButton(panelRect, "RankingButton", "랭킹", 0.10f, 0.525f, 0.90f, 0.64f, OpenRanking, true);
-        CreateButton(panelRect, "CodexButton", "도감 (준비 중)", 0.10f, 0.365f, 0.90f, 0.48f, null, false);
-        CreateButton(panelRect, "SettingsButton", "설정", 0.10f, 0.205f, 0.90f, 0.32f, OpenSettings, true);
-        CreateButton(panelRect, "QuitButton", "나가기", 0.10f, 0.045f, 0.90f, 0.16f, HandleQuitClicked, true);
+        CreateButton(panelRect, "ReturnButton", Loc.T("common.back"), 0.10f, 0.685f, 0.90f, 0.80f, ClosePause, true);
+        CreateButton(panelRect, "RankingButton", Loc.T("title.ranking"), 0.10f, 0.525f, 0.90f, 0.64f, OpenRanking, true);
+        CreateButton(panelRect, "CodexButton", Loc.T("pause.codex_wip"), 0.10f, 0.365f, 0.90f, 0.48f, null, false);
+        CreateButton(panelRect, "SettingsButton", Loc.T("title.settings"), 0.10f, 0.205f, 0.90f, 0.32f, OpenSettings, true);
+        CreateButton(panelRect, "QuitButton", Loc.T("pause.quit"), 0.10f, 0.045f, 0.90f, 0.16f, HandleQuitClicked, true);
 
         // 설정 패널은 Content가 아니라 root 직속으로 둔다 - 자기 활성 상태를 스스로 관리하며,
         // Content보다 뒤 형제라 그리기 순서상 딤 배경·옵션 패널 위에 덮인다(기존 동작 유지).

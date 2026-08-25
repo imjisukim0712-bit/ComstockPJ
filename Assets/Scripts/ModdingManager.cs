@@ -91,7 +91,7 @@ public class ModdingManager : MonoBehaviour
             PartData? defaultPart = catalog.GetDefaultPart(slot);
             if (defaultPart == null)
             {
-                Debug.LogWarning($"PartsCatalog에 {slot.ToKorean()} 슬롯의 기본 파츠가 없습니다.");
+                Debug.LogWarning($"PartsCatalog에 {slot.ToDisplayName()} 슬롯의 기본 파츠가 없습니다.");
                 continue;
             }
 

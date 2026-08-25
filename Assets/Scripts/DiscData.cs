@@ -129,17 +129,16 @@ public struct DiscData
     /// </summary>
     public string BuildDescription()
     {
-        if (effectType != DiscEffectType.OnKillStackStat) return effectDescription;
+        if (effectType != DiscEffectType.OnKillStackStat) return this.DiscEffect();
 
         int copies = Mathf.Max(1, CountEquippedCopies());
         float total_cap = cap * copies;               // 장 수만큼 상한도 함께 늘어난다(ApplyKillStack과 같은 규칙)
         RunState.DiscStackProgress.TryGetValue(discId, out float progress);
 
-        string stat = StatTypeNames.ToKorean(statA);
+        string stat = StatTypeNames.ToDisplayName(statA);
 
         // "{stat}이(가)" 같은 조사 분기를 피하려고 기호 표기를 쓴다(체력/방어력/이동속도가 섞인다).
-        return $"적을 처치할 때마다 {stat} +{amountA:0.###} " +
-               $"(현재 +{progress:0.##} / 최대 +{total_cap:0.##})";
+        return Loc.T("disc.perkill_growth", stat, amountA.ToString("0.###"), progress.ToString("0.##"), total_cap.ToString("0.##"));
     }
 
     /// <summary>지금 장착 중인 이 디스크의 장 수(상점 카드처럼 아직 장착 전이면 0).</summary>
@@ -158,25 +157,25 @@ public struct DiscData
     public Sprite LoadIcon() => string.IsNullOrEmpty(iconName) ? null : Resources.Load<Sprite>(iconName);
 }
 
-/// <summary>StatType을 UI에 한글로 보여주기 위한 표시명 모음.</summary>
+/// <summary>StatType을 UI에 보여주기 위한 표시명 모음(2026-08-25 다국어 도입으로 ToKorean에서 개명).</summary>
 public static class StatTypeNames
 {
-    public static string ToKorean(StatType type)
+    public static string ToDisplayName(StatType type)
     {
         switch (type)
         {
-            case StatType.MaxHp: return "체력";
-            case StatType.Atk: return "공격력";
-            case StatType.Def: return "방어력";
-            case StatType.MoveSpeed: return "이동속도";
-            case StatType.Avoid: return "회피율";
-            case StatType.Luck: return "행운";
-            case StatType.CritChance: return "치명타 확률";
-            case StatType.CritDamage: return "치명타 피해";
-            case StatType.Mass: return "질량";
-            case StatType.GoldGain: return "골드 획득량";
-            case StatType.WeaponRangeBonus: return "무기 사거리";
-            case StatType.ExpGain: return "경험치 획득량";
+            case StatType.MaxHp: return Loc.T("stat.maxhp");
+            case StatType.Atk: return Loc.T("stat.atk");
+            case StatType.Def: return Loc.T("stat.def");
+            case StatType.MoveSpeed: return Loc.T("stat.movespeed");
+            case StatType.Avoid: return Loc.T("stat.avoid");
+            case StatType.Luck: return Loc.T("stat.luck");
+            case StatType.CritChance: return Loc.T("stat.critchance");
+            case StatType.CritDamage: return Loc.T("stat.critdamage");
+            case StatType.Mass: return Loc.T("stat.mass");
+            case StatType.GoldGain: return Loc.T("stat.goldgain");
+            case StatType.WeaponRangeBonus: return Loc.T("stat.weaponrange");
+            case StatType.ExpGain: return Loc.T("stat.expgain");
             default: return type.ToString();
         }
     }

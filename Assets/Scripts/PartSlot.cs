@@ -52,19 +52,20 @@ public static class PartSlotExtensions
         PartSlot.DiscSlot         // 머리
     };
 
-    public static string ToKorean(this PartSlot slot)
+    /// <summary>파츠 슬롯의 표시명(2026-08-25 다국어 도입으로 ToKorean에서 개명).</summary>
+    public static string ToDisplayName(this PartSlot slot)
     {
         switch (slot)
         {
-            case PartSlot.ArmWeaponSocket: return "무기 소켓";
-            case PartSlot.ArmArmor: return "팔 장갑";
-            case PartSlot.MagneticCore: return "자기장 코어";
-            case PartSlot.Leg: return "다리";
-            case PartSlot.LegArmor: return "다리 장갑";
-            case PartSlot.Foot: return "발";
-            case PartSlot.Helmet: return "헬멧";
-            case PartSlot.DiscSlot: return "디스크 슬롯";
-            case PartSlot.Memory: return "메모리";
+            case PartSlot.ArmWeaponSocket: return Loc.T("partslot.weaponsocket");
+            case PartSlot.ArmArmor: return Loc.T("partslot.armarmor");
+            case PartSlot.MagneticCore: return Loc.T("partslot.magneticcore");
+            case PartSlot.Leg: return Loc.T("partslot.leg");
+            case PartSlot.LegArmor: return Loc.T("partslot.legarmor");
+            case PartSlot.Foot: return Loc.T("partslot.foot");
+            case PartSlot.Helmet: return Loc.T("partslot.helmet");
+            case PartSlot.DiscSlot: return Loc.T("partslot.discslot");
+            case PartSlot.Memory: return Loc.T("partslot.memory");
             default: return slot.ToString();
         }
     }

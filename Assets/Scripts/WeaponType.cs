@@ -18,16 +18,17 @@ public enum WeaponType
 
 public static class WeaponTypeExtensions
 {
-    public static string ToKorean(this WeaponType type)
+    /// <summary>무기 타입의 표시명(2026-08-25 다국어 도입으로 ToKorean에서 개명).</summary>
+    public static string ToDisplayName(this WeaponType type)
     {
         switch (type)
         {
-            case WeaponType.RapidFire: return "연사화기";
-            case WeaponType.Shotgun: return "산탄화기";
-            case WeaponType.Precision: return "정밀화기";
-            case WeaponType.Explosive: return "폭발화기";
-            case WeaponType.Energy: return "에너지무기";
-            case WeaponType.Melee: return "근접무기";
+            case WeaponType.RapidFire: return Loc.T("weapontype.rapidfire");
+            case WeaponType.Shotgun: return Loc.T("weapontype.shotgun");
+            case WeaponType.Precision: return Loc.T("weapontype.precision");
+            case WeaponType.Explosive: return Loc.T("weapontype.explosive");
+            case WeaponType.Energy: return Loc.T("weapontype.energy");
+            case WeaponType.Melee: return Loc.T("weapontype.melee");
             default: return type.ToString();
         }
     }

@@ -97,10 +97,10 @@ public static class RunScore
         if (player != null && GameDataManager.Instance != null &&
             GameDataManager.Instance.Robots.TryGetValue(player.RobotId, out RobotData data))
         {
-            return data.robot_name;
+            return data.Robot();
         }
 
-        return "플레이어";
+        return Loc.T("common.player");
     }
 
     /// <summary>

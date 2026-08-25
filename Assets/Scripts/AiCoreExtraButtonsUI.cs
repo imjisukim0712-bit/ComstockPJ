@@ -97,7 +97,7 @@ public class AiCoreExtraButtonsUI : MonoBehaviour
     /// <summary>카드를 새로 그릴 때마다 호출해 버튼 문구·보유 골드·사용 가능 여부를 현재 상태에 맞춘다.</summary>
     public void Refresh(int rerollCost, bool canAffordReroll, int gold)
     {
-        if (reroll_label != null) reroll_label.text = $"리롤 ({rerollCost}골드)";
+        if (reroll_label != null) reroll_label.text = Loc.T("aicore.reroll", rerollCost);
         if (reroll_button != null) reroll_button.interactable = canAffordReroll;
 
         if (gold_text != null) gold_text.text = gold.ToString();

@@ -125,7 +125,7 @@ public class AiCoreUpgradePool : ScriptableObject
     /// </summary>
     public static string BuildEffectLine(StatType statType, float amount)
     {
-        string name = StatTypeNames.ToKorean(statType);
+        string name = StatTypeNames.ToDisplayName(statType);
 
         switch (statType)
         {

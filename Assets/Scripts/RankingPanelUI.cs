@@ -61,14 +61,14 @@ public class RankingPanelUI : MonoBehaviour
 
         TextMeshProUGUI title = CreateText(panelRect, "Title", new Vector2(0.05f, 0.90f), new Vector2(0.95f, 0.965f),
                                            TextAlignmentOptions.Midline, 36f);
-        title.text = $"랭킹 - {mapId}"; // 맵마다 랭킹이 갈리므로 어느 맵인지 항상 보여준다
+        title.text = Loc.T("ranking.title", mapId); // 맵마다 랭킹이 갈리므로 어느 맵인지 항상 보여준다
         title.color = AccentColor;
 
         listText = CreateText(panelRect, "ListText", new Vector2(0.07f, 0.16f), new Vector2(0.93f, 0.87f),
                               TextAlignmentOptions.TopLeft, 26f);
-        listText.text = "불러오는 중...";
+        listText.text = Loc.T("common.loading");
 
-        Button close = CreateButton(panelRect, "CloseButton", new Vector2(0.32f, 0.035f), new Vector2(0.68f, 0.115f), "닫기");
+        Button close = CreateButton(panelRect, "CloseButton", new Vector2(0.32f, 0.035f), new Vector2(0.68f, 0.115f), Loc.T("common.close"));
         close.onClick.AddListener(Close);
 
         LeaderboardService.Current.FetchTopScores(mapId, 20, OnFetched);
@@ -80,13 +80,13 @@ public class RankingPanelUI : MonoBehaviour
 
         if (entries == null || entries.Count == 0)
         {
-            listText.text = "아직 등록된 기록이 없습니다.";
+            listText.text = Loc.T("ranking.empty");
             return;
         }
 
         var sb = new StringBuilder();
         for (int i = 0; i < entries.Count; i++)
-            sb.AppendLine($"{i + 1}위 · {entries[i].PlayerName} · {entries[i].Score:N0}점");
+            sb.AppendLine(Loc.T("ranking.row", i + 1, entries[i].PlayerName, entries[i].Score.ToString("N0")));
 
         listText.text = sb.ToString();
     }

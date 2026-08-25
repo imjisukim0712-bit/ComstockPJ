@@ -162,6 +162,6 @@ public class EquipmentDetailPopup : MonoBehaviour
 
         TextMeshProUGUI label = CreateText((RectTransform)go.transform, "Label",
             Vector2.zero, Vector2.one, TextAlignmentOptions.Center, 10f, 22f);
-        label.text = "닫기";
+        label.text = Loc.T("common.close");
     }
 }

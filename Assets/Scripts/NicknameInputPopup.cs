@@ -45,7 +45,7 @@ public class NicknameInputPopup : MonoBehaviour
 
         var ui = root.AddComponent<NicknameInputPopup>();
         ui.onConfirm = onConfirm;
-        ui.fallbackName = string.IsNullOrWhiteSpace(defaultName) ? "플레이어" : defaultName;
+        ui.fallbackName = string.IsNullOrWhiteSpace(defaultName) ? Loc.T("common.player") : defaultName;
         ui.Build(rootRect);
         return ui;
     }
@@ -67,7 +67,7 @@ public class NicknameInputPopup : MonoBehaviour
 
         TextMeshProUGUI title = CreateText(panelRect, "Title", new Vector2(0.05f, 0.72f), new Vector2(0.95f, 0.93f),
                                            TextAlignmentOptions.Midline, 30f);
-        title.text = "랭킹에 올릴 닉네임";
+        title.text = Loc.T("nickname.title");
         title.color = AccentColor;
 
         inputField = CreateInputField(panelRect, new Vector2(0.08f, 0.42f), new Vector2(0.92f, 0.65f));
@@ -76,7 +76,7 @@ public class NicknameInputPopup : MonoBehaviour
         inputField.text = string.IsNullOrEmpty(saved) ? fallbackName : saved;
         inputField.onSubmit.AddListener(_ => Confirm()); // 입력창에서 Enter를 눌러도 확인된다
 
-        Button confirmButton = CreateButton(panelRect, "ConfirmButton", new Vector2(0.30f, 0.08f), new Vector2(0.70f, 0.30f), "확인");
+        Button confirmButton = CreateButton(panelRect, "ConfirmButton", new Vector2(0.30f, 0.08f), new Vector2(0.70f, 0.30f), Loc.T("common.confirm"));
         confirmButton.onClick.AddListener(Confirm);
     }
 
@@ -174,7 +174,7 @@ public class NicknameInputPopup : MonoBehaviour
         placeholderGo.transform.SetParent(textAreaRect, false);
         Stretch((RectTransform)placeholderGo.transform, Vector2.zero, Vector2.one);
         var placeholder = placeholderGo.GetComponent<TextMeshProUGUI>();
-        placeholder.text = "닉네임을 입력하세요";
+        placeholder.text = Loc.T("nickname.placeholder");
         placeholder.fontStyle = FontStyles.Italic;
         placeholder.color = new Color(1f, 1f, 1f, 0.4f);
         placeholder.alignment = TextAlignmentOptions.MidlineLeft;

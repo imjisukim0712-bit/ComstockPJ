@@ -19,13 +19,14 @@ public enum WeaponClass
 
 public static class WeaponClassExtensions
 {
-    public static string ToKorean(this WeaponClass weaponClass)
+    /// <summary>무기 분류의 표시명(2026-08-25 다국어 도입으로 ToKorean에서 개명).</summary>
+    public static string ToDisplayName(this WeaponClass weaponClass)
     {
         switch (weaponClass)
         {
-            case WeaponClass.Light: return "경무장";
-            case WeaponClass.Heavy: return "중무장";
-            case WeaponClass.Melee: return "근접무기";
+            case WeaponClass.Light: return Loc.T("weaponclass.light");
+            case WeaponClass.Heavy: return Loc.T("weaponclass.heavy");
+            case WeaponClass.Melee: return Loc.T("weaponclass.melee");
             default: return weaponClass.ToString();
         }
     }

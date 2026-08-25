@@ -23,14 +23,15 @@ public enum LegSkillType
 
 public static class LegSkillTypeExtensions
 {
-    public static string ToKorean(this LegSkillType type)
+    /// <summary>다리 스킬의 표시명(2026-08-25 다국어 도입으로 ToKorean에서 개명).</summary>
+    public static string ToDisplayName(this LegSkillType type)
     {
         switch (type)
         {
-            case LegSkillType.Roll: return "구르기";
-            case LegSkillType.Hop: return "폴짝 뛰기";
-            case LegSkillType.Boost: return "순간 부스트";
-            default: return "없음";
+            case LegSkillType.Roll: return Loc.T("legskill.roll");
+            case LegSkillType.Hop: return Loc.T("legskill.hop");
+            case LegSkillType.Boost: return Loc.T("legskill.boost");
+            default: return Loc.T("common.none");
         }
     }
 }

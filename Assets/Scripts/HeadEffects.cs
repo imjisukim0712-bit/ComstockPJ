@@ -470,7 +470,7 @@ public static class HeadEffects
     /// <summary>장착이 막혔을 때 UI에 띄울 이유. 막히지 않으면 null.</summary>
     public static string GetPartBlockReason(PartData part)
     {
-        return IsPartAllowed(part) ? null : "팬봇은 기본 다리만 장착할 수 있습니다";
+        return IsPartAllowed(part) ? null : Loc.T("headeffect.fanbot.only_basic_legs");
     }
 
     // ── 보상 (미니 픽시) ───────────────────────────────────────────────────────────

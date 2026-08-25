@@ -122,23 +122,23 @@ public struct PartData
 
         if (slot == PartSlot.ArmWeaponSocket)
         {
-            lines.Add(restrictsWeaponType ? $"{allowedWeaponType.ToKorean()} 전용" : "모든 카테고리 장착 가능");
+            lines.Add(restrictsWeaponType ? Loc.T("part.weapon_only", allowedWeaponType.ToDisplayName()) : Loc.T("part.all_categories"));
 
             var boosts = new System.Collections.Generic.List<string>();
-            if (socketAttackSpeedPercent != 0f) boosts.Add($"공격 속도 +{socketAttackSpeedPercent:0.##}%");
-            if (socketDamageFlat != 0f) boosts.Add($"공격력 +{socketDamageFlat:0.##}");
-            if (socketDamagePercent != 0f) boosts.Add($"공격력 +{socketDamagePercent:0.##}%");
-            if (socketCritChancePercent != 0f) boosts.Add($"치명타 확률 +{socketCritChancePercent:0.##}%");
-            if (socketSplashPercent != 0f) boosts.Add($"스플래시 범위 +{socketSplashPercent:0.##}%");
-            if (socketDefIgnorePercent != 0f) boosts.Add($"방어력 무시 +{socketDefIgnorePercent:0.##}%p");
+            if (socketAttackSpeedPercent != 0f) boosts.Add($"{StatTypeNames.ToDisplayName(StatType.Atk)} +{socketAttackSpeedPercent:0.##}%");
+            if (socketDamageFlat != 0f) boosts.Add($"{StatTypeNames.ToDisplayName(StatType.Atk)} +{socketDamageFlat:0.##}");
+            if (socketDamagePercent != 0f) boosts.Add($"{StatTypeNames.ToDisplayName(StatType.Atk)} +{socketDamagePercent:0.##}%");
+            if (socketCritChancePercent != 0f) boosts.Add($"{StatTypeNames.ToDisplayName(StatType.CritChance)} +{socketCritChancePercent:0.##}%");
+            if (socketSplashPercent != 0f) boosts.Add($"{Loc.T("detail.splash_radius")} +{socketSplashPercent:0.##}%");
+            if (socketDefIgnorePercent != 0f) boosts.Add($"{Loc.T("detail.defignore")} +{socketDefIgnorePercent:0.##}%p");
             if (boosts.Count > 0) lines.Add(string.Join(" · ", boosts));
 
             AppendCommonLines(lines);
-            return lines.Count > 0 ? string.Join("\n", lines) : "(보너스 없음)";
+            return lines.Count > 0 ? string.Join("\n", lines) : Loc.T("part.no_bonus");
         }
 
-        if (discSlotCount > 0) lines.Add($"디스크 슬롯 {discSlotCount}칸");
-        if (coreMaxLevelBonus != 0) lines.Add($"AI 코어 최대 레벨 +{coreMaxLevelBonus}");
+        if (discSlotCount > 0) lines.Add(Loc.T("part.disc_slots", discSlotCount));
+        if (coreMaxLevelBonus != 0) lines.Add(Loc.T("part.core_maxlevel", coreMaxLevelBonus));
 
         if (bonusAmount != 0f) lines.Add(FormatStatLine(bonusStat, bonusAmount));
         if (bonusAmount2 != 0f) lines.Add(FormatStatLine(bonusStat2, bonusAmount2));
@@ -146,22 +146,22 @@ public struct PartData
         string effectLine = BuildEffectLine();
         if (effectLine.Length > 0) lines.Add(effectLine);
 
-        if (legMassPercent != 0f) lines.Add($"질량 {legMassPercent:0.##}% 변화");
+        if (legMassPercent != 0f) lines.Add(Loc.T("part.mass_change", legMassPercent.ToString("0.##")));
         if (legSkillType != LegSkillType.None)
-            lines.Add($"액티브 스킬: {legSkillType.ToKorean()} (쿨타임 {legSkillCooldown:0.#}초)");
+            lines.Add(Loc.T("part.active_skill", legSkillType.ToDisplayName(), legSkillCooldown.ToString("0.#")));
         if (legHpLossSpeedPenalty)
-            lines.Add("체력 25% 감소마다 이동속도 -5% (누적)");
+            lines.Add(Loc.T("part.leg.hp_speed_penalty"));
         if (legSpeedRampPassive)
-            lines.Add("패시브: 동일 방향 2초 이동 시 이동속도 점진 가속(최대 +2)");
+            lines.Add(Loc.T("part.leg.rampup"));
 
         AppendCommonLines(lines);
-        return lines.Count > 0 ? string.Join("\n", lines) : "(보너스 없음)";
+        return lines.Count > 0 ? string.Join("\n", lines) : Loc.T("part.no_bonus");
     }
 
     private void AppendCommonLines(System.Collections.Generic.List<string> lines)
     {
-        if (weightCapacity != 0f) lines.Add($"무게 지탱 +{weightCapacity:0.##}");
-        if (weight != 0f) lines.Add($"무게 {weight:0.##}");
+        if (weightCapacity != 0f) lines.Add(Loc.T("part.weight_capacity", weightCapacity.ToString("0.##")));
+        if (weight != 0f) lines.Add(Loc.T("detail.weight", weight.ToString("0.##")));
     }
 
     private static string FormatStatLine(StatType stat, float amount)
@@ -177,11 +177,11 @@ public struct PartData
         // 설명 문구의 <b>수치 자체는 반올림하지 않는다</b>(사용자 지정: "아이템 설명 등 자체를
         // 정수로 바꿔버리면 안됨") - 기획 수치를 그대로 보여줘야 하므로 소수점을 유지한다.
         if (stat == StatType.CritDamage)
-            return $"{StatTypeNames.ToKorean(stat)} {sign}{shown * 100f:0.##}%";
+            return $"{StatTypeNames.ToDisplayName(stat)} {sign}{shown * 100f:0.##}%";
 
         return StatFormat.IsPercentStat(stat)
-            ? $"{StatTypeNames.ToKorean(stat)} {sign}{shown:0.##}%"
-            : $"{StatTypeNames.ToKorean(stat)} {sign}{shown:0.##}";
+            ? $"{StatTypeNames.ToDisplayName(stat)} {sign}{shown:0.##}%"
+            : $"{StatTypeNames.ToDisplayName(stat)} {sign}{shown:0.##}";
     }
 
     private string BuildEffectLine()
@@ -189,25 +189,25 @@ public struct PartData
         switch (effect)
         {
             case PartEffect.DefFromLuckPercent:
-                return $"행운의 {effectAmount:0.##}%만큼 방어력 증가";
+                return Loc.T("parteffect.luck_to_def", effectAmount.ToString("0.##"));
             case PartEffect.DefFromAtkPercent:
-                return $"공격력의 {effectAmount:0.##}%만큼 방어력 증가";
+                return Loc.T("parteffect.atk_to_def", effectAmount.ToString("0.##"));
             case PartEffect.DefPercentBonus:
-                return $"방어력 {effectAmount:0.##}% 증가";
+                return Loc.T("parteffect.def_percent", effectAmount.ToString("0.##"));
             case PartEffect.DefWhenLowHp:
-                return $"체력이 50% 이하일 때 방어력 +{effectAmount:0.##}";
+                return Loc.T("parteffect.lowhp_def", effectAmount.ToString("0.##"));
             case PartEffect.MeleeReflectPercent:
-                return $"근접 공격 반사 {effectAmount:0.##}%";
+                return Loc.T("parteffect.melee_reflect", effectAmount.ToString("0.##"));
             case PartEffect.CoreStartLevel:
-                return $"AI 코어 시작 레벨 +{effectAmount:0.##}";
+                return Loc.T("parteffect.core_startlevel", effectAmount.ToString("0.##"));
             case PartEffect.PerDiscStat:
-                return $"장착한 디스크 1개당 {StatTypeNames.ToKorean(effectStat)} +{effectAmount:0.##}";
+                return Loc.T("parteffect.per_disc", StatTypeNames.ToDisplayName(effectStat), effectAmount.ToString("0.##"));
             case PartEffect.PerSymphonyDiscAtk:
-                return $"장착한 \"교향곡\" 계열 디스크 1개당 공격력 +{effectAmount:0.###}";
+                return Loc.T("parteffect.per_symphony_disc", effectAmount.ToString("0.###"));
             case PartEffect.MoveSpeedPercentBonus:
-                return $"이동속도 {effectAmount:0.##}% 증가";
+                return Loc.T("parteffect.movespeed_percent", effectAmount.ToString("0.##"));
             case PartEffect.MassPercentBonus:
-                return $"질량 {effectAmount:0.##}% 변화";
+                return Loc.T("part.mass_change", effectAmount.ToString("0.##"));
             default:
                 return string.Empty;
         }

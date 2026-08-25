@@ -29,6 +29,33 @@ public static class ItemCellUI
     /// <summary>테두리 아트를 못 찾았을 때만 쓰는 대체 배경색(정상적인 경우엔 안 쓰인다).</summary>
     private static readonly Color CellBaseColor = new Color(0.10f, 0.10f, 0.12f, 1f);
 
+    private static Vector2? safe_content_inset;
+
+    /// <summary>
+    /// <see cref="FrameSpriteName"/>의 <b>실제 9-slice border 두께</b>를 0~1 비율로 환산한 값
+    /// (가로/세로 각각, 셀 한쪽 가장자리 기준). 캡션처럼 셀 바깥쪽 가장자리에 붙는 글자는
+    /// 반드시 이 비율만큼 안쪽에만 놓아야 테두리와 겹치지 않는다("UI 제작 규칙" 참고).
+    /// 임의의 여백 숫자를 쓰지 않고 실제 아트에서 역산한다 - 아트가 바뀌면 자동으로 따라온다.
+    /// </summary>
+    private static Vector2 GetSafeContentInset()
+    {
+        if (safe_content_inset.HasValue) return safe_content_inset.Value;
+
+        Sprite frameSprite = Resources.Load<Sprite>(FrameSpriteName);
+        if (frameSprite == null)
+        {
+            safe_content_inset = new Vector2(0.06f, 0.06f); // 아트가 없으면 예전 여백으로 대체
+            return safe_content_inset.Value;
+        }
+
+        Vector4 border = frameSprite.border; // (left, bottom, right, top), 텍스처 px 단위
+        Rect rect = frameSprite.textureRect;
+        safe_content_inset = new Vector2(
+            Mathf.Max(border.x, border.z) / rect.width,
+            Mathf.Max(border.y, border.w) / rect.height);
+        return safe_content_inset.Value;
+    }
+
     /// <summary>
     /// 칸 안 글씨의 자동 크기 조절 설정. Canvas가 ConstantPixelSize라 해상도에 따라 고정 픽셀
     /// 폰트가 칸을 넘친다(프로젝트 안내.md 참고). 자동 조절만으로는 <b>최소 크기에서도 안 들어가는
@@ -114,8 +141,11 @@ public static class ItemCellUI
             var capGo = new GameObject("Caption", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
             capGo.transform.SetParent(cell.transform, false);
             var capRect = (RectTransform)capGo.transform;
-            capRect.anchorMin = new Vector2(0.06f, 0.66f);
-            capRect.anchorMax = new Vector2(0.94f, 0.97f);
+            // 좌/우/위쪽은 셀의 바깥 가장자리라 실제 테두리 두께만큼 비운다. 아래쪽(0.66)은
+            // 캡션-아이콘 내부 경계일 뿐 테두리와 무관해 손대지 않는다.
+            Vector2 inset = GetSafeContentInset();
+            capRect.anchorMin = new Vector2(inset.x, 0.66f);
+            capRect.anchorMax = new Vector2(1f - inset.x, 1f - inset.y);
             capRect.offsetMin = Vector2.zero;
             capRect.offsetMax = Vector2.zero;
 

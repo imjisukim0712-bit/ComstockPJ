@@ -36,8 +36,8 @@ public class ShopManager : MonoBehaviour
         public bool IsAccessory;
         public AccessoryData Accessory;
 
-        public string DisplayName => IsAccessory ? Accessory.accessoryName : IsDisc ? Disc.discName : Weapon.weapon_name;
-        public string CategoryName => IsAccessory ? "악세사리" : IsDisc ? "디스크" : "무기";
+        public string DisplayName => IsAccessory ? Accessory.Accessory() : IsDisc ? Disc.Disc() : Weapon.Weapon();
+        public string CategoryName => IsAccessory ? Loc.T("codex.cat.accessory") : IsDisc ? Loc.T("codex.cat.disc") : Loc.T("codex.cat.weapon");
 
         /// <summary>카드 본문에 보여줄 성능 요약.</summary>
         public string BuildDescription()
@@ -49,27 +49,27 @@ public class ShopManager : MonoBehaviour
             {
                 int owned = 0;
                 foreach (int id in RunState.AccessoryPurchaseOrder) if (id == Accessory.accessoryId) owned++;
-                return $"점수 +{Accessory.score} (효과 없음)\n보유 {owned}개";
+                return Loc.T("shop.accessory.desc", Accessory.score, owned);
             }
 
             if (IsDisc) return Disc.BuildDescription();
 
             // 등급별 수치가 데이터 행에 이미 반영되어 있으므로 배율을 곱하지 않고 그대로 보여준다.
-            string text = $"공격력 {Weapon.weapon_atk:0.##} / 공격속도 {Weapon.weapon_atsp:0.##} / 사거리 {Weapon.weapon_range:0.##}";
+            string text = Loc.T("shop.weapon.summary", Weapon.weapon_atk.ToString("0.##"), Weapon.weapon_atsp.ToString("0.##"), Weapon.weapon_range.ToString("0.##"));
 
-            if (Weapon.weapon_projectiles > 1) text += $" / {Weapon.weapon_projectiles}발";
-            if (Weapon.weapon_splash > 0f) text += $" / 폭발 {Weapon.weapon_splash:0.##}";
+            if (Weapon.weapon_projectiles > 1) text += $" / {Loc.T("shop.weapon.shots", Weapon.weapon_projectiles)}";
+            if (Weapon.weapon_splash > 0f) text += $" / {Loc.T("shop.weapon.splash")} {Weapon.weapon_splash:0.##}";
             if (Weapon.weapon_pierce != 0)
             {
-                string pierce = Weapon.weapon_pierce < 0 ? "관통 전체" : $"관통 {Weapon.weapon_pierce}회";
+                string pierce = Weapon.weapon_pierce < 0 ? Loc.T("shop.weapon.pierce_all") : Loc.T("detail.weapon.pierce", Loc.T("common.times", Weapon.weapon_pierce));
                 if (Weapon.weapon_pierce_chance > 0f && Weapon.weapon_pierce_chance < 1f)
                 {
                     pierce += $"({Weapon.weapon_pierce_chance * 100f:0}%)";
                 }
                 text += $" / {pierce}";
             }
-            if (Weapon.weapon_defignore > 0f) text += $" / 방어무시 {Weapon.weapon_defignore * 100f:0}%";
-            if (Weapon.weapon_knockback > 0f) text += " / 넉백";
+            if (Weapon.weapon_defignore > 0f) text += $" / {Loc.T("detail.defignore")} {Weapon.weapon_defignore * 100f:0}%";
+            if (Weapon.weapon_knockback > 0f) text += $" / {Loc.T("detail.weapon.knockback_flag")}";
 
             return text;
         }
@@ -152,7 +152,7 @@ public class ShopManager : MonoBehaviour
     {
         reason = string.Empty;
 
-        if (index < 0 || index >= offers.Count) { reason = "잘못된 칸입니다"; return false; }
+        if (index < 0 || index >= offers.Count) { reason = Loc.T("shop.err.bad_slot"); return false; }
 
         Offer offer = offers[index];
         // 악세사리·디스크는 이미 구매했어도 다시 사는 것이 정상 동작(스택형)이라 Purchased
@@ -160,9 +160,9 @@ public class ShopManager : MonoBehaviour
         // TryPurchaseDisc/CreateAccessoryOffer가 Purchased를 절대 true로 두지 않는다.
         // (디스크는 2026-08-24 사용자 지정으로 합류 - TryPurchaseDisc 주석 참고. 슬롯이 차면
         //  아래 IsDiscSlotFull이 대신 막는다.)
-        if (!offer.IsAccessory && !offer.IsDisc && offer.Purchased) { reason = "이미 구매했습니다"; return false; }
-        if (RunState.Gold < offer.Price) { reason = "골드가 부족합니다"; return false; }
-        if (offer.IsDisc && IsDiscSlotFull) { reason = "디스크 슬롯이 가득 찼습니다"; return false; }
+        if (!offer.IsAccessory && !offer.IsDisc && offer.Purchased) { reason = Loc.T("shop.err.already_bought"); return false; }
+        if (RunState.Gold < offer.Price) { reason = Loc.T("shop.err.nogold"); return false; }
+        if (offer.IsDisc && IsDiscSlotFull) { reason = Loc.T("shop.err.disc_full"); return false; }
 
         return true;
     }
@@ -232,7 +232,7 @@ public class ShopManager : MonoBehaviour
         if (!CanPurchase(index, out reason)) return false;
 
         Offer offer = offers[index];
-        if (offer.IsDisc || offer.IsAccessory) { reason = "무기 칸이 아닙니다"; return false; }
+        if (offer.IsDisc || offer.IsAccessory) { reason = Loc.T("shop.err.not_weapon"); return false; }
 
         return true;
     }
@@ -255,12 +255,12 @@ public class ShopManager : MonoBehaviour
 
         if (modding.IsWeaponMismatched(socketIndex, offer.WeaponId))
         {
-            warnings.Add($"타입 불일치 - 무게 x{modding.MismatchWeightMultiplier:0.#} 적용");
+            warnings.Add(Loc.T("shop.warn.type_mismatch", modding.MismatchWeightMultiplier.ToString("0.#")));
         }
 
         if (!modding.CheckWeightLimit(socketIndex, offer.WeaponId, out float totalAfter, out float capacity))
         {
-            warnings.Add($"무게 초과 ({totalAfter:0.#} / {capacity:0.#}) - 이동속도 감소");
+            warnings.Add(Loc.T("shop.warn.overweight", totalAfter.ToString("0.#"), capacity.ToString("0.#")));
         }
 
         return string.Join(" / ", warnings);

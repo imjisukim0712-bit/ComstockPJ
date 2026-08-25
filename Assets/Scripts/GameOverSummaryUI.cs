@@ -89,8 +89,8 @@ public class GameOverSummaryUI : MonoBehaviour
         {
             // 2026-08-19 Phase C(점수 시스템) - 새 텍스트 필드를 씬에 늘리는 대신 기존 헤더에
             // 한 줄 붙인다(씬 수정 없이 반영 가능한 가장 간단한 자리).
-            summaryHeaderText.text = $"도달 웨이브 {RunState.WaveNumber}     보유 골드 {RunState.Gold}\n" +
-                                      $"총점 {RunScore.ComputeTotal():N0}";
+            summaryHeaderText.text = Loc.T("summary.header", RunState.WaveNumber, RunState.Gold) + "\n" +
+                                      Loc.T("score.total", RunScore.ComputeTotal().ToString("N0"));
         }
 
         RefreshModdingStatus(modding, shoot, player);
@@ -106,17 +106,17 @@ public class GameOverSummaryUI : MonoBehaviour
         int socketCount = shoot != null ? shoot.SocketCount : 0;
 
         moddingStatusText.text =
-            "[로봇 모딩]\n" +
-            $"헤드: {GetRobotName(player)}\n" +
-            $"헬멧: {PartLine(modding, PartSlot.Helmet)}\n" +
+            $"{Loc.T("summary.modding")}\n" +
+            $"{Loc.T("modding.head")}: {GetRobotName(player)}\n" +
+            $"{Loc.T("partslot.helmet")}: {PartLine(modding, PartSlot.Helmet)}\n" +
             $"{BuildWeaponSocketPartsBlock(modding, socketCount)}\n" +
-            $"팔 장갑: {PartLine(modding, PartSlot.ArmArmor)}\n" +
-            $"자기장 코어: {PartLine(modding, PartSlot.MagneticCore)}\n" +
-            $"다리: {PartLine(modding, PartSlot.Leg)}\n" +
-            $"다리 장갑: {PartLine(modding, PartSlot.LegArmor)}\n" +
-            $"발: {PartLine(modding, PartSlot.Foot)}\n" +
-            $"디스크 슬롯: {PartLine(modding, PartSlot.DiscSlot)}\n" +
-            $"무게 {(modding != null ? modding.GetTotalWeight() : 0f):0.#} / " +
+            $"{Loc.T("partslot.armarmor")}: {PartLine(modding, PartSlot.ArmArmor)}\n" +
+            $"{Loc.T("partslot.magneticcore")}: {PartLine(modding, PartSlot.MagneticCore)}\n" +
+            $"{Loc.T("partslot.leg")}: {PartLine(modding, PartSlot.Leg)}\n" +
+            $"{Loc.T("partslot.legarmor")}: {PartLine(modding, PartSlot.LegArmor)}\n" +
+            $"{Loc.T("partslot.foot")}: {PartLine(modding, PartSlot.Foot)}\n" +
+            $"{Loc.T("partslot.discslot")}: {PartLine(modding, PartSlot.DiscSlot)}\n" +
+            $"{Loc.T("modding.weight")} {(modding != null ? modding.GetTotalWeight() : 0f):0.#} / " +
             $"{(modding != null ? modding.GetTotalWeightCapacity() : 0f):0.#}";
     }
 
@@ -124,19 +124,19 @@ public class GameOverSummaryUI : MonoBehaviour
     {
         if (equippedWeaponsText == null) return;
 
-        var lines = new List<string> { "[장착 무기]" };
+        var lines = new List<string> { Loc.T("modding.equipped_weapons") };
 
         if (shoot == null)
         {
-            lines.Add("(정보 없음)");
+            lines.Add(Loc.T("common.no_info"));
         }
         else
         {
             for (int i = 0; i < shoot.SocketCount; i++)
             {
                 lines.Add(shoot.TryGetSocketInfo(i, out WeaponData weapon, out ItemGrade grade)
-                    ? $"소켓 {i + 1}: <color={grade.ToColorHex()}>{grade.ToKorean()}</color> {weapon.weapon_name}"
-                    : $"소켓 {i + 1}: (비어 있음)");
+                    ? $"{Loc.T("shop.socket_n", i + 1)}: <color={grade.ToColorHex()}>{grade.ToDisplayName()}</color> {weapon.Weapon()}"
+                    : $"{Loc.T("shop.socket_n", i + 1)}: {Loc.T("common.empty")}");
             }
         }
 
@@ -148,11 +148,11 @@ public class GameOverSummaryUI : MonoBehaviour
         if (equippedDiscsText == null) return;
 
         int slotCount = shop != null ? shop.DiscSlotCount : 0;
-        var lines = new List<string> { $"[디스크] {RunState.EquippedDiscIds.Count}/{slotCount}" };
+        var lines = new List<string> { $"{Loc.T("modding.discs")} {RunState.EquippedDiscIds.Count}/{slotCount}" };
 
         if (RunState.EquippedDiscIds.Count == 0)
         {
-            lines.Add("(없음)");
+            lines.Add(Loc.T("common.none_paren"));
         }
         else if (shop != null && shop.Catalog != null)
         {
@@ -162,7 +162,7 @@ public class GameOverSummaryUI : MonoBehaviour
                 foreach (DiscData disc in shop.Catalog.Discs)
                 {
                     if (disc.discId != discId) continue;
-                    name = $"<color={disc.grade.ToColorHex()}>{disc.grade.ToKorean()}</color> {disc.discName}";
+                    name = $"<color={disc.grade.ToColorHex()}>{disc.grade.ToDisplayName()}</color> {disc.Disc()}";
                     break;
                 }
                 lines.Add(name);
@@ -178,28 +178,28 @@ public class GameOverSummaryUI : MonoBehaviour
 
         if (player == null)
         {
-            statsText.text = "[최종 능력치]\n(정보 없음)";
+            statsText.text = $"{Loc.T("summary.final_stats")}\n{Loc.T("common.no_info")}";
             return;
         }
 
         statsText.text =
-            "[최종 능력치]\n" +
+            $"{Loc.T("summary.final_stats")}\n" +
             // 2026-08-24 사용자 지정 표기 규칙(StatFormat 참고).
-            $"체력 {StatFormat.Int(Mathf.Max(0f, player.CurrentHp))}/{StatFormat.Int(player.MaxHp)}\n" +
-            $"공격력 {StatFormat.Int(player.Atk)}\n" +
-            $"방어력 {StatFormat.Int(player.Def)}\n" +
-            $"치명타 확률 {StatFormat.Percent(player.Cc)}\n" +
-            $"치명타 피해 {StatFormat.RatioPercent(player.Cd)}\n" +
-            $"이동속도 {StatFormat.Decimal(player.MoveSpeed)}\n" +
-            $"회피율 {StatFormat.Percent(player.Avoid)}\n" +
-            $"행운 {StatFormat.Int(player.Luck)}\n" +
-            $"질량 {StatFormat.Decimal(player.Mess)}";
+            $"{StatTypeNames.ToDisplayName(StatType.MaxHp)} {StatFormat.Int(Mathf.Max(0f, player.CurrentHp))}/{StatFormat.Int(player.MaxHp)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.Atk)} {StatFormat.Int(player.Atk)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.Def)} {StatFormat.Int(player.Def)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.CritChance)} {StatFormat.Percent(player.Cc)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.CritDamage)} {StatFormat.RatioPercent(player.Cd)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.MoveSpeed)} {StatFormat.Decimal(player.MoveSpeed)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.Avoid)} {StatFormat.Percent(player.Avoid)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.Luck)} {StatFormat.Int(player.Luck)}\n" +
+            $"{StatTypeNames.ToDisplayName(StatType.Mass)} {StatFormat.Decimal(player.Mess)}";
     }
 
     private static string PartLine(ModdingManager modding, PartSlot slot)
     {
-        if (modding == null || !modding.TryGetEquippedPart(slot, out PartData part)) return "(없음)";
-        return $"<color={part.grade.ToColorHex()}>{part.grade.ToKorean()}</color> {part.partName}";
+        if (modding == null || !modding.TryGetEquippedPart(slot, out PartData part)) return Loc.T("common.none_paren");
+        return $"<color={part.grade.ToColorHex()}>{part.grade.ToDisplayName()}</color> {part.Part()}";
     }
 
     // ShopPanelUI.BuildWeaponSocketPartsBlock과 동일 - 소켓마다 다른 파츠를 낄 수 있어
@@ -211,21 +211,21 @@ public class GameOverSummaryUI : MonoBehaviour
         for (int i = 0; i < socketCount; i++)
         {
             string part = modding != null && modding.TryGetEquippedWeaponSocketPart(i, out PartData socketPart)
-                ? $"<color={socketPart.grade.ToColorHex()}>{socketPart.grade.ToKorean()}</color> {socketPart.partName}"
-                : "(없음)";
+                ? $"<color={socketPart.grade.ToColorHex()}>{socketPart.grade.ToDisplayName()}</color> {socketPart.Part()}"
+                : Loc.T("common.none_paren");
 
-            lines.Add($"무기 소켓 {i + 1}: {part}");
+            lines.Add($"{Loc.T("modding.weaponsocket_n", i + 1)}: {part}");
         }
 
-        return lines.Count > 0 ? string.Join("\n", lines) : "무기 소켓: (없음)";
+        return lines.Count > 0 ? string.Join("\n", lines) : $"{Loc.T("partslot.weaponsocket")}: {Loc.T("common.none_paren")}";
     }
 
     private static string GetRobotName(PlayerRobotController player)
     {
-        if (player == null || GameDataManager.Instance == null) return "(알 수 없음)";
+        if (player == null || GameDataManager.Instance == null) return Loc.T("common.unknown");
 
         return GameDataManager.Instance.Robots.TryGetValue(player.RobotId, out RobotData data)
-            ? data.robot_name
+            ? data.Robot()
             : $"ID {player.RobotId}";
     }
 }

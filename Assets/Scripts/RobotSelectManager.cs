@@ -44,7 +44,7 @@ public class RobotSelectManager : MonoBehaviour
 
         if (GameDataManager.Instance.Robots.TryGetValue(robotId, out RobotData data))
         {
-            panelNameText.text = data.robot_name;
+            panelNameText.text = data.Robot();
             // 로봇별 이미지를 따로 관리한다면 여기서 panelImage.sprite 갱신
         }
     }
