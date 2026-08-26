@@ -126,9 +126,11 @@ public class EnemyUnit : MonoBehaviour
 
     private Transform health_bar_root;
     private Transform health_bar_fill;
+    private SpriteRenderer health_bar_fill_renderer;
     private float health_bar_width;
-    private static Sprite white_pixel_sprite;      // pivot 중앙 - 배경용
-    private static Sprite white_pixel_sprite_left; // pivot 왼쪽 - 채움 바용(왼쪽 고정, 오른쪽만 줄어듦)
+    private float health_bar_fill_max_width; // 테두리 안쪽(채움 바가 100%일 때의 폭)
+    private float health_bar_fill_height;
+    private static Sprite white_pixel_sprite;      // 아트를 못 찾았을 때의 폴백(흰 사각형)
 
     // 부품 상자 드랍 확률 조회용. 몬스터마다 새로 찾지 않도록 클래스 전체가 공유하는 캐시.
     // PlayerRobotController.Awake()가 Alive.Clear()와 함께 매 런 시작마다 비워준다(재시도 시 이전 판의 참조가 남지 않도록).
@@ -915,6 +917,7 @@ public class EnemyUnit : MonoBehaviour
         CurrentHp -= dmg;
         UpdateHealthBar();
         PlayHitFlash();
+        PlayHitSfx();
 
         // 2026-08-23 사용자 제공 좀비 피격 이펙트(8프레임) - 몸 전체가 물드는 HitFlash와
         // 별개로 몸통 중앙에 스파크 스프라이트를 한 번 더 재생한다. 크기는 본인 스프라이트
@@ -932,6 +935,21 @@ public class EnemyUnit : MonoBehaviour
 
         if (CurrentHp <= 0f) Die();
     }
+
+    // ── 효과음(2026-08-26 사용자 제공) ───────────────────────────
+    // 파일 목록과 원본 이름 대응표는 SFXManager 참고. 보스는 전용 세트가 있어 오버라이드한다.
+
+    /// <summary>피격음 볼륨. 화면에 적이 많으면 이 소리가 가장 자주 나므로 발사음보다 낮게 둔다.</summary>
+    protected const float HitSfxVolume = 0.45f;
+
+    /// <summary>사망음 볼륨.</summary>
+    protected const float DeathSfxVolume = 0.55f;
+
+    /// <summary>맞을 때마다 한 번. 3종 중 무작위 + 간격 제한은 <see cref="SFXManager.PlayEnemyHit"/>가 한다.</summary>
+    protected virtual void PlayHitSfx() => SFXManager.PlayEnemyHit(HitSfxVolume);
+
+    /// <summary>죽을 때 한 번. 보스는 사망 연출 중간(폭발 시점)에 직접 내므로 이 경로를 비운다.</summary>
+    protected virtual void PlayDeathSfx() => SFXManager.Play(SFXManager.EnemyDeathClipName, DeathSfxVolume);
 
     /// <summary>외부(리더의 회복 능력 등)에서 체력을 채운다. MaxHp를 넘지 않고, 죽은 유닛에는 적용하지 않는다.</summary>
     public void Heal(float amount)
@@ -984,24 +1002,100 @@ public class EnemyUnit : MonoBehaviour
 
         int sorting_base = body_sprite_renderer.sortingOrder + 5;
 
-        SpriteRenderer bg = CreateBarPart("Background", GetWhitePixelSprite(), health_bar_root, sorting_base, new Color(0.1f, 0.1f, 0.1f, 0.85f));
+        // 2026-08-26 사용자 제공 아트로 교체(그 전에는 단색 사각형 두 장이었다).
+        // 배경 패널은 그대로 두고 채움 바만 체력 비율에 따라 초록/주황/빨강 스프라이트로 갈아끼운다.
+        Sprite panel = GetHealthBarPanelSprite();
+        SpriteRenderer bg = CreateBarPart("Background", panel, health_bar_root, sorting_base, Color.white);
         bg.transform.localPosition = Vector3.zero;
-        bg.transform.localScale = new Vector3(health_bar_width, thickness, 1f);
+        bg.transform.localScale = ComputeSpriteScale(panel, health_bar_width, thickness);
 
-        // 채움 바는 pivot을 왼쪽(0, 0.5)에 둔 전용 스프라이트를 써서, 폭이 줄어들 때
-        // 왼쪽 끝은 고정된 채 오른쪽 끝만 줄어들게 한다(가운데 pivot이면 양쪽이 다 줄어든다).
-        SpriteRenderer fill = CreateBarPart("Fill", GetLeftPivotPixelSprite(), health_bar_root, sorting_base + 1, Color.green);
-        fill.transform.localPosition = new Vector3(-health_bar_width * 0.5f, 0f, 0f); // 바 왼쪽 끝에 고정
+        // 채움 바는 패널 테두리 안쪽에 들어가야 한다 - 정규화 상수가 아니라 두께에 비례한
+        // 절대 여백으로 밀어 넣는다(패널을 크게 늘려도 테두리 두께는 두께 비율을 따라간다).
+        float inset = thickness * HealthBarInsetRatio;
+        health_bar_fill_max_width = Mathf.Max(0.01f, health_bar_width - inset * 2f);
+        health_bar_fill_height = Mathf.Max(0.01f, thickness - inset * 2f);
 
-        // 두께(y)를 배경과 똑같이 명시적으로 맞춘다. 예전에는 여기서 localScale을 아예 설정하지
-        // 않아 기본값 1이 그대로 남았고(UpdateHealthBar는 x만 바꾸고 y는 기존값을 유지한다),
-        // 프리팹 스케일이 0.134였을 때는 월드 두께가 우연히 배경과 비슷해져서 눈에 띄지 않았다.
-        // 2026-08-10 규격 적용으로 프리팹 스케일이 1이 되면서 채움 바만 두께 1.0으로 그려져
-        // 체력바가 위아래로 뚱뚱해 보이는 문제로 드러났다.
-        fill.transform.localScale = new Vector3(health_bar_width, thickness, 1f);
+        Sprite fill_sprite = GetHealthBarFillSprite(1f);
+        SpriteRenderer fill = CreateBarPart("Fill", fill_sprite, health_bar_root, sorting_base + 1, Color.white);
         health_bar_fill = fill.transform;
+        health_bar_fill_renderer = fill;
+
+        // 위치/크기는 체력 비율에 따라 매번 다시 잡는다(아래 ApplyHealthBarFill).
+        ApplyHealthBarFill(1f);
 
         health_bar_root.gameObject.SetActive(false); // 초기값은 Init()에서 UpdateHealthBar()가 결정
+    }
+
+    // ── 체력바 아트(2026-08-26 사용자 제공 `이미지UI` 세트) ─────────
+    // 파일은 Resources/UI에 16장(패널 4 + 초록/주황/빨강 각 4)이 들어와 있고, 그중 <b>체력바
+    // 비율(폭:두께 ≈ 6.25:1)에 가장 가까운 장을 골라 쓴다</b> - 비율이 다른 장을 쓰면 같은
+    // 크기로 늘렸을 때 모서리 베벨이 눌려 보인다.
+
+    private const string HealthBarPanelSprite = "UI/Mshp_panel01";  // 1456x214 (6.8:1)
+    private const string HealthBarFillHighSprite = "UI/Green_hp01"; // 1453x216 (6.7:1)
+    private const string HealthBarFillMidSprite = "UI/Orange_hp02"; // 1476x210 (7.0:1)
+    private const string HealthBarFillLowSprite = "UI/Red_hp01";    // 1510x216 (7.0:1)
+
+    /// <summary>채움 바가 배경 패널 테두리 안으로 들어가는 여백(두께 대비 비율).</summary>
+    private const float HealthBarInsetRatio = 0.18f;
+
+    /// <summary>초록 → 주황으로 바뀌는 체력 비율.</summary>
+    private const float HealthBarMidThreshold = 0.6f;
+
+    /// <summary>주황 → 빨강으로 바뀌는 체력 비율.</summary>
+    private const float HealthBarLowThreshold = 0.3f;
+
+    private static Sprite hp_panel_sprite;
+    private static Sprite hp_fill_high_sprite;
+    private static Sprite hp_fill_mid_sprite;
+    private static Sprite hp_fill_low_sprite;
+
+    private static Sprite GetHealthBarPanelSprite() => LoadBarSprite(ref hp_panel_sprite, HealthBarPanelSprite);
+
+    private static Sprite GetHealthBarFillSprite(float ratio)
+    {
+        if (ratio > HealthBarMidThreshold) return LoadBarSprite(ref hp_fill_high_sprite, HealthBarFillHighSprite);
+        if (ratio > HealthBarLowThreshold) return LoadBarSprite(ref hp_fill_mid_sprite, HealthBarFillMidSprite);
+        return LoadBarSprite(ref hp_fill_low_sprite, HealthBarFillLowSprite);
+    }
+
+    /// <summary>아트가 없으면 예전처럼 흰 사각형으로 폴백한다(체력바가 통째로 사라지지 않도록).</summary>
+    private static Sprite LoadBarSprite(ref Sprite cache, string resourcePath)
+    {
+        if (cache == null) cache = Resources.Load<Sprite>(resourcePath);
+        return cache != null ? cache : GetWhitePixelSprite();
+    }
+
+    /// <summary>
+    /// 스프라이트를 <paramref name="width"/> x <paramref name="height"/> 월드 크기로 그리기 위한
+    /// localScale. 원본 해상도/PPU가 제각각이라 <b>스프라이트의 실제 월드 크기로 나눠야</b>
+    /// 크기가 맞는다(1x1 유닛 흰 사각형 시절에는 값을 그대로 넣어도 됐다).
+    /// </summary>
+    private static Vector3 ComputeSpriteScale(Sprite sprite, float width, float height)
+    {
+        if (sprite == null) return new Vector3(width, height, 1f);
+
+        Vector2 size = sprite.bounds.size;
+        float sx = size.x > 0.0001f ? width / size.x : width;
+        float sy = size.y > 0.0001f ? height / size.y : height;
+        return new Vector3(sx, sy, 1f);
+    }
+
+    /// <summary>
+    /// 채움 바를 체력 비율에 맞춰 다시 그린다. 스프라이트 pivot이 가운데이므로 <b>폭을 줄이는
+    /// 만큼 왼쪽으로 위치도 옮겨야</b> 왼쪽 끝이 고정된 채 오른쪽만 줄어든다
+    /// (예전에는 pivot이 왼쪽인 전용 흰 사각형을 써서 위치를 고정할 수 있었다).
+    /// </summary>
+    private void ApplyHealthBarFill(float ratio)
+    {
+        if (health_bar_fill == null || health_bar_fill_renderer == null) return;
+
+        Sprite sprite = GetHealthBarFillSprite(ratio);
+        if (health_bar_fill_renderer.sprite != sprite) health_bar_fill_renderer.sprite = sprite;
+
+        float width = health_bar_fill_max_width * Mathf.Clamp01(ratio);
+        health_bar_fill.localScale = ComputeSpriteScale(sprite, width, health_bar_fill_height);
+        health_bar_fill.localPosition = new Vector3((width - health_bar_fill_max_width) * 0.5f, 0f, 0f);
     }
 
     private static SpriteRenderer CreateBarPart(string name, Sprite sprite, Transform parent, int sortingOrder, Color color)
@@ -1046,8 +1140,8 @@ public class EnemyUnit : MonoBehaviour
         health_bar_root.gameObject.SetActive(should_show);
         if (!should_show) return;
 
-        health_bar_fill.localScale = new Vector3(health_bar_width * ratio, health_bar_fill.localScale.y, 1f);
-        health_bar_fill.GetComponent<SpriteRenderer>().color = Color.Lerp(Color.red, Color.green, ratio);
+        // 색은 스프라이트 자체가 갖고 있다(예전에는 흰 사각형에 Color.Lerp로 초록↔빨강을 칠했다).
+        ApplyHealthBarFill(ratio);
     }
 
     /// <summary>Canvas 없이 SpriteRenderer로 단색 막대를 그리기 위한 1x1 흰색 스프라이트(pivot 중앙, 캐시).</summary>
@@ -1055,13 +1149,6 @@ public class EnemyUnit : MonoBehaviour
     {
         if (white_pixel_sprite == null) white_pixel_sprite = CreateWhitePixelSprite(new Vector2(0.5f, 0.5f));
         return white_pixel_sprite;
-    }
-
-    /// <summary>채움 바 전용 - pivot이 왼쪽(0, 0.5)인 1x1 흰색 스프라이트(캐시).</summary>
-    private static Sprite GetLeftPivotPixelSprite()
-    {
-        if (white_pixel_sprite_left == null) white_pixel_sprite_left = CreateWhitePixelSprite(new Vector2(0f, 0.5f));
-        return white_pixel_sprite_left;
     }
 
     private static Sprite CreateWhitePixelSprite(Vector2 pivot)
@@ -1100,6 +1187,8 @@ public class EnemyUnit : MonoBehaviour
     {
         if (IsDead) return;
         IsDead = true;
+
+        PlayDeathSfx();
 
         if (rb != null) rb.linearVelocity = Vector3.zero;
 

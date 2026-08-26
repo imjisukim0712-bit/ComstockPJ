@@ -60,11 +60,30 @@ public static class PartIconLibrary
         return sprite;
     }
 
+    /// <summary>
+    /// <b>무기가 안 들어있는 무기 슬롯</b>에 까는 아이콘(2026-08-26 사용자 제공 `무기아이콘.png`).
+    ///
+    /// 슬롯 공용 아이콘(<see cref="Get(PartSlot)"/>의 <see cref="PartSlot.ArmWeaponSocket"/>)과
+    /// 굳이 나눈 이유: 그쪽은 "무기 <b>소켓 파츠</b>가 비었다"는 뜻이고 여기는 "소켓은 있는데
+    /// <b>무기</b>가 비었다"는 뜻이라, 같은 그림을 쓰면 상점의 두 격자에서 서로 구분되지 않는다.
+    /// </summary>
+    public static Sprite GetEmptyWeaponSlot()
+    {
+        if (empty_weapon_icon == null) empty_weapon_icon = Resources.Load<Sprite>(ResourceFolder + EmptyWeaponIconName);
+
+        // 아트가 없으면 예전처럼 슬롯 공용 아이콘(→ 임시 실루엣)으로 폴백한다.
+        return empty_weapon_icon != null ? empty_weapon_icon : Get(PartSlot.ArmWeaponSocket);
+    }
+
+    private const string EmptyWeaponIconName = "WeaponEmpty";
+    private static Sprite empty_weapon_icon;
+
     /// <summary>에셋을 새로 넣은 뒤 캐시를 비우고 싶을 때 사용.</summary>
     public static void ClearCache()
     {
         cache.Clear();
         icon_cache.Clear();
+        empty_weapon_icon = null;
     }
 
     // ------------------------------------------------------------------

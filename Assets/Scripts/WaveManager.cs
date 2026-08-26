@@ -271,6 +271,12 @@ public class WaveManager : MonoBehaviour
         boss.PlaySpawnIntro();
 
         boss_spawned_this_wave = true;
+
+        // 보스 전용 BGM으로 갈아탄다(2026-08-26 사용자 제공). 되돌리는 곳은
+        // HandleBossDefeated / EndWave / WinGame + GameOverManager - 어느 경로로 보스전이
+        // 끝나도 일반 곡으로 돌아온다(MusicManager.SetBossBattle은 멱등하다).
+        MusicManager.SetBossBattle(true);
+
         Debug.Log($"보스 등장 (웨이브 {RunState.WaveNumber}, HP {bossData.monster_hp}, 배율 x{multiplier:0.##})");
     }
 
@@ -287,6 +293,7 @@ public class WaveManager : MonoBehaviour
     private void HandleBossDefeated()
     {
         boss_defeated_this_wave = true;
+        MusicManager.SetBossBattle(false);
         Debug.Log("보스 처치됨 - 웨이브 제한시간이 끝나면 승리 처리됩니다");
     }
 
@@ -351,6 +358,8 @@ public class WaveManager : MonoBehaviour
             enemySpawner.DespawnAllAliveEnemies();
         }
 
+        MusicManager.SetBossBattle(false);
+
         Debug.Log($"웨이브 {RunState.WaveNumber} 보스 처치 + 시간 종료 - 승리!");
         GameWinManager.TriggerWin();
     }
@@ -358,6 +367,8 @@ public class WaveManager : MonoBehaviour
     private void EndWave()
     {
         int wave = RunState.WaveNumber;
+
+        MusicManager.SetBossBattle(false); // 보스전이 아니었으면 아무 일도 하지 않는다
 
         // 남은 적은 여기서 통째로 소멸한다. Destroy만 하고 EnemyUnit.Die()를 부르지 않으므로
         // 보상 픽업/드랍 아이템이 생기지 않는다("남은 좀비는 아이템 드랍 없이 사라진다").

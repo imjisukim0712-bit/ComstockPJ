@@ -31,6 +31,9 @@ public static class GameOverManager
         // 닫지 않고 알트탭으로 나가버려도 기록이 남아야 한다.
         HeadRecords.ReportRunFinished(PlayerSession.SelectedRobotId, RunScore.ComputeTotal(), RunState.WaveNumber);
 
+        // 보스전 도중에 죽었으면 보스 곡을 정산 화면까지 끌고 가지 않는다(2026-08-26).
+        MusicManager.SetBossBattle(false);
+
         Debug.Log("=== 1회차 게임 오버 ===");
         OnGameOver?.Invoke();
     }

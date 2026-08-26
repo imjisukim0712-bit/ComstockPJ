@@ -1324,8 +1324,9 @@ public class ShopPanelUI : MonoBehaviour
             bool has = shootManager.TryGetSocketInfo(i, out WeaponData weapon, out ItemGrade grade);
 
             // 무기를 안 낀 소켓은 완전히 빈 칸으로 두면 "칸이 왜 있지?" 싶으므로,
-            // 무기 소켓 아이콘을 흐리게 깔아 "여기에 무기를 낄 수 있다"는 것을 보여준다.
-            Sprite icon = has ? ResolveWeaponIcon(weapon) : PartIconLibrary.Get(PartSlot.ArmWeaponSocket);
+            // 빈 무기 슬롯 아이콘을 깔아 "여기에 무기를 낄 수 있다"는 것을 보여준다.
+            // 2026-08-26 사용자 제공 아트로 교체(그 전에는 코드로 그린 임시 실루엣이었다).
+            Sprite icon = has ? ResolveWeaponIcon(weapon) : PartIconLibrary.GetEmptyWeaponSlot();
 
             // 교체 모드에서는 빈 소켓도 눌러야 한다(그 자리로 옮기기). 고른 출발 칸은 노란색으로
             // 강조한다 - 정비 화면이 교체 가능한 슬롯을 노란색으로 여는 것과 같은 관례.

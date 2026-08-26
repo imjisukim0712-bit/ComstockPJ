@@ -33,6 +33,36 @@ public class SFXManager : MonoBehaviour
     /// <see cref="AiCoreManager"/>가 레벨업 이펙트와 같은 지점에서 한 번 재생한다.</summary>
     public const string LevelUpClipName = "LevelUp";
 
+    // ── 2026-08-26 사용자 제공 전투 효과음 ────────────────────────────────
+    // 파일은 전부 Resources/SFX에 있고 <b>이름으로만</b> 연결된다(이 클래스의 폴더 스캔 규칙).
+    // 다른 소리로 바꾸고 싶으면 같은 이름의 파일을 덮어쓰면 코드 수정 없이 교체된다.
+    //
+    // 원본 파일명 → 이 프로젝트 이름:
+    //   01_weapon_melee_attack     → Weapon_Melee
+    //   02_weapon_rapid_fire       → Weapon_RapidFire   (정밀화기도 이 소리를 함께 쓴다 - 전용 파일 없음)
+    //   03_weapon_shotgun_fire     → Weapon_Shotgun
+    //   06_weapon_explosive_launch → Weapon_Explosive
+    //   Laser_pistol               → Weapon_LaserPistol (에너지 계열 중 투사체 무기)
+    //   플라즈마캐논               → Weapon_PlasmaCannon(빔 무기)
+    //   18/19_enemy_hit_a,b + zombiehit → Enemy_Hit_A/B/C (피격마다 무작위)
+    //   01_cartoon_zombie_classic_splat → Enemy_Death
+    //   보스 사운드/02~04          → Boss_Hit_A/B/C
+    //   보스 사운드/05_heavy_burst → Boss_Death
+    public const string WeaponMeleeClipName = "Weapon_Melee";
+    public const string WeaponRapidFireClipName = "Weapon_RapidFire";
+    public const string WeaponShotgunClipName = "Weapon_Shotgun";
+    public const string WeaponExplosiveClipName = "Weapon_Explosive";
+    public const string WeaponLaserPistolClipName = "Weapon_LaserPistol";
+    public const string WeaponPlasmaCannonClipName = "Weapon_PlasmaCannon";
+    public const string EnemyDeathClipName = "Enemy_Death";
+    public const string BossDeathClipName = "Boss_Death";
+
+    /// <summary>일반 적 피격음 3종. 같은 소리가 연달아 나면 기계적으로 들리므로 무작위로 고른다.</summary>
+    private static readonly string[] EnemyHitClipNames = { "Enemy_Hit_A", "Enemy_Hit_B", "Enemy_Hit_C" };
+
+    /// <summary>보스 전용 피격음 3종(사용자가 "보스 사운드" 폴더에 넣어준 묵직한 파열음).</summary>
+    private static readonly string[] BossHitClipNames = { "Boss_Hit_A", "Boss_Hit_B", "Boss_Hit_C" };
+
     private const string VolumePrefsKey = "comstock_sfx_volume";
     private const float DefaultVolume = 0.7f;
 
@@ -56,6 +86,9 @@ public class SFXManager : MonoBehaviour
 
     private AudioSource source;
     private readonly Dictionary<string, AudioClip> clips = new Dictionary<string, AudioClip>();
+
+    /// <summary>클립(또는 무작위 그룹)별 마지막 재생 시각. <see cref="PlayThrottled"/> 전용.</summary>
+    private readonly Dictionary<string, float> last_played_time = new Dictionary<string, float>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Bootstrap()
@@ -146,6 +179,51 @@ public class SFXManager : MonoBehaviour
         if (!Instance.clips.TryGetValue(clipName, out AudioClip clip) || clip == null) return;
 
         Instance.source.PlayOneShot(clip, Mathf.Clamp01(volumeScale) * Volume);
+    }
+
+    /// <summary>
+    /// 같은 클립이 <paramref name="minInterval"/>초 안에 다시 요청되면 <b>무시</b>한다.
+    ///
+    /// 전투 효과음(발사·피격)은 호출 빈도가 프레임 단위다 - 소켓 4개짜리 연사 무기면 초당 40번,
+    /// 화면에 적이 20마리면 피격음도 그만큼 겹친다. <see cref="AudioSource.PlayOneShot"/>은
+    /// 요청을 전부 믹싱하므로 그대로 두면 소리가 뭉개지고 볼륨이 치솟는다. 재생 자체를 막는
+    /// 이 방식이 볼륨을 낮추는 것보다 확실하다(볼륨을 낮추면 겹침 자체는 그대로다).
+    ///
+    /// 시간은 <see cref="Time.unscaledTime"/>으로 잰다 - 정비/상점(timeScale=0)에서도 UI 소리가
+    /// 나야 하고, 배속 연출 중에 간격이 늘었다 줄었다 하면 안 된다.
+    /// </summary>
+    public static void PlayThrottled(string clipName, float minInterval, float volumeScale = 1f)
+    {
+        if (Instance == null || string.IsNullOrEmpty(clipName)) return;
+
+        float now = Time.unscaledTime;
+        if (Instance.last_played_time.TryGetValue(clipName, out float last) && now - last < minInterval) return;
+
+        Instance.last_played_time[clipName] = now;
+        Play(clipName, volumeScale);
+    }
+
+    /// <summary>일반 적 피격음(3종 중 무작위). 간격 제한은 <see cref="PlayThrottled"/> 참고.</summary>
+    public static void PlayEnemyHit(float volumeScale = 1f) => PlayRandom(EnemyHitClipNames, 0.05f, volumeScale);
+
+    /// <summary>보스 피격음(3종 중 무작위).</summary>
+    public static void PlayBossHit(float volumeScale = 1f) => PlayRandom(BossHitClipNames, 0.12f, volumeScale);
+
+    /// <summary>
+    /// 후보 중 하나를 무작위로 재생한다. <b>간격 제한은 후보 전체를 하나로 묶어서 건다</b> -
+    /// 클립마다 따로 걸면 3종이 동시에 울려 제한이 사실상 없어진다.
+    /// </summary>
+    private static void PlayRandom(string[] clipNames, float minInterval, float volumeScale)
+    {
+        if (Instance == null || clipNames == null || clipNames.Length == 0) return;
+
+        float now = Time.unscaledTime;
+        // 그룹 전체의 마지막 재생 시각은 첫 번째 이름 자리에 함께 기록한다(별도 키를 만들 필요가 없다).
+        string group_key = clipNames[0];
+        if (Instance.last_played_time.TryGetValue(group_key, out float last) && now - last < minInterval) return;
+
+        Instance.last_played_time[group_key] = now;
+        Play(clipNames[Random.Range(0, clipNames.Length)], volumeScale);
     }
 
     private void EnsurePlaceholderClip(string clipName, float frequency, float duration)

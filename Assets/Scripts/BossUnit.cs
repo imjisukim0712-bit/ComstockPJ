@@ -724,6 +724,18 @@ public class BossUnit : EnemyUnit
         AccumulateGroggyGauge(raw_amount);
     }
 
+    // ── 효과음(2026-08-26) ────────────────────────────────────
+    // 사용자가 "보스 사운드" 폴더로 따로 넣어준 묵직한 파열음 4종을 쓴다
+    // (일반 몬스터의 Enemy_Hit_*/Enemy_Death와 구분된다).
+
+    /// <summary>보스 피격음은 전용 3종을 무작위로 쓴다.</summary>
+    protected override void PlayHitSfx() => SFXManager.PlayBossHit(0.7f);
+
+    /// <summary><b>여기서는 아무 소리도 내지 않는다.</b> 보스의 사망음은 사망 연출이 끝나는
+    /// <see cref="base.Die"/> 시점이 아니라 <see cref="DeathSequence"/>의 폭발 순간에 나야 한다
+    /// (그때가 화면에서 "터지는" 순간이다).</summary>
+    protected override void PlayDeathSfx() { }
+
     /// <summary>
     /// 사망 모션(16프레임) → 폭발 이펙트(60프레임) → 그제서야 실제 처치 처리.
     ///
@@ -767,6 +779,7 @@ public class BossUnit : EnemyUnit
 
         BossFrameEffect.Play(DeathExplosionFolder, transform.position, deathExplosionWidth,
             sr != null ? sr.sortingOrder + 2 : 3, deathExplosionDuration);
+        SFXManager.Play(SFXManager.BossDeathClipName, 0.9f); // 폭발과 같은 프레임에(PlayDeathSfx 주석 참고)
         ShakeCamera(0.9f, 0.35f);
 
         yield return new WaitForSeconds(deathExplosionDuration);

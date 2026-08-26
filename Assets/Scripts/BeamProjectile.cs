@@ -3,16 +3,22 @@ using UnityEngine;
 
 /// <summary>
 /// 플라즈마 캐논처럼 <b>일정 시간 동안 직선 범위에 반복 피해를 주는 빔</b>.
-/// 투사체(Projectile)와 달리 날아가지 않고, 발사 순간의 위치·방향을 그대로 고정한 채
-/// weapon_duration 동안 제자리에 머무르며 tick 간격마다 범위 안의 적을 타격한다.
+/// 투사체(Projectile)와 달리 날아가지 않고, weapon_duration 동안 <b>총구에 붙어서</b>
+/// tick 간격마다 범위 안의 적을 타격한다.
 ///
-/// 방향을 총구에 붙여 따라다니게 하지 않는 이유: 3초 내내 조준을 따라 회전하는 레이저가 되어
-/// 사실상 화면 전체를 쓸어버리는 무기가 되기 때문이다. 발사한 방향으로만 뻗는다.
+/// <b>빔은 총구를 그대로 따라간다 - 위치도 방향도</b>(2026-08-26 사용자 확정: "총구는 계속
+/// 회전할 수 있어야함. 그에 따라 레이저도 회전하여야 함"). 매 프레임 발사한 쪽
+/// (<see cref="PlayerShootManager"/>)에게 <b>지금 총구가 어디서 어느 쪽을 향하는지</b>를 다시
+/// 물어보므로(<see cref="barrel_provider"/>), 캐릭터가 움직이든 총이 다른 적을 향해 돌든
+/// 그림이 좌우로 뒤집히든 빔은 항상 총구에서 총열 방향으로 뻗는다. 판정 범위
+/// (<see cref="ApplyTick"/>)도 같은 위치·방향을 쓰므로 "보이는 것 = 맞는 것"이 유지된다
+/// (빔이 조준을 따라 쓸고 지나가는 것도 그래서 그대로 판정된다).
 ///
-/// <b>단, 위치는 총구를 따라간다</b>(2026-08-26 사용자 지적: "직선 레이저가 총구를 따라가는게
-/// 아니라 바닥에 남아있어") - 방향은 고정하되 <see cref="follow_pivot"/>(발사한 소켓의
-/// RigingPoint)와의 상대 오프셋만 유지한 채 매 프레임 위치를 갱신한다. 발사 순간 이후
-/// 캐릭터가 이동하면 빔 전체가 함께 이동하고, 회전(조준 재추적)은 여전히 하지 않는다.
+/// <para><b>이전 두 번의 부분 수정 이력</b>: (1) 처음에는 발사 순간의 월드 좌표에 완전히 고정돼
+/// 캐릭터가 움직이면 빔이 바닥에 남았다. (2) 그 다음에는 "발사 시점의 월드 오프셋"만 유지해
+/// 이동은 따라갔지만, 3초 동안 총이 다른 적을 향해 계속 도는 사이(실측: 리그 각 92도 → 347도)
+/// 총구만 움직이고 빔은 각도가 굳어 있어 <b>총과 빔이 따로 놀았다</b>. 이제 로컬 좌표계에
+/// 물려 두어 두 문제가 같은 규칙 하나로 사라진다.</para>
 ///
 /// 빔이 여러 개 겹치는 문제는 발사 쪽에서 구조적으로 막혀 있다 - 모든 무기의 대기시간은
 /// "발사 동작이 끝난 뒤"부터 흐르므로(PlayerShootManager.TryFireSlot 참고),
@@ -36,10 +42,13 @@ public class BeamProjectile : MonoBehaviour
     private float remaining_time;
     private float next_tick_time;
 
-    /// <summary>발사한 소켓의 리깅 포인트(없으면 총구). 매 프레임 이 위치 + <see cref="pivot_offset"/>로
-    /// 빔을 옮겨 캐릭터 이동을 따라가게 한다(방향은 바꾸지 않는다).</summary>
-    private Transform follow_pivot;
-    private Vector3 pivot_offset;
+    /// <summary>
+    /// "지금 총구가 어디서 어느 쪽을 향하는가"를 돌려주는 콜백(발사한 쪽이 넘겨준다).
+    /// false를 돌려주면(총이 사라졌다 등) 빔은 마지막 위치·방향을 유지한다.
+    /// </summary>
+    public delegate bool BarrelProvider(out Vector3 origin, out Vector3 direction);
+
+    private BarrelProvider barrel_provider;
 
     // OverlapBox 결과에서 중복 컴포넌트(자식 콜라이더 등)를 걸러내기 위한 틱 단위 임시 집합
     private readonly HashSet<EnemyUnit> hit_this_tick = new HashSet<EnemyUnit>();
@@ -73,27 +82,29 @@ public class BeamProjectile : MonoBehaviour
     public static BeamProjectile Fire(Sprite[] visual_frames, Vector3 origin, Vector3 fire_direction, float beam_length,
                                       float beam_half_width, float total_damage, float duration,
                                       float def_ignore_percent, float knockback_strength, int source_weapon_id = 0,
-                                      bool isCrit = false, Transform followPivot = null)
+                                      bool isCrit = false, BarrelProvider barrelProvider = null)
     {
         GameObject obj = new GameObject("Beam");
         obj.transform.position = origin;
+        obj.transform.rotation = Quaternion.FromToRotation(Vector3.right, fire_direction.sqrMagnitude > 0.0001f
+            ? new Vector3(fire_direction.x, fire_direction.y, 0f).normalized
+            : Vector3.right);
 
         BeamProjectile beam = obj.AddComponent<BeamProjectile>();
         beam.Init(visual_frames, fire_direction, beam_length, beam_half_width, total_damage, duration,
-                  def_ignore_percent, knockback_strength, source_weapon_id, isCrit, followPivot);
+                  def_ignore_percent, knockback_strength, source_weapon_id, isCrit, barrelProvider);
         return beam;
     }
 
     private void Init(Sprite[] frames, Vector3 fire_direction, float beam_length, float beam_half_width,
                       float total_damage, float duration, float def_ignore_percent, float knockback_strength,
-                      int weapon_id = 0, bool isCrit = false, Transform followPivot = null)
+                      int weapon_id = 0, bool isCrit = false, BarrelProvider barrelProvider = null)
     {
         is_crit = isCrit;
         direction = fire_direction.sqrMagnitude > 0.0001f ? fire_direction.normalized : Vector3.right;
         direction.z = 0f;
 
-        follow_pivot = followPivot;
-        pivot_offset = follow_pivot != null ? transform.position - follow_pivot.position : Vector3.zero;
+        barrel_provider = barrelProvider;
 
         length = Mathf.Max(0.1f, beam_length);
         half_width = Mathf.Max(0.1f, beam_half_width);
@@ -137,10 +148,11 @@ public class BeamProjectile : MonoBehaviour
         float sprite_length = Mathf.Max(0.0001f, first.bounds.size.x);
         float sprite_height = Mathf.Max(0.0001f, first.bounds.size.y);
 
-        // 스프라이트의 왼쪽 끝이 총구에 오도록 절반 길이만큼 앞으로 밀어준다
+        // 회전은 <b>빔 오브젝트 자신</b>이 들고 있다(FollowMuzzle이 매 프레임 갱신) - 자식은
+        // 로컬 +x 방향으로 절반 길이만큼 밀어두기만 하면 시작점이 총구에 붙는다.
         visual_obj.transform.localScale = new Vector3(length / sprite_length, (half_width * 2f) / sprite_height, 1f);
-        visual_obj.transform.localPosition = direction * (length * 0.5f);
-        visual_obj.transform.localRotation = Quaternion.FromToRotation(Vector3.right, direction);
+        visual_obj.transform.localPosition = new Vector3(length * 0.5f, 0f, 0f);
+        visual_obj.transform.localRotation = Quaternion.identity;
     }
 
     private void UpdateVisualAnimation()
@@ -164,7 +176,7 @@ public class BeamProjectile : MonoBehaviour
             return;
         }
 
-        if (follow_pivot != null) transform.position = follow_pivot.position + pivot_offset;
+        FollowMuzzle();
 
         if (Time.time >= next_tick_time)
         {
@@ -176,6 +188,29 @@ public class BeamProjectile : MonoBehaviour
 
         remaining_time -= Time.deltaTime;
         if (remaining_time <= 0f) Destroy(gameObject);
+    }
+
+    /// <summary>
+    /// 빔의 시작점과 방향을 총구(발사한 소켓의 리깅 포인트 기준 로컬 좌표계)로 다시 맞춘다.
+    /// 판정 범위(<see cref="ApplyTick"/>)도 같은 위치·방향에서 뻗어나가므로
+    /// "보이는 곳 = 맞는 곳"이 유지된다.
+    /// </summary>
+    private void FollowMuzzle()
+    {
+        if (barrel_provider == null) return;
+
+        Vector3 origin;
+        Vector3 barrel;
+        if (!barrel_provider(out origin, out barrel)) return;
+
+        origin.z = 0f; // Z축 미사용 규칙
+        transform.position = origin;
+
+        barrel.z = 0f;
+        if (barrel.sqrMagnitude <= 0.0001f) return;
+
+        direction = barrel.normalized;
+        transform.rotation = Quaternion.FromToRotation(Vector3.right, direction);
     }
 
     /// <summary>빔이 덮는 직사각형 범위 안의 모든 적에게 1틱 피해를 준다.</summary>

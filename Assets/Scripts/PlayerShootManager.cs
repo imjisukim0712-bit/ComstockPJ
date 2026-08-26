@@ -174,6 +174,12 @@ public class PlayerShootManager : MonoBehaviour
              "전부 불러와 파일명 오름차순으로 순환 재생한다 - 프레임이 1장뿐이면 정지 이미지처럼 보인다)")]
     [SerializeField] private string beam_sprite_name = "PlasmaCannonBeam";
 
+    [Tooltip("빔이 총구 안쪽에서 시작하는 깊이 = 무기 그림이 조준 방향으로 차지하는 길이 x 이 비율. " +
+             "0이면 그림의 바깥 끝(총구 링의 가장 바깥 모서리)에서 시작해 렌즈와 빔 사이가 벌어져 보인다. " +
+             "실측(RightPlasmaCannon.png): 렌즈 코어가 바깥 끝에서 총열 축으로 259px 안쪽 / 그림 길이 936px = 0.277")]
+    [Range(0f, 0.6f)]
+    [SerializeField] private float beam_muzzle_inset_ratio = 0.28f;
+
     [Header("총구 화염 이펙트 (밸런스/크기 미확정 임시값)")]
     [Tooltip("총구 화염 이펙트의 가로 크기(월드 유닛). 근접무기를 제외한 모든 소켓 발사 시 재생된다")]
     [SerializeField] private float muzzle_flash_target_width = 1.2f;
@@ -1286,12 +1292,15 @@ public class PlayerShootManager : MonoBehaviour
             MuzzleFlashEffect.Play(fire_origin, aim_direction, muzzle_flash_target_width, muzzle_flash_sorting_order);
         }
 
+        // 발사음(2026-08-26 사용자 제공). 총구 화염과 같은 지점에서 한 번만 낸다 - 산탄처럼
+        // 한 번에 여러 발이 나가는 무기도 소리는 발사 1회에 1번이어야 한다.
+        PlayWeaponFireSfx(weapon);
+
         switch (weapon.weapon_firemode)
         {
             case WeaponFireMode.Beam:
-                FireBeam(weapon, fire_origin, aim_direction, damage, slot_index, is_crit,
-                         slot.rig_point != null ? slot.rig_point : slot.muzzle_point);
                 attack_duration = Mathf.Max(0f, weapon.weapon_duration);
+                FireBeam(weapon, fire_origin, aim_direction, damage, slot_index, is_crit, slot, attack_duration);
                 break;
 
             case WeaponFireMode.MeleeSwing:
@@ -1380,8 +1389,59 @@ public class PlayerShootManager : MonoBehaviour
             GameObject prefab = ResolveProjectilePrefab(weapon, slot);
             if (prefab == null) yield break;
 
+            PlayWeaponFireSfx(weapon); // 2회차 발사도 소리가 나야 "두 번 쐈다"가 들린다
             FireProjectiles(prefab, slot, weapon, origin, last_direction, distance, damage, slot_index, isCrit);
         }
+    }
+
+    // ── 발사음 ──────────────────────────────────────────────────
+    // 2026-08-26 사용자 제공 효과음 반영. 파일 목록과 원본 이름 대응표는 SFXManager 참고.
+
+    /// <summary>발사음 볼륨(전역 효과음 볼륨에 곱해진다). 총소리가 피격음/UI음을 덮지 않는 선.</summary>
+    private const float WeaponSfxVolume = 0.6f;
+
+    /// <summary>같은 발사음의 최소 간격(초). 소켓이 4개면 같은 무기가 초당 40번까지 울린다
+    /// (<see cref="SFXManager.PlayThrottled"/> 주석 참고) - 초당 20번으로 제한한다.</summary>
+    private const float WeaponSfxMinInterval = 0.05f;
+
+    /// <summary>빔(플라즈마 캐논) 전용 간격. 이 소리만 4.6초로 길어서, 짧은 간격으로 겹치면
+    /// 같은 소리가 서너 겹 쌓여 볼륨이 튄다(빔 1회가 3초 + 대기 2초라 원래 겹칠 일이 없지만,
+    /// 소켓 여러 개가 동시에 쏘거나 공격속도 버프가 붙으면 겹친다).</summary>
+    private const float BeamSfxMinInterval = 2f;
+
+    private static void PlayWeaponFireSfx(WeaponData weapon)
+    {
+        string clip = ResolveWeaponFireClip(weapon);
+        float interval = clip == SFXManager.WeaponPlasmaCannonClipName ? BeamSfxMinInterval : WeaponSfxMinInterval;
+        SFXManager.PlayThrottled(clip, interval, WeaponSfxVolume);
+    }
+
+    /// <summary>
+    /// 이 무기가 낼 발사음 이름. <b>발사 방식(<see cref="WeaponFireMode"/>)을 먼저 보고</b>,
+    /// 그다음 무기 카테고리(<see cref="WeaponType"/>, PartsCatalog.weaponMeta)를 본다 -
+    /// 빔(플라즈마 캐논)과 근접은 카테고리와 상관없이 소리가 정해져 있기 때문이다.
+    ///
+    /// 정밀화기는 전용 파일이 아직 없어 연사 소리를 함께 쓴다(사용자가 나중에
+    /// <c>Resources/SFX/Weapon_Precision.wav</c>를 넣으면 여기 한 줄만 늘리면 된다).
+    /// </summary>
+    private static string ResolveWeaponFireClip(WeaponData weapon)
+    {
+        if (weapon.weapon_firemode == WeaponFireMode.MeleeSwing) return SFXManager.WeaponMeleeClipName;
+        if (weapon.weapon_firemode == WeaponFireMode.Beam) return SFXManager.WeaponPlasmaCannonClipName;
+
+        PartsCatalog catalog = HeadEffects.Catalog;
+        if (catalog != null && catalog.TryGetWeaponMeta(weapon.weapon_id, out PartsCatalog.WeaponMetaEntry meta))
+        {
+            switch (meta.type)
+            {
+                case WeaponType.Shotgun: return SFXManager.WeaponShotgunClipName;
+                case WeaponType.Explosive: return SFXManager.WeaponExplosiveClipName;
+                case WeaponType.Energy: return SFXManager.WeaponLaserPistolClipName; // 빔이 아닌 에너지 = 레이저 피스톨 계열
+                case WeaponType.Melee: return SFXManager.WeaponMeleeClipName;
+            }
+        }
+
+        return SFXManager.WeaponRapidFireClipName; // 연사 + 정밀 + 메타 누락 폴백
     }
 
     /// <summary>
@@ -1626,7 +1686,7 @@ public class PlayerShootManager : MonoBehaviour
     /// <param name="followPivot">발사한 소켓의 리깅 포인트. 빔이 매 프레임 이 위치를 따라가게
     /// 한다(2026-08-26 - 예전엔 발사 순간 위치에 고정돼 캐릭터가 이동하면 바닥에 남았다).</param>
     private void FireBeam(WeaponData weapon, Vector3 origin, Vector3 direction, float total_damage, int slot_index,
-                          bool isCrit, Transform followPivot)
+                          bool isCrit, WeaponSlot slot, float duration)
     {
         Sprite[] visual_frames = ResolveBeamFrames(beam_sprite_name);
 
@@ -1634,9 +1694,150 @@ public class PlayerShootManager : MonoBehaviour
         float def_ignore = Mathf.Clamp01(weapon.weapon_defignore
                                          + GetSocketModifiers(slot_index, weapon).DefIgnorePercent * 0.01f);
 
-        BeamProjectile.Fire(visual_frames, origin, direction, GetTravelRange(weapon, slot_index), weapon.ProjectileSize,
-                            total_damage, weapon.weapon_duration, def_ignore, weapon.weapon_knockback,
-                            weapon.weapon_id, isCrit, followPivot);
+        // <b>빔은 "적 방향"이 아니라 "그림 속 총열"을 그대로 탄다</b>(2026-08-26 사용자 지적:
+        // "이 빨간 선과 같이 직선으로 해줘"). 적 방향으로 쏘면 총이 아직 다 돌지 않았거나
+        // 소켓 보정각이 그림과 맞지 않는 만큼(실측 12~30도) 총과 빔이 꺾인 채 붙어 다닌다.
+        //
+        // 그리고 <b>매 프레임 다시 물어본다</b> - 총은 빔이 나가는 동안에도 계속 돌고, 조준
+        // 각도에 따라 ApplyAngleFlip이 그림을 뒤집기도 하므로(그 순간 총열 방향이 42도까지
+        // 튄다) 발사 시점의 값을 굳혀 두면 그때부터 다시 어긋난다.
+        WeaponSlot captured_slot = slot;
+        WeaponData captured_weapon = weapon;
+        Vector3 captured_aim = direction;
+
+        BeamProjectile.BarrelProvider provider = delegate (out Vector3 barrel_origin, out Vector3 barrel_direction)
+        {
+            barrel_origin = Vector3.zero;
+            barrel_direction = Vector3.right;
+
+            if (this == null) return false; // 씬 재시작 등으로 사수가 사라졌으면 마지막 상태 유지
+
+            ResolveBarrelLine(captured_slot, captured_weapon, captured_aim, out barrel_origin, out barrel_direction);
+            return true;
+        };
+
+        Vector3 beam_origin, beam_direction;
+        ResolveBarrelLine(slot, weapon, direction, out beam_origin, out beam_direction);
+
+        BeamProjectile.Fire(visual_frames, beam_origin, beam_direction, GetTravelRange(weapon, slot_index),
+                            weapon.ProjectileSize, total_damage, duration, def_ignore, weapon.weapon_knockback,
+                            weapon.weapon_id, isCrit, provider);
+    }
+
+    /// <summary>
+    /// 무기 그림 안에서 <b>총구가 그려진 위치와 총열이 향하는 각도</b>(스프라이트 로컬 기준).
+    ///
+    /// 빔은 이 두 값으로 "총구에서 총열 방향으로" 나간다. 원본 PNG에서 실측한 값이며,
+    /// 좌우 미러 그림은 서로 x 부호만 뒤집힌 쌍이다(RightPlasmaCannon 렌즈 코어 px(305, 604) /
+    /// LeftPlasmaCannon px(716, 603), 1024x1024 · PPU 100 · pivot 중앙).
+    /// </summary>
+    private struct BarrelArt
+    {
+        public Vector2 muzzleLocal;   // 스프라이트 로컬 좌표(유닛). pivot(그림 중앙)이 원점
+        public float angleDegrees;    // 총열이 향하는 각도(스프라이트 로컬, 도)
+    }
+
+    /// <summary>
+    /// 빔 무기 그림별 총구 실측표. <b>여기 없는 그림은 자동 추정으로 폴백한다</b>(아래 주석 참고).
+    ///
+    /// <para><b>왜 각도 계산으로 못 구하나</b>: pivot 각도에서 <c>rotation_offset_degrees</c>와
+    /// <c>weapon_imgangle</c>을 빼면 "조준 목표 방향"이 나오는데, 이 값들은 무기 그림이 아니라
+    /// <b>씬의 소켓마다</b> 잡혀 있고(실측 126.3도 / 37도) 플라즈마 캐논 그림과 맞지 않는다.
+    /// 게다가 <see cref="ApplyAngleFlip"/>이 조준 각도에 따라 무기 이미지에 flip + 로컬 회전을
+    /// 얹기 때문에 <b>같은 pivot 각도라도 총열이 그려지는 방향이 42도까지 달라진다</b>(실측).
+    /// 그래서 "그림 안에서 총열이 어디를 향하는가"만 실측해 두고, 회전·반전·스케일은 렌더러
+    /// Transform이 알아서 반영하게 한다(2026-08-26 사용자 지적: "레이저가 무기와 직선이 아닌
+    /// 약간 휘어진 형태" → 실측 어긋난 각 12~30도).</para>
+    /// </summary>
+    private static readonly Dictionary<string, BarrelArt> barrel_art_by_sprite = new Dictionary<string, BarrelArt>
+    {
+        { "RightPlasmaCannon", new BarrelArt { muzzleLocal = new Vector2(-2.07f, -0.92f), angleDegrees = -156.0f } },
+        { "LeftPlasmaCannon",  new BarrelArt { muzzleLocal = new Vector2( 2.04f, -0.91f), angleDegrees =  -24.1f } },
+    };
+
+    /// <summary>
+    /// 빔이 시작할 지점(총구)과 뻗어나갈 방향(총열 축)을 구한다.
+    /// 표에 있는 그림이면 실측값을, 없으면 그림 중심 → 총구(조준 방향 최원점)로 추정한다.
+    /// </summary>
+    private void ResolveBarrelLine(WeaponSlot slot, WeaponData weapon, Vector3 aimDirection,
+                                   out Vector3 origin, out Vector3 direction)
+    {
+        direction = aimDirection.sqrMagnitude > 0.0001f ? aimDirection.normalized : Vector3.right;
+        origin = ResolveMuzzleWorldPosition(slot, weapon, direction);
+
+        SpriteRenderer renderer = slot.hand_sprite_renderer;
+        if (renderer == null || !renderer.enabled || renderer.sprite == null) return;
+
+        if (barrel_art_by_sprite.TryGetValue(renderer.sprite.name, out BarrelArt art))
+        {
+            // 실측 그림: 총구 위치와 총열 방향을 그대로 월드로 옮긴다.
+            // 반전(flipX/flipY)은 렌더러 속성이라 Transform에 없으므로 부호를 직접 뒤집고,
+            // 방향은 TransformVector로 옮긴다(리그가 음수 스케일일 수 있다 - 위치를
+            // TransformPoint로 옮기므로 부호 관례를 맞춰야 한다).
+            Vector2 muzzle_local = art.muzzleLocal;
+            float rad = art.angleDegrees * Mathf.Deg2Rad;
+            Vector2 axis_local = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
+
+            if (renderer.flipX) { muzzle_local.x = -muzzle_local.x; axis_local.x = -axis_local.x; }
+            if (renderer.flipY) { muzzle_local.y = -muzzle_local.y; axis_local.y = -axis_local.y; }
+
+            Vector3 world_origin = renderer.transform.TransformPoint(muzzle_local);
+            Vector3 world_axis = renderer.transform.TransformVector(axis_local);
+            world_axis.z = 0f;
+
+            if (world_axis.sqrMagnitude > 0.0001f)
+            {
+                origin = new Vector3(world_origin.x, world_origin.y, 0f);
+                direction = world_axis.normalized;
+            }
+            return;
+        }
+
+        // 표에 없는 그림: 중심 → 총구 방향을 총열 축으로 보고 두 번 다듬는다(대략적).
+        // 그 뒤 총구 안쪽으로 밀어 넣어(beam_muzzle_inset_ratio) 빔이 그림 끝에서 떠 보이지 않게 한다.
+        Vector3 center = renderer.transform.position;
+        for (int i = 0; i < 2; i++)
+        {
+            Vector3 axis = ResolveMuzzleWorldPosition(slot, weapon, direction) - center;
+            axis.z = 0f;
+            if (axis.sqrMagnitude < 0.0001f) break;
+            direction = axis.normalized;
+        }
+
+        origin = ResolveMuzzleWorldPosition(slot, weapon, direction)
+                 - direction * (MeasureWeaponExtentAlongAim(slot, direction) * beam_muzzle_inset_ratio);
+        origin.z = 0f;
+    }
+
+    /// <summary>
+    /// 무기 그림이 조준 방향으로 차지하는 길이(월드 유닛). 총구 안쪽으로 얼마나 파고들지를
+    /// <b>그림 크기에 비례</b>해서 정하기 위한 값이라, 무기가 바뀌어도 상수를 다시 잡을 필요가 없다.
+    /// 메시를 못 읽으면 0을 돌려준다(그 경우 보정 없이 예전처럼 바깥 끝에서 시작한다).
+    /// </summary>
+    private float MeasureWeaponExtentAlongAim(WeaponSlot slot, Vector3 aimDirection)
+    {
+        SpriteRenderer renderer = slot.hand_sprite_renderer;
+        if (renderer == null || !renderer.enabled || renderer.sprite == null) return 0f;
+
+        Vector2[] verts = GetSpriteMeshVertices(renderer.sprite);
+        if (verts == null || verts.Length == 0) return 0f;
+
+        Vector2 aim = new Vector2(aimDirection.x, aimDirection.y);
+        if (aim.sqrMagnitude < 0.0001f) return 0f;
+        aim.Normalize();
+
+        Transform image = renderer.transform;
+        float min = float.MaxValue;
+        float max = float.MinValue;
+        for (int i = 0; i < verts.Length; i++)
+        {
+            Vector3 world = image.TransformPoint(ApplyRendererFlip(verts[i], renderer));
+            float projection = Vector2.Dot(new Vector2(world.x, world.y), aim);
+            if (projection < min) min = projection;
+            if (projection > max) max = projection;
+        }
+
+        return Mathf.Max(0f, max - min);
     }
 
     /// <summary>

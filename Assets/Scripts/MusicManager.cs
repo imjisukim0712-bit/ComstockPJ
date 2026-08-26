@@ -30,6 +30,10 @@ public class MusicManager : MonoBehaviour
     /// <summary>인게임 곡 이름 접두사(Game_BGM01, Game_BGM02 … 몇 개든 자동으로 잡힌다).</summary>
     private const string GameClipPrefix = "Game_BGM";
 
+    /// <summary>보스 전투 전용 곡(2026-08-26 사용자 제공 <c>boss_battle_bgm (Condensed Rush Mix)</c>).
+    /// 접두사가 <see cref="GameClipPrefix"/>와 달라서 일반 재생목록에는 섞이지 않는다.</summary>
+    private const string BossClipName = "Boss_BGM";
+
     /// <summary>타이틀 곡을 쓸 씬 이름.</summary>
     private const string TitleSceneName = "Title";
 
@@ -44,11 +48,15 @@ public class MusicManager : MonoBehaviour
 
     private AudioSource source;
     private AudioClip title_clip;
+    private AudioClip boss_clip;
     private readonly List<AudioClip> game_clips = new List<AudioClip>();
 
     // 지금 어떤 재생 목록을 쓰는 중인지. 씬을 넘겨도 목록이 같으면 곡을 끊지 않는다.
     private bool is_title_playlist;
     private bool playlist_started;
+
+    /// <summary>보스 전투 곡을 트는 중인지. 재생목록(타이틀/인게임)과 <b>직교하는</b> 상태다.</summary>
+    private bool is_boss_battle;
 
     private float target_volume = DefaultVolume;
     private float fade_velocity;      // 0이면 페이드 없음, 양수/음수면 초당 볼륨 변화량
@@ -132,9 +140,36 @@ public class MusicManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 보스 전투 곡으로 갈아탄다(보스 등장) / 원래 인게임 곡으로 돌아온다(보스 처치·웨이브 종료·게임오버).
+    ///
+    /// <b>호출부가 상태를 들고 있지 않아도 되도록 멱등하게 만들었다</b> - 같은 값으로 여러 번
+    /// 불러도 곡이 처음부터 다시 시작되지 않는다(보스 처치/웨이브 종료/게임오버가 겹쳐서
+    /// 들어오는 경로가 실제로 있다).
+    /// </summary>
+    public static void SetBossBattle(bool active)
+    {
+        if (Instance == null) return;
+        Instance.ApplyBossBattle(active);
+    }
+
+    private void ApplyBossBattle(bool active)
+    {
+        if (is_boss_battle == active) return;
+        if (active && boss_clip == null) return; // 곡이 없으면 아무것도 하지 않는다(기존 곡 유지)
+
+        is_boss_battle = active;
+
+        // 타이틀 화면에서는 보스 곡을 틀 이유가 없다(있을 수 없는 조합이지만 방어).
+        if (is_title_playlist) return;
+
+        CrossFadeTo(active ? boss_clip : PickNextGameClip(), loop: active);
+    }
+
     private void LoadClips()
     {
         title_clip = Resources.Load<AudioClip>($"{MusicFolder}/{TitleClipName}");
+        boss_clip = Resources.Load<AudioClip>($"{MusicFolder}/{BossClipName}");
 
         // 곡 파일을 추가/삭제해도 코드를 고치지 않도록 폴더를 통째로 읽어 접두사로 거른다.
         AudioClip[] all = Resources.LoadAll<AudioClip>(MusicFolder);
@@ -146,12 +181,23 @@ public class MusicManager : MonoBehaviour
         game_clips.Sort((a, b) => string.CompareOrdinal(a.name, b.name)); // 순서를 안정적으로
 
         if (title_clip == null) Debug.LogWarning($"[MusicManager] 타이틀 곡을 찾지 못했습니다: Resources/{MusicFolder}/{TitleClipName}");
+        if (boss_clip == null) Debug.LogWarning($"[MusicManager] 보스 곡을 찾지 못했습니다: Resources/{MusicFolder}/{BossClipName}");
         if (game_clips.Count == 0) Debug.LogWarning($"[MusicManager] 인게임 곡({GameClipPrefix}*)을 찾지 못했습니다: Resources/{MusicFolder}");
     }
 
     private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         EnsureSingleAudioListener();
+
+        // 보스전 도중에 씬이 바뀌면(재시작·타이틀 복귀) 보스 곡을 그대로 끌고 가면 안 된다.
+        // playlist_started를 내려서 아래 ApplyPlaylistForScene이 "같은 재생목록이니 그대로 둔다"
+        // 로 빠져나가지 않고 반드시 새 곡을 고르게 한다.
+        if (is_boss_battle)
+        {
+            is_boss_battle = false;
+            playlist_started = false;
+        }
+
         ApplyPlaylistForScene(scene.name);
     }
 
@@ -263,7 +309,8 @@ public class MusicManager : MonoBehaviour
         UpdateFade();
 
         // 인게임 곡이 끝나면(반복이 꺼져 있으므로 자연히 멈춘다) 다른 곡을 고른다.
-        if (!is_title_playlist && !source.isPlaying && source.clip != null && pending_clip == null && fade_velocity == 0f)
+        // 보스 곡은 반복 재생이라 끝나지 않지만, 상태가 어긋나도 곡이 바뀌지 않도록 함께 막는다.
+        if (!is_title_playlist && !is_boss_battle && !source.isPlaying && source.clip != null && pending_clip == null && fade_velocity == 0f)
         {
             StartClip(PickNextGameClip(), loop: false);
         }
