@@ -147,11 +147,15 @@ public static class ItemCellUI
     /// <param name="iconBright">false면 아이콘을 흐리게 그린다(빈 슬롯 표시용).</param>
     /// <param name="grade">칸의 등급. 등급별 테두리 아트를 고른다(일반이면 등급색 없는 기본 칸).</param>
     /// <param name="tint">강조(선택)·흐리기(빈 칸)일 때만 준다. null이면 아트 원색 그대로.</param>
+    /// <param name="cornerCaption">true면 이름표를 위쪽 띠가 아니라 <b>우상단 배지</b>로 둔다
+    /// (무기 소켓 칸의 번호 - ItemCellLayout.SetCornerCaption 참고). 아이콘이 칸 안쪽을 다 쓴다.</param>
     public static Image CreateIconCell(RectTransform parent, string name, Sprite icon, ItemGrade grade,
-                                       Color? tint, string caption, bool iconBright, System.Action onClick)
+                                       Color? tint, string caption, bool iconBright, System.Action onClick,
+                                       bool cornerCaption = false)
     {
         Image background = CreateShell(parent, name, grade, tint, onClick, out GameObject cell);
         ItemCellLayout layout = cell.GetComponent<ItemCellLayout>();
+        if (layout != null) layout.SetCornerCaption(cornerCaption);
 
         bool hasCaption = !string.IsNullOrEmpty(caption);
 
@@ -219,12 +223,20 @@ public static class ItemCellUI
     /// 0보다 크면 칸 높이도 컨테이너 높이를 이 행 수로 나눠 맞춘다(스크롤이 없는 격자용).
     /// 0이면 가로세로 비율만 유지한다 - 스크롤이 있어 세로로 넘쳐도 되는 경우.
     /// </param>
-    public static void EnsureGrid(RectTransform container, Vector2 fallbackCellSize, int columns, int fitRows = 0)
+    /// <param name="square">true면 칸을 <b>정사각형</b>으로 만든다 - 가로/세로 중 작은 쪽에 맞춘 뒤
+    /// 남는 자리는 비워 둔다(2026-08-26 사용자 지시: 무기 소켓 칸을 정사각형으로).
+    /// <paramref name="fitRows"/>와 함께 주면 세로도 행 수에 맞춘 뒤 정사각형으로 줄인다.</param>
+    public static void EnsureGrid(RectTransform container, Vector2 fallbackCellSize, int columns, int fitRows = 0,
+                                  bool square = false)
     {
         GridLayoutGroup grid = container.GetComponent<GridLayoutGroup>();
         if (grid == null) grid = container.gameObject.AddComponent<GridLayoutGroup>();
 
-        const float spacing = 6f;
+        // 칸 사이 간격(px). 2026-08-26 사용자가 "간격을 반 정도로"라고 해서 6 → 0까지 내렸다가,
+        // <b>칸끼리 붙어 보인다</b>는 재지적을 받고 3으로 되돌렸다. 화면에 실제로 보이는 틈은
+        // 이 값보다 넓다 - 칸 프레임 아트가 자기 rect 안쪽으로 약 3px 들어가 그려지기 때문이다
+        // (1920 실측: 이 값이 6일 때 테두리와 테두리 사이가 12px, 3일 때 9px).
+        const float spacing = 3f;
         int columnCount = Mathf.Max(1, columns);
 
         // ContentSizeFitter는 스크롤 뷰의 content일 때만 필요하다. 스크롤이 없는 격자에도 붙어
@@ -233,11 +245,17 @@ public static class ItemCellUI
         bool insideScrollRect = container.GetComponentInParent<ScrollRect>() != null;
         ContentSizeFitter fitter = container.GetComponent<ContentSizeFitter>();
 
-        if (!insideScrollRect)
+        if (!insideScrollRect && fitter != null)
         {
-            if (fitter != null) fitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
-            container.sizeDelta = new Vector2(container.sizeDelta.x, 0f); // 앵커가 정한 높이로 복귀
+            fitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
+            container.sizeDelta = new Vector2(container.sizeDelta.x, 0f); // fitter가 늘려 둔 높이 복귀
         }
+        // <b>fitter가 없으면 sizeDelta를 건드리지 않는다</b>(2026-08-26). 예전에는 무조건
+        // sizeDelta.y = 0으로 밀었는데, 그러면 <b>stretch 앵커 + 픽셀 offset</b>으로 잡아 둔
+        // 컨테이너의 offsetMin/Max가 함께 뭉개진다(sizeDelta = offsetMax - offsetMin이라
+        // 0으로 만들면 Unity가 두 값을 pivot 기준으로 다시 맞춘다). 상점의 격자를 배경 패널의
+        // 9-slice 테두리 안쪽 픽셀로 앉히면서 드러났다 - 실측으로 아래쪽이 65~74px 삐져나왔다.
+        // 늘려 놓는 주체가 fitter뿐이므로 fitter가 없을 때는 되돌릴 것도 없다.
 
         Vector2 cellSize = fallbackCellSize;
         float availableWidth = container.rect.width;
@@ -259,6 +277,13 @@ public static class ItemCellUI
                     }
                 }
 
+                if (square)
+                {
+                    float side = Mathf.Min(cellWidth, cellHeight);
+                    cellWidth = side;
+                    cellHeight = side;
+                }
+
                 cellSize = new Vector2(cellWidth, cellHeight);
             }
         }
@@ -267,7 +292,9 @@ public static class ItemCellUI
         grid.spacing = new Vector2(spacing, spacing);
         grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         grid.constraintCount = columnCount;
-        grid.childAlignment = TextAnchor.UpperLeft;
+        // 정사각형 칸은 컨테이너 폭을 다 못 채우므로 가운데로 모은다(왼쪽에 몰리면 오른쪽이
+        // 통째로 비어 "빠진 칸"처럼 보인다). 그 외에는 예전대로 왼쪽 위부터 채운다.
+        grid.childAlignment = square ? TextAnchor.UpperCenter : TextAnchor.UpperLeft;
 
         if (insideScrollRect)
         {
@@ -291,5 +318,59 @@ public static class ItemCellUI
             child.transform.SetParent(null, false);
             Object.Destroy(child);
         }
+    }
+
+    /// <summary>
+    /// 잠긴 아이템 아이콘을 "형태만 남은 단색 실루엣"으로 만든다(2026-08-26 사용자 지적:
+    /// "실루엣만 보여야 한다니까 왜 더 선명해져. 회색으로 덮어").
+    ///
+    /// <para><b>왜 <c>Image.color</c> 틴트로는 안 되는가</b>: color는 원본 픽셀에 곱해지는
+    /// 값이라, 밝은 회색을 주면 원본의 명암 대비(눈·윤곽선 등)가 오히려 더 선명하게 살아난다
+    /// (어두운 색을 곱하면 반대로 뭉개져 안 보인다 - 이전 값 0.10이 그 경우였다). 곱연산으로는
+    /// "밝으면서도 디테일이 안 보이는" 상태를 만들 수 없다.</para>
+    ///
+    /// <para><b>해법</b>: 아이콘 스프라이트를 <see cref="Mask"/>의 스텐실로만 쓰고(알파 모양만
+    /// 취하고 원본 색은 안 보이게 <c>showMaskGraphic = false</c>) 그 안을 단색 자식 이미지로
+    /// 채운다 - 진짜 실루엣(모양은 그대로, 색상 정보는 전혀 없음)이 된다.</para>
+    /// </summary>
+    public static void SetIconLockState(Image icon, bool unlocked, Color silhouetteColor)
+    {
+        if (icon == null) return;
+
+        Mask mask = icon.GetComponent<Mask>();
+        Transform fillTransform = icon.transform.Find("SilhouetteFill");
+
+        if (unlocked)
+        {
+            icon.color = Color.white;
+            if (mask != null) mask.enabled = false;
+            if (fillTransform != null) fillTransform.gameObject.SetActive(false);
+            return;
+        }
+
+        icon.color = Color.white; // 마스크 스텐실 용도 - 원본 색은 showMaskGraphic=false라 안 보인다
+        if (mask == null) mask = icon.gameObject.AddComponent<Mask>();
+        mask.showMaskGraphic = false;
+        mask.enabled = true;
+
+        Image fill;
+        if (fillTransform != null)
+        {
+            fill = fillTransform.GetComponent<Image>();
+            fillTransform.gameObject.SetActive(true);
+        }
+        else
+        {
+            var fillGo = new GameObject("SilhouetteFill", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            fillGo.transform.SetParent(icon.transform, false);
+            var fillRect = (RectTransform)fillGo.transform;
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = Vector2.zero;
+            fillRect.offsetMax = Vector2.zero;
+            fill = fillGo.GetComponent<Image>();
+            fill.raycastTarget = false;
+        }
+        fill.color = silhouetteColor;
     }
 }

@@ -9,6 +9,11 @@ using UnityEngine;
 /// 방향을 총구에 붙여 따라다니게 하지 않는 이유: 3초 내내 조준을 따라 회전하는 레이저가 되어
 /// 사실상 화면 전체를 쓸어버리는 무기가 되기 때문이다. 발사한 방향으로만 뻗는다.
 ///
+/// <b>단, 위치는 총구를 따라간다</b>(2026-08-26 사용자 지적: "직선 레이저가 총구를 따라가는게
+/// 아니라 바닥에 남아있어") - 방향은 고정하되 <see cref="follow_pivot"/>(발사한 소켓의
+/// RigingPoint)와의 상대 오프셋만 유지한 채 매 프레임 위치를 갱신한다. 발사 순간 이후
+/// 캐릭터가 이동하면 빔 전체가 함께 이동하고, 회전(조준 재추적)은 여전히 하지 않는다.
+///
 /// 빔이 여러 개 겹치는 문제는 발사 쪽에서 구조적으로 막혀 있다 - 모든 무기의 대기시간은
 /// "발사 동작이 끝난 뒤"부터 흐르므로(PlayerShootManager.TryFireSlot 참고),
 /// 3초 빔은 3초 + 대기시간이 지나야 다음 발이 나간다.
@@ -30,6 +35,11 @@ public class BeamProjectile : MonoBehaviour
     private float knockback;
     private float remaining_time;
     private float next_tick_time;
+
+    /// <summary>발사한 소켓의 리깅 포인트(없으면 총구). 매 프레임 이 위치 + <see cref="pivot_offset"/>로
+    /// 빔을 옮겨 캐릭터 이동을 따라가게 한다(방향은 바꾸지 않는다).</summary>
+    private Transform follow_pivot;
+    private Vector3 pivot_offset;
 
     // OverlapBox 결과에서 중복 컴포넌트(자식 콜라이더 등)를 걸러내기 위한 틱 단위 임시 집합
     private readonly HashSet<EnemyUnit> hit_this_tick = new HashSet<EnemyUnit>();
@@ -63,24 +73,27 @@ public class BeamProjectile : MonoBehaviour
     public static BeamProjectile Fire(Sprite[] visual_frames, Vector3 origin, Vector3 fire_direction, float beam_length,
                                       float beam_half_width, float total_damage, float duration,
                                       float def_ignore_percent, float knockback_strength, int source_weapon_id = 0,
-                                      bool isCrit = false)
+                                      bool isCrit = false, Transform followPivot = null)
     {
         GameObject obj = new GameObject("Beam");
         obj.transform.position = origin;
 
         BeamProjectile beam = obj.AddComponent<BeamProjectile>();
         beam.Init(visual_frames, fire_direction, beam_length, beam_half_width, total_damage, duration,
-                  def_ignore_percent, knockback_strength, source_weapon_id, isCrit);
+                  def_ignore_percent, knockback_strength, source_weapon_id, isCrit, followPivot);
         return beam;
     }
 
     private void Init(Sprite[] frames, Vector3 fire_direction, float beam_length, float beam_half_width,
                       float total_damage, float duration, float def_ignore_percent, float knockback_strength,
-                      int weapon_id = 0, bool isCrit = false)
+                      int weapon_id = 0, bool isCrit = false, Transform followPivot = null)
     {
         is_crit = isCrit;
         direction = fire_direction.sqrMagnitude > 0.0001f ? fire_direction.normalized : Vector3.right;
         direction.z = 0f;
+
+        follow_pivot = followPivot;
+        pivot_offset = follow_pivot != null ? transform.position - follow_pivot.position : Vector3.zero;
 
         length = Mathf.Max(0.1f, beam_length);
         half_width = Mathf.Max(0.1f, beam_half_width);
@@ -116,7 +129,10 @@ public class BeamProjectile : MonoBehaviour
         visual_renderer = visual_obj.AddComponent<SpriteRenderer>();
         visual_renderer.sprite = first;
         visual_renderer.sortingOrder = VisualSortingOrder;
-        visual_renderer.color = new Color(1f, 1f, 1f, 0.6f); // 겹쳐 보여도 눈이 아프지 않도록 반투명
+        // 2026-08-26 사용자 지적: "이상한 투명도가 적용되어 있다" - 애초에 겹칠 일이 없다
+        // (클래스 주석 참고: 발사 대기시간이 지속시간을 포함해 흐르므로 같은 소켓의 빔은
+        // 구조적으로 겹치지 않는다). 반투명을 없애고 원본 그림 그대로 불투명하게 보여준다.
+        visual_renderer.color = Color.white;
 
         float sprite_length = Mathf.Max(0.0001f, first.bounds.size.x);
         float sprite_height = Mathf.Max(0.0001f, first.bounds.size.y);
@@ -147,6 +163,8 @@ public class BeamProjectile : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+
+        if (follow_pivot != null) transform.position = follow_pivot.position + pivot_offset;
 
         if (Time.time >= next_tick_time)
         {

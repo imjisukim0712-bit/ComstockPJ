@@ -393,8 +393,6 @@ public class EnemyUnit : MonoBehaviour
     // 보스(좀비 군집체)의 8프레임 모션을 제공하면서 <see cref="MonsterAnimationLibrary"/>로
     // 옮겨 몬스터ID 단위로 일반화했다. 세트가 없는 몬스터(차저)는 프리팹의 정지 스프라이트를
     // 그대로 유지한다(사용자 지정: "아직 애니메이션 없는 건 멈춘 이미지로 놔둬").
-    private MonsterAnimationLibrary.Clip move_clip;
-    private bool move_clip_resolved;
 
     /// <summary>
     /// 이 유닛이 쓸 이동 프레임 세트. 기본은 몬스터ID로 조회하며, 데이터테이블 밖에 있는
@@ -405,21 +403,20 @@ public class EnemyUnit : MonoBehaviour
         MonsterAnimationLibrary.GetByMonsterId(MonsterId);
 
     /// <summary>
-    /// 프레임 세트는 <see cref="Init"/>로 MonsterId가 들어온 뒤에야 결정된다(스폰 순서:
-    /// Instantiate → Awake → Init). 그래서 Awake가 아니라 처음 쓰이는 시점에 한 번 조회한다.
+    /// 이 유닛이 지금 재생해야 할 프레임 세트. <b>매번 다시 조회한다 - 캐시하면 안 된다.</b>
+    ///
+    /// 예전에는 "MonsterId는 <see cref="Init"/> 이후에야 정해지므로 처음 쓰이는 시점에 한 번만
+    /// 조회한다"는 이유로 결과를 굳혀 뒀는데, 그러면 <b>상태에 따라 세트를 바꾸는 오버라이드가
+    /// 영영 반영되지 않는다</b>. 실제로 <see cref="ChargerUnit.ResolveMoveClip"/>이 "돌진 중에는
+    /// ChargerCharge 세트"로 바꿔치기하도록 짜여 있었지만, 첫 걷기 프레임에서 ChargerMove로
+    /// 굳어버려 <b>전용 돌진 애니메이션이 한 번도 재생되지 않았다</b>(2026-08-26 실측: 돌진
+    /// 구간 내내 걷기 프레임 f01~f16이 2.5배속으로 재생됨 - 다리는 걷는데 몸만 미끄러졌다).
+    ///
+    /// 매 프레임 호출해도 <see cref="MonsterAnimationLibrary"/> 쪽이 폴더명으로 캐시하므로
+    /// 실제 비용은 Dictionary 조회 한두 번뿐이다(스프라이트 로드는 최초 1회).
+    /// 조회 시점이 항상 "쓰기 직전"이라 MonsterId 결정 순서 문제도 자연히 사라진다.
     /// </summary>
-    private MonsterAnimationLibrary.Clip MoveClip
-    {
-        get
-        {
-            if (!move_clip_resolved)
-            {
-                move_clip = ResolveMoveClip();
-                move_clip_resolved = true;
-            }
-            return move_clip;
-        }
-    }
+    private MonsterAnimationLibrary.Clip MoveClip => ResolveMoveClip();
 
     [Tooltip("이동 모션 재생 속도(초당 프레임 수) 강제 지정. 0 이하면 몬스터별 기본값" +
              "(MonsterAnimationLibrary의 Fps)을 쓴다")]

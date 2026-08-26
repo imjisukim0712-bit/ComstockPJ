@@ -19,8 +19,12 @@ using UnityEngine;
 public class LeaderUnit : EnemyUnit
 {
     [Header("주변 회복 (2026-08-21 무리 동반 기믹 대체)")]
+    // 2026-08-26 사용자 지시("리더의 힐 기믹 쿨타임 늘려줘. 지금은 너무 자주 회복해")로 3 → 8초.
+    // 한 번에 3마리를 최대 체력의 20%씩 채우므로, 3초 간격이면 초당 회복량이 대상 최대 체력의
+    // 6.7%나 되어 플레이어의 DPS를 그대로 상쇄했다. 8초면 초당 2.5%로 내려가 "리더를 먼저
+    // 노려야 한다"는 압박은 남기되 교전 자체가 막히지는 않는다.
     [Tooltip("이 간격(초)마다 주변 좀비를 회복시킨다")]
-    [SerializeField] private float healInterval = 3f;
+    [SerializeField] private float healInterval = 8f;
 
     [Tooltip("한 번에 회복시킬 최대 대상 수(가장 가까운 순으로 고른다)")]
     [SerializeField] private int healTargetCount = 3;

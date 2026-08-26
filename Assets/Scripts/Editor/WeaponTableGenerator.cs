@@ -88,7 +88,7 @@ public static class WeaponTableGenerator
 
         public float imgscale;
         public float imgangle;        // 이미지에 그려진 방향과 조준각의 차이를 메우는 보정각(도). 대부분 0(총구가 오른쪽을 향한 그림)
-        public float weight;          // 자기장코어+다리 지탱력과 비교되는 무게
+        public float weight;          // 다리 지탱력과 비교되는 무게(2026-08-26 자기장 코어 삭제)
         public int basePrice;         // 일반 등급 가격 (상위 등급은 x PriceMultipliers)
 
         public string tanhwan;

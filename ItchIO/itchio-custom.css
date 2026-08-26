@@ -1,0 +1,168 @@
+/* itch.io 커스텀 CSS 권한이 있을 때 Edit theme > Custom CSS에 붙여 넣습니다. */
+
+#wrapper .formatted_description .custom-comstock-description {
+  --custom-ink: #15121c;
+  --custom-panel: #292238;
+  --custom-purple: #9a67d6;
+  --custom-mint: #74ded4;
+  box-sizing: border-box;
+  padding: 24px;
+  color: #eee9f2;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.025) 0,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    var(--custom-ink);
+  border: 4px solid var(--custom-purple);
+  box-shadow: 10px 10px 0 #09070d;
+  font-family: Consolas, "Courier New", monospace;
+  line-height: 1.65;
+}
+
+#wrapper .formatted_description .custom-comstock-description,
+#wrapper .formatted_description .custom-comstock-description * {
+  box-sizing: border-box;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-boot {
+  margin: -24px -24px 24px;
+  padding: 18px 16px 16px;
+  color: var(--custom-ink);
+  background: var(--custom-mint);
+  border-bottom: 4px solid #09070d;
+  letter-spacing: 0.09em;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-boot strong {
+  font-size: 1.3em;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-boot code {
+  color: var(--custom-ink);
+  background: transparent;
+}
+
+#wrapper .formatted_description .custom-comstock-description h2 {
+  margin: 32px 0 14px;
+  padding: 9px 12px;
+  color: #fff;
+  background: var(--custom-panel);
+  border: 0;
+  border-left: 8px solid var(--custom-purple);
+  border-bottom: 2px solid var(--custom-mint);
+  font: 700 1.15em/1.3 Consolas, "Courier New", monospace;
+  letter-spacing: 0.03em;
+}
+
+#wrapper .formatted_description .custom-comstock-description blockquote {
+  margin: 22px 0;
+  padding: 14px 16px;
+  color: inherit;
+  background: var(--custom-panel);
+  border: 2px solid var(--custom-mint);
+  border-left-width: 8px;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-alert {
+  border-color: var(--custom-purple);
+}
+
+#wrapper .formatted_description .custom-comstock-description blockquote p {
+  margin: 0;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-kicker {
+  margin: 26px 0;
+  color: var(--custom-mint);
+  letter-spacing: 0.08em;
+}
+
+#wrapper .formatted_description .custom-comstock-description table {
+  width: 100%;
+  margin: 14px 0 24px;
+  color: inherit;
+  background: transparent;
+  border-collapse: separate;
+  border-spacing: 6px;
+}
+
+#wrapper .formatted_description .custom-comstock-description table td {
+  padding: 12px;
+  background: var(--custom-panel);
+  border: 2px solid #4e4263;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-loop strong,
+#wrapper .formatted_description .custom-comstock-description .custom-readout strong {
+  color: var(--custom-mint);
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-controls td:first-child {
+  color: #fff;
+  background: var(--custom-purple);
+  border-color: var(--custom-purple);
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-controls code {
+  color: #fff;
+  background: transparent;
+  font-size: 1.1em;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+#wrapper .formatted_description .custom-comstock-description li {
+  margin-bottom: 8px;
+}
+
+#wrapper .formatted_description .custom-comstock-description li::marker {
+  color: var(--custom-purple);
+}
+
+#wrapper .formatted_description .custom-comstock-description code {
+  padding: 2px 5px;
+  color: var(--custom-mint);
+  background: #0c0a10;
+}
+
+#wrapper .formatted_description .custom-comstock-description hr {
+  height: 4px;
+  margin: 34px 0 26px;
+  background: var(--custom-purple);
+  border: 0;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-footnote {
+  color: #bbb2c8;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-final {
+  margin-bottom: 0;
+  color: var(--custom-mint);
+  font-size: 1.08em;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 680px) {
+  #wrapper .formatted_description .custom-comstock-description {
+    padding: 16px;
+    border-width: 3px;
+    box-shadow: 6px 6px 0 #09070d;
+  }
+
+  #wrapper .formatted_description .custom-comstock-description .custom-boot {
+    margin: -16px -16px 18px;
+  }
+
+  #wrapper .formatted_description .custom-comstock-description .custom-loop,
+  #wrapper .formatted_description .custom-comstock-description .custom-loop tbody,
+  #wrapper .formatted_description .custom-comstock-description .custom-loop tr,
+  #wrapper .formatted_description .custom-comstock-description .custom-loop td {
+    display: block;
+    width: 100%;
+  }
+}

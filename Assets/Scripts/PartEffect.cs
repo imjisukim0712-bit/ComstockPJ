@@ -25,7 +25,16 @@ public enum PartEffect
     /// <summary>근접 공격으로 받은 피해의 effectAmount%를 공격자에게 되돌린다(가시 플레이트).</summary>
     MeleeReflectPercent,
 
-    /// <summary>AI 코어의 시작 레벨이 effectAmount만큼 올라간다(뉴럴 캐시).</summary>
+    /// <summary>
+    /// (미사용) AI 코어의 시작 레벨이 effectAmount만큼 올라간다.
+    ///
+    /// <b>2026-08-26 사용자 지시로 폐지</b> - 유일한 사용처였던 뉴럴 캐시가 "최대 레벨 +20~45"로
+    /// 바뀌었다(coreMaxLevelBonus). 지금 게임에서는 파츠를 런 도중에 부품 상자로 얻으므로
+    /// "시작 레벨"이라는 개념 자체가 성립하지 않았다 - 장착하는 순간 레벨이 한꺼번에 지급됐다.
+    /// enum은 int로 직렬화되므로 <see cref="PartSlot.Foot"/> 전례대로 <b>자리만 남겨둔다</b>
+    /// (지우면 뒤에 있는 PerDiscStat 이하 값이 전부 밀려 카탈로그의 효과가 뒤바뀐다).
+    /// 계산 로직(AiCoreManager/ModdingManager)과 번역 키는 함께 지웠다.
+    /// </summary>
     CoreStartLevel,
 
     /// <summary>장착한 디스크 1개당 effectStat이 effectAmount만큼 오른다(확장 프레임/코어 연결망/허브 접속기).</summary>

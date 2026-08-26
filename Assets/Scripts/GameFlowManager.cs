@@ -72,9 +72,68 @@ public class GameFlowManager : MonoBehaviour
     /// </summary>
     public static bool IsPaused { get; private set; }
 
+    // 정비/상점 패널 캐시. 파괴되면 Unity의 가짜 null 규칙에 따라 == null이 참이 되어
+    // 다음 조회 때 다시 찾는다(씬을 다시 로드해도 안전하다).
+    private static ModdingPanelUI modding_panel_cache;
+    private static ShopPanelUI shop_panel_cache;
+
+    /// <summary>
+    /// 정비·상점처럼 <b>화면 전체를 덮는 패널이 지금 실제로 켜져 있는지</b>.
+    ///
+    /// <b>2026-08-26 사용자 리포트</b>: "상점에서 점수랑 다음 웨이브랑 겹쳐있음."
+    /// 점수 HUD(<see cref="ScoreHudUI"/>)와 설정 아이콘(<see cref="SettingsIconUI"/>)은 캔버스
+    /// 직속이라 패널과 함께 꺼지지 않고, <see cref="IsIntermission"/> <b>플래그만 보고</b> 스스로
+    /// 숨고 있었다. 플래그와 실제 화면이 어긋나는 순간(플래그가 아직 안 켜졌거나 이미 꺼진 프레임,
+    /// 또는 정규 흐름을 타지 않고 패널을 연 경우)에는 두 HUD가 상점 오른쪽 위 [Next Wave] 버튼
+    /// 위에 그대로 겹쳐 그려진다. <b>플래그가 아니라 패널의 실제 상태를 보면</b> 어긋날 수 없다.
+    /// </summary>
+    public static bool IsFullScreenPanelOpen
+    {
+        get
+        {
+            if (modding_panel_cache == null)
+                modding_panel_cache = FindFirstObjectByType<ModdingPanelUI>(FindObjectsInactive.Include);
+            if (shop_panel_cache == null)
+                shop_panel_cache = FindFirstObjectByType<ShopPanelUI>(FindObjectsInactive.Include);
+
+            return (modding_panel_cache != null && modding_panel_cache.gameObject.activeInHierarchy)
+                || (shop_panel_cache != null && shop_panel_cache.gameObject.activeInHierarchy);
+        }
+    }
+
+    /// <summary>
+    /// 일시정지가 <b>아닐 때</b> 적용되어야 할 시간 배속. 일시정지 중에 다른 연출이 배속을
+    /// 바꾸면 실제 적용은 미루고 이 값만 갱신했다가, 일시정지를 풀 때 이 값으로 복귀한다.
+    /// </summary>
+    private static float base_time_scale = 1f;
+
+    /// <summary>
+    /// <b>Time.timeScale을 바꾸는 유일한 통로다.</b> 일시정지 중이면 실제 적용을 미루고 값만 기억한다.
+    ///
+    /// <b>2026-08-26 버그 수정</b> - 예전에는 각자 <c>Time.timeScale</c>을 직접 대입했고,
+    /// <see cref="PauseMenuUI"/>는 "열기 직전 값을 기억했다가 닫을 때 되돌리는" 방식이었다.
+    /// 그래서 웨이브 시작 배너(<see cref="PlayWaveTransitionBannerRoutine"/>, 1.2초 동안
+    /// timeScale=0)가 떠 있는 동안 ESC를 누르면 <b>일시정지가 0을 "원래 값"으로 기억</b>했고,
+    /// 그 사이 배너 코루틴은 실시간으로 계속 돌아 1.2초 뒤 timeScale을 1로 되돌렸다.
+    /// 그 상태에서 일시정지를 닫으면 기억해 둔 0이 다시 적용돼 <b>게임이 영구히 멈췄다</b>
+    /// (사용자 리포트: "웨이브 UI가 뜬 상태에서 ESC → 설정 → 복귀하면 캐릭터를 못 움직임").
+    /// 이제 "일시정지가 아닐 때의 배속"을 여기 한 곳에서만 소유하므로 둘이 싸우지 않는다.
+    /// </summary>
+    public static void SetTimeScale(float value)
+    {
+        base_time_scale = value;
+        if (!IsPaused) Time.timeScale = value;
+    }
+
     /// <summary>PauseMenuUI만 호출한다. GameFlowManager가 이 상태의 유일한 진실 공급원이라
-    /// 다른 스크립트의 Update 가드들이 안심하고 참조할 수 있다.</summary>
-    public static void SetPaused(bool paused) => IsPaused = paused;
+    /// 다른 스크립트의 Update 가드들이 안심하고 참조할 수 있다.
+    /// 일시정지를 풀 때는 "그 사이에 정해진" <see cref="base_time_scale"/>로 복귀한다 -
+    /// 일시정지를 연 시점의 값이 아니다(위 <see cref="SetTimeScale"/> 주석 참고).</summary>
+    public static void SetPaused(bool paused)
+    {
+        IsPaused = paused;
+        Time.timeScale = paused ? 0f : base_time_scale;
+    }
 
     /// <summary>
     /// 씬을 다시 시작할 때 이전 판의 값이 남지 않도록 PlayerRobotController.Awake()가 호출한다
@@ -84,6 +143,9 @@ public class GameFlowManager : MonoBehaviour
     {
         IsIntermission = false;
         IsPaused = false;
+        base_time_scale = 1f;
+        modding_panel_cache = null;
+        shop_panel_cache = null;
         Time.timeScale = 1f; // 정비 중에 플레이모드를 껐다 켠 경우 0으로 굳어있지 않도록
     }
 
@@ -307,14 +369,21 @@ public class GameFlowManager : MonoBehaviour
     {
         bool isBossWave = waveManager != null && waveManager.IsBossWave(waveNumber);
 
-        Time.timeScale = 0f;
+        SetTimeScale(0f);
         waveTransitionBanner.Show(waveNumber, isBossWave);
 
         // Time.timeScale이 0이므로 실시간(unscaled) 대기를 써야 실제로 시간이 흐른다.
-        yield return new WaitForSecondsRealtime(waveTransitionBannerDuration);
+        // 배너가 떠 있는 동안 ESC를 누르면(일시정지) 여기서도 카운트를 멈춘다 - 그러지 않으면
+        // 설정 화면을 보는 사이에 배너가 뒤에서 조용히 사라져, 돌아왔을 때 배너를 못 본다.
+        float elapsed = 0f;
+        while (elapsed < waveTransitionBannerDuration)
+        {
+            if (!IsPaused) elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
 
         waveTransitionBanner.Hide();
-        Time.timeScale = 1f; // 웨이브가 시작된 직후(=전투 중)이므로 항상 1로 복귀해도 안전하다
+        SetTimeScale(1f); // 웨이브가 시작된 직후(=전투 중)이므로 항상 1로 복귀해도 안전하다
     }
 
     /// <summary>
@@ -361,7 +430,7 @@ public class GameFlowManager : MonoBehaviour
     {
         EnsurePauseMenu(); // scoreSummaryPopup이 아직 없으면 여기서 만든다(EnsureAiCoreExtraButtons와 같은 방어)
 
-        if (freezeTimeDuringIntermission) Time.timeScale = 0f;
+        if (freezeTimeDuringIntermission) SetTimeScale(0f);
         CloseAllIntermissionPanels();
         SetCombatHudVisible(false);
 
@@ -403,8 +472,8 @@ public class GameFlowManager : MonoBehaviour
         // "다음에"를 누르면 제출만 건너뛰고 타이틀 복귀는 그대로 진행한다(2026-08-25).
         void ReturnToTitle()
         {
-            Time.timeScale = 1f;
-            GameFlowManager.SetPaused(false);
+            SetTimeScale(1f);
+            SetPaused(false);
             UnityEngine.SceneManagement.SceneManager.LoadScene("Title");
         }
 
@@ -417,7 +486,7 @@ public class GameFlowManager : MonoBehaviour
 
     private void EnterIntermissionScreens()
     {
-        if (freezeTimeDuringIntermission) Time.timeScale = 0f;
+        if (freezeTimeDuringIntermission) SetTimeScale(0f);
 
         CloseAllIntermissionPanels(); // 이전 단계에서 열린 패널이 남아있지 않도록 항상 깨끗하게 시작
         SetCombatHudVisible(false);   // CloseAll보다 뒤에 와야 한다 - 패널의 Close()가 HUD를 다시 켤 수 있으므로
@@ -813,7 +882,7 @@ public class GameFlowManager : MonoBehaviour
         CurrentState = State.Combat;
         IsIntermission = false;
         SetCombatHudVisible(true);
-        Time.timeScale = 1f; // 정지 해제 - freezeTimeDuringIntermission이 꺼져 있어도 안전한 값
+        SetTimeScale(1f); // 정지 해제 - freezeTimeDuringIntermission이 꺼져 있어도 안전한 값
 
         if (waveManager != null) waveManager.StartNextWave();
     }

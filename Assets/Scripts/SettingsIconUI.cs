@@ -95,7 +95,10 @@ public class SettingsIconUI : MonoBehaviour
         // 일이 없는 버튼이 떠 있으면 혼란스럽다). 일시정지 메뉴가 이미 열려 있을 때도 숨긴다 -
         // 이 아이콘이 PauseMenu보다 뒤 형제라 딤 배경 위에 떠 버리기 때문이다.
         bool paused_menu_open = PauseMenuUI.Instance != null && PauseMenuUI.Instance.IsOpen;
+        // 점수 HUD와 같은 이유로 패널의 실제 상태도 함께 본다(2026-08-26) -
+        // 이 아이콘도 상점 오른쪽 위 [Next Wave] 버튼과 같은 자리를 쓴다.
         bool visible = !GameFlowManager.IsIntermission
+                       && !GameFlowManager.IsFullScreenPanelOpen
                        && !GameOverManager.IsGameOver
                        && !GameWinManager.IsGameWon
                        && !paused_menu_open;

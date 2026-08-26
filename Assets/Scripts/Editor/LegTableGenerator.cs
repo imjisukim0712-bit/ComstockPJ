@@ -77,7 +77,7 @@ public static class LegTableGenerator
         slot = PartSlot.Leg,
         grade = ItemGrade.Normal,
         isDefaultStarter = true,
-        iconName = string.Empty,
+        iconName = "Leg_Standard",
         weight = LegWeight,
         weightCapacity = 12f, // 기존 표준 다리 값 승계(명세에 지탱력 언급 없음)
 
@@ -96,7 +96,7 @@ public static class LegTableGenerator
         slot = PartSlot.Leg,
         grade = ItemGrade.Normal,
         isDefaultStarter = false,
-        iconName = string.Empty,
+        iconName = "Leg_Spider",
         weight = LegWeight,
         weightCapacity = 12f,
 
@@ -119,7 +119,7 @@ public static class LegTableGenerator
         slot = PartSlot.Leg,
         grade = ItemGrade.Normal,
         isDefaultStarter = false,
-        iconName = string.Empty,
+        iconName = "Leg_Caterpillar",
         weight = LegWeight,
         weightCapacity = 12f,
 
@@ -138,7 +138,7 @@ public static class LegTableGenerator
         slot = PartSlot.Leg,
         grade = ItemGrade.Normal,
         isDefaultStarter = false,
-        iconName = string.Empty,
+        iconName = "Leg_Rocket",
         weight = LegWeight,
         weightCapacity = 12f,
 

@@ -62,6 +62,12 @@ public class ChargerUnit : EnemyUnit
     /// 돌진 중(<see cref="is_charging"/>)에는 걷기 대신 돌진 프레임 세트를 재생한다.
     /// <see cref="EnemyUnit.UpdateWalkAnimation"/>은 IsAttacking이 꺼진 뒤에만 이 값을 읽으므로,
     /// 예비 동작(IsAttacking=true) 중에는 호출되지 않고 실제 돌진이 시작된 뒤에만 적용된다.
+    ///
+    /// <b>2026-08-26 - 이 오버라이드는 그동안 한 번도 효력이 없었다.</b> 베이스의
+    /// <c>MoveClip</c>이 결과를 <b>최초 1회만 조회해 굳히고</b> 있어서, 스폰 직후 걷는 순간
+    /// ChargerMove로 확정된 뒤 <see cref="is_charging"/>가 켜져도 다시 물어보지 않았다.
+    /// 그래서 돌진 내내 <b>걷기 프레임이 2.5배속으로</b> 재생됐다(다리는 걷는 동작인데 몸은
+    /// 그보다 훨씬 빠르게 미끄러진다). 베이스에서 캐시를 걷어내 매번 조회하도록 고쳤다.
     /// </summary>
     protected override MonsterAnimationLibrary.Clip ResolveMoveClip()
     {

@@ -7,7 +7,10 @@ using UnityEngine;
 /// <b>아이콘 우선순위</b>(2026-08-20 파츠 25종 아트 적용으로 파츠별 아이콘이 생겼다):
 ///   1) 파츠별 아이콘 — `Assets/Resources/PartIcons/{PartData.iconName}`
 ///   2) 슬롯 공용 아이콘 — `Assets/Resources/PartIcons/{PartSlot}`
-///      (ArmWeaponSocket / ArmArmor / MagneticCore / Leg / LegArmor / Foot / Helmet / DiscSlot / Memory)
+///      (ArmWeaponSocket / Leg / LegArmor / Helmet / DiscSlot / Memory)
+///      아래 switch에는 폐지된 슬롯(ArmArmor·MagneticCore는 2026-08-26, Foot은 2026-08-18)의
+///      가지도 그대로 남아 있다 - enum 값이 남아 있는 한 도달만 안 할 뿐 틀린 코드는 아니고,
+///      Foot을 폐지할 때 정한 관례를 그대로 따른 것이다(PartSlot.cs 참고).
 ///   3) 코드로 그린 임시 실루엣
 /// (텍스처 임포트 설정은 Sprite(2D and UI)여야 한다.)
 ///

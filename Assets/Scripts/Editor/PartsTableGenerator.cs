@@ -15,7 +15,8 @@ using UnityEngine;
 ///
 /// <b>이 생성기는 위 5개 슬롯의 "루트 파츠"만 갈아끼운다.</b>
 ///  - 슬롯당 1개씩 있는 기본 장착 파츠(`isDefaultStarter`)는 손대지 않는다(사용자 확정 2026-08-20).
-///  - 팔 장갑 / 자기장 코어 / 다리 슬롯은 명세에 없어 그대로 둔다.
+///  - 다리 슬롯은 명세에 없어 그대로 둔다(팔 장갑·자기장 코어도 여기 있었지만 2026-08-26에
+///    슬롯 자체가 삭제됐다 - PartSlot.cs 참고).
 /// 무게는 명세에 없으므로 각 슬롯의 기존 임시값을 승계한다(헬멧 1.5 / 다리장갑 2 / 소켓 2 /
 /// 메모리 0 / 디스크슬롯 0.8).
 /// </summary>
@@ -197,9 +198,15 @@ public static class PartsTableGenerator
             coreMaxLevel = I(15, 25, 35, 43, 50)
         },
         new Def {
+            // 2026-08-26 사용자 지시로 "AI 코어 시작 레벨 +15~35"(PartEffect.CoreStartLevel)를
+            // <b>최대 레벨 +20~45</b>로 교체했다. 시작 레벨 개념은 지금 게임 구조와 맞지 않는다 -
+            // 파츠를 런 도중에 부품 상자로 얻으므로 "시작"이랄 것이 없고, 장착하는 순간 레벨
+            // 15~35개가 한꺼번에 지급돼 업그레이드 카드가 무더기로 쌓였다.
+            // 세 메모리의 역할 구분: 칩 = 상한만(최대 +50) / 뉴럴 캐시 = 상한 + 성장 속도 /
+            // 아카식 = 상한 + 성장 + 골드.
             idBase = 533010, name = "뉴럴 캐시", slot = PartSlot.Memory,
             icon = "Memory_NeuralCache", weight = MemoryWeight,
-            effect = PartEffect.CoreStartLevel, effectAmount = V(15f, 20f, 25f, 30f, 35f),
+            coreMaxLevel = I(20, 26, 32, 38, 45),
             stat1 = StatType.ExpGain, amount1 = V(10f, 15f, 20f, 25f, 30f)
         },
         new Def {

@@ -43,6 +43,27 @@ public static class UiSafeArea
     }
 
     /// <summary>
+    /// 배경 이미지의 테두리 두께를 <b>캔버스 픽셀</b>로 돌려준다(left, bottom, right, top).
+    /// Sliced가 아니거나 정보가 없으면 0이다.
+    ///
+    /// <para><see cref="GetBorderRatio"/>와 달리 rect 크기로 나누지 않는다. 9-slice 코너는
+    /// <b>rect가 커지든 작아지든 항상 같은 픽셀 수로 그려지므로</b>, 안쪽에 무언가를 넣을 때는
+    /// 비율이 아니라 이 픽셀 값을 써야 한다("UI 제작 규칙" - 정규화 상수로 테두리를 피하려는
+    /// 시도는 구조적으로 불가능하다).</para>
+    /// </summary>
+    public static Vector4 GetBorderPixels(Image background)
+    {
+        if (background == null || background.sprite == null) return Vector4.zero;
+        if (background.type != Image.Type.Sliced && background.type != Image.Type.Tiled) return Vector4.zero;
+
+        Vector4 border = background.sprite.border; // (left, bottom, right, top) - 텍스처 픽셀
+        if (border == Vector4.zero) return Vector4.zero;
+
+        float ppu = Mathf.Max(0.0001f, background.pixelsPerUnitMultiplier);
+        return new Vector4(border.x / ppu, border.y / ppu, border.z / ppu, border.w / ppu);
+    }
+
+    /// <summary>
     /// <paramref name="content"/>의 앵커를 <b>부모 배경의 테두리 안쪽으로</b> 밀어 넣는다.
     /// 이미 안쪽에 있으면 건드리지 않는다(디자인 의도를 함부로 넓히지 않기 위해 clamp만 한다).
     /// </summary>

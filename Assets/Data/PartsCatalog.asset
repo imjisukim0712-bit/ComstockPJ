@@ -44,74 +44,12 @@ MonoBehaviour:
     legMassPercent: 0
     legVisualType: 0
     coreMaxLevelBonus: 0
-  - partId: 500002
-    partName: "\uD45C\uC900 \uD314 \uC7A5\uAC11"
-    slot: 1
-    grade: 0
-    isDefaultStarter: 1
-    iconName: ArmArmor_Standard
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 0
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.5
-    weightCapacity: 0
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 500003
-    partName: "\uD45C\uC900 \uC790\uAE30\uC7A5 \uCF54\uC5B4"
-    slot: 2
-    grade: 0
-    isDefaultStarter: 1
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 0
-    bonusAmount: 0
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 2.5
-    weightCapacity: 12
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
   - partId: 500004
     partName: "\uAE30\uBCF8 \uB2E4\uB9AC"
     slot: 3
     grade: 0
     isDefaultStarter: 1
-    iconName: 
+    iconName: Leg_Standard
     restrictsWeaponType: 0
     allowedWeaponType: 0
     socketAttackSpeedPercent: 0
@@ -128,7 +66,7 @@ MonoBehaviour:
     effectStat: 0
     effectAmount: 10
     weight: 3.5
-    weightCapacity: 12
+    weightCapacity: 24
     discSlotCount: 0
     legSkillType: 1
     legSkillCooldown: 1
@@ -223,626 +161,6 @@ MonoBehaviour:
     weight: 0.8
     weightCapacity: 0
     discSlotCount: 6
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510050
-    partName: "\uB098\uB178 \uCF54\uD305 \uC7A5\uAC11"
-    slot: 1
-    grade: 0
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 3
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.5
-    weightCapacity: 0
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510051
-    partName: "\uB098\uB178 \uCF54\uD305 \uC7A5\uAC11"
-    slot: 1
-    grade: 1
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 3.9
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.5
-    weightCapacity: 0
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510052
-    partName: "\uB098\uB178 \uCF54\uD305 \uC7A5\uAC11"
-    slot: 1
-    grade: 2
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 5.1
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.5
-    weightCapacity: 0
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510053
-    partName: "\uB098\uB178 \uCF54\uD305 \uC7A5\uAC11"
-    slot: 1
-    grade: 3
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 6.6
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.5
-    weightCapacity: 0
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510054
-    partName: "\uB098\uB178 \uCF54\uD305 \uC7A5\uAC11"
-    slot: 1
-    grade: 4
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 9
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.5
-    weightCapacity: 0
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510060
-    partName: "\uAC15\uD654 \uC7A5\uAC11"
-    slot: 1
-    grade: 0
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 5
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.5
-    weightCapacity: 0
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510061
-    partName: "\uAC15\uD654 \uC7A5\uAC11"
-    slot: 1
-    grade: 1
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 6.5
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.5
-    weightCapacity: 0
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510062
-    partName: "\uAC15\uD654 \uC7A5\uAC11"
-    slot: 1
-    grade: 2
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 8.5
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.5
-    weightCapacity: 0
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510063
-    partName: "\uAC15\uD654 \uC7A5\uAC11"
-    slot: 1
-    grade: 3
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 11
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.5
-    weightCapacity: 0
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510064
-    partName: "\uAC15\uD654 \uC7A5\uAC11"
-    slot: 1
-    grade: 4
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 15
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 1.5
-    weightCapacity: 0
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510070
-    partName: "\uCD08\uC804\uB3C4 \uCF54\uC5B4"
-    slot: 2
-    grade: 0
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 0
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 2.5
-    weightCapacity: 15
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510071
-    partName: "\uCD08\uC804\uB3C4 \uCF54\uC5B4"
-    slot: 2
-    grade: 1
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 0
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 2.5
-    weightCapacity: 19.5
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510072
-    partName: "\uCD08\uC804\uB3C4 \uCF54\uC5B4"
-    slot: 2
-    grade: 2
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 0
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 2.5
-    weightCapacity: 25.5
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510073
-    partName: "\uCD08\uC804\uB3C4 \uCF54\uC5B4"
-    slot: 2
-    grade: 3
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 0
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 2.5
-    weightCapacity: 33
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510074
-    partName: "\uCD08\uC804\uB3C4 \uCF54\uC5B4"
-    slot: 2
-    grade: 4
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 0
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 2.5
-    weightCapacity: 45
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510080
-    partName: "\uACE0\uBC00\uB3C4 \uCF54\uC5B4"
-    slot: 2
-    grade: 0
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 0
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 2.5
-    weightCapacity: 21
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510081
-    partName: "\uACE0\uBC00\uB3C4 \uCF54\uC5B4"
-    slot: 2
-    grade: 1
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 0
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 2.5
-    weightCapacity: 27.3
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510082
-    partName: "\uACE0\uBC00\uB3C4 \uCF54\uC5B4"
-    slot: 2
-    grade: 2
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 0
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 2.5
-    weightCapacity: 35.7
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510083
-    partName: "\uACE0\uBC00\uB3C4 \uCF54\uC5B4"
-    slot: 2
-    grade: 3
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 0
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 2.5
-    weightCapacity: 46.2
-    discSlotCount: 0
-    legSkillType: 0
-    legSkillCooldown: 0
-    legHpLossSpeedPenalty: 0
-    legSpeedRampPassive: 0
-    legMassPercent: 0
-    legVisualType: 0
-    coreMaxLevelBonus: 0
-  - partId: 510084
-    partName: "\uACE0\uBC00\uB3C4 \uCF54\uC5B4"
-    slot: 2
-    grade: 4
-    isDefaultStarter: 0
-    iconName: 
-    restrictsWeaponType: 0
-    allowedWeaponType: 0
-    socketAttackSpeedPercent: 0
-    socketDamageFlat: 0
-    socketDamagePercent: 0
-    socketCritChancePercent: 0
-    socketSplashPercent: 0
-    socketDefIgnorePercent: 0
-    bonusStat: 2
-    bonusAmount: 0
-    bonusStat2: 0
-    bonusAmount2: 0
-    effect: 0
-    effectStat: 0
-    effectAmount: 0
-    weight: 2.5
-    weightCapacity: 63
-    discSlotCount: 0
     legSkillType: 0
     legSkillCooldown: 0
     legHpLossSpeedPenalty: 0
@@ -3689,9 +3007,9 @@ MonoBehaviour:
     bonusAmount: 10
     bonusStat2: 0
     bonusAmount2: 0
-    effect: 6
+    effect: 0
     effectStat: 0
-    effectAmount: 15
+    effectAmount: 0
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
@@ -3701,7 +3019,7 @@ MonoBehaviour:
     legSpeedRampPassive: 0
     legMassPercent: 0
     legVisualType: 0
-    coreMaxLevelBonus: 0
+    coreMaxLevelBonus: 20
   - partId: 533011
     partName: "\uB274\uB7F4 \uCE90\uC2DC"
     slot: 8
@@ -3720,9 +3038,9 @@ MonoBehaviour:
     bonusAmount: 15
     bonusStat2: 0
     bonusAmount2: 0
-    effect: 6
+    effect: 0
     effectStat: 0
-    effectAmount: 20
+    effectAmount: 0
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
@@ -3732,7 +3050,7 @@ MonoBehaviour:
     legSpeedRampPassive: 0
     legMassPercent: 0
     legVisualType: 0
-    coreMaxLevelBonus: 0
+    coreMaxLevelBonus: 26
   - partId: 533012
     partName: "\uB274\uB7F4 \uCE90\uC2DC"
     slot: 8
@@ -3751,9 +3069,9 @@ MonoBehaviour:
     bonusAmount: 20
     bonusStat2: 0
     bonusAmount2: 0
-    effect: 6
+    effect: 0
     effectStat: 0
-    effectAmount: 25
+    effectAmount: 0
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
@@ -3763,7 +3081,7 @@ MonoBehaviour:
     legSpeedRampPassive: 0
     legMassPercent: 0
     legVisualType: 0
-    coreMaxLevelBonus: 0
+    coreMaxLevelBonus: 32
   - partId: 533013
     partName: "\uB274\uB7F4 \uCE90\uC2DC"
     slot: 8
@@ -3782,9 +3100,9 @@ MonoBehaviour:
     bonusAmount: 25
     bonusStat2: 0
     bonusAmount2: 0
-    effect: 6
+    effect: 0
     effectStat: 0
-    effectAmount: 30
+    effectAmount: 0
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
@@ -3794,7 +3112,7 @@ MonoBehaviour:
     legSpeedRampPassive: 0
     legMassPercent: 0
     legVisualType: 0
-    coreMaxLevelBonus: 0
+    coreMaxLevelBonus: 38
   - partId: 533014
     partName: "\uB274\uB7F4 \uCE90\uC2DC"
     slot: 8
@@ -3813,9 +3131,9 @@ MonoBehaviour:
     bonusAmount: 30
     bonusStat2: 0
     bonusAmount2: 0
-    effect: 6
+    effect: 0
     effectStat: 0
-    effectAmount: 35
+    effectAmount: 0
     weight: 0
     weightCapacity: 0
     discSlotCount: 0
@@ -3825,7 +3143,7 @@ MonoBehaviour:
     legSpeedRampPassive: 0
     legMassPercent: 0
     legVisualType: 0
-    coreMaxLevelBonus: 0
+    coreMaxLevelBonus: 45
   - partId: 533020
     partName: "\uC544\uCE74\uC2DD \uB808\uC9C0\uC2A4\uD130"
     slot: 8
@@ -4761,7 +4079,7 @@ MonoBehaviour:
     slot: 3
     grade: 0
     isDefaultStarter: 0
-    iconName: 
+    iconName: Leg_Spider
     restrictsWeaponType: 0
     allowedWeaponType: 0
     socketAttackSpeedPercent: 0
@@ -4778,7 +4096,7 @@ MonoBehaviour:
     effectStat: 0
     effectAmount: 20
     weight: 3.5
-    weightCapacity: 12
+    weightCapacity: 24
     discSlotCount: 0
     legSkillType: 2
     legSkillCooldown: 1
@@ -4792,7 +4110,7 @@ MonoBehaviour:
     slot: 3
     grade: 0
     isDefaultStarter: 0
-    iconName: 
+    iconName: Leg_Caterpillar
     restrictsWeaponType: 0
     allowedWeaponType: 0
     socketAttackSpeedPercent: 0
@@ -4809,7 +4127,7 @@ MonoBehaviour:
     effectStat: 0
     effectAmount: 25
     weight: 3.5
-    weightCapacity: 12
+    weightCapacity: 24
     discSlotCount: 0
     legSkillType: 3
     legSkillCooldown: 3
@@ -4823,7 +4141,7 @@ MonoBehaviour:
     slot: 3
     grade: 0
     isDefaultStarter: 0
-    iconName: 
+    iconName: Leg_Rocket
     restrictsWeaponType: 0
     allowedWeaponType: 0
     socketAttackSpeedPercent: 0
@@ -4840,7 +4158,7 @@ MonoBehaviour:
     effectStat: 0
     effectAmount: 10
     weight: 3.5
-    weightCapacity: 12
+    weightCapacity: 24
     discSlotCount: 0
     legSkillType: 0
     legSkillCooldown: 0
@@ -5258,5 +4576,7 @@ MonoBehaviour:
     weight: 3
     minWave: 7
   partBoxDropChance: 0.003
+  partBoxGuaranteeWaves: 2
+  partBoxGuaranteeChanceMultiplier: 12
   mismatchWeightMultiplier: 2
   overweightSpeedPenaltyPerUnit: 0.05

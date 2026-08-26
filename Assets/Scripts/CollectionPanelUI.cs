@@ -24,7 +24,10 @@ public class CollectionPanelUI : MonoBehaviour
 
     private static readonly Color AccentColor = new Color(0.95f, 0.75f, 0.15f, 1f);
     private static readonly Color CellIdleColor = new Color(0.16f, 0.17f, 0.20f, 1f);
-    private static readonly Color LockedIconColor = new Color(0.10f, 0.10f, 0.12f, 1f);
+    // 2026-08-26 사용자 지적: "해금화면에서는 각 이미지 실루엣만 보여줘야지, 어둡게 보여주면
+    // 안됨" - 옛 값(0.10)은 칸 배경(CellIdleColor 0.16)보다도 어두워 실루엣이 거의 안 보였다.
+    // 배경보다 밝은 회색으로 올려 모양은 뚜렷하되 색상 정보는 드러나지 않는 실루엣으로 만든다.
+    private static readonly Color LockedIconColor = new Color(0.42f, 0.44f, 0.48f, 1f);
     private static readonly Color MutedTextColor = new Color(0.72f, 0.74f, 0.78f, 1f);
 
     private sealed class CategoryTab
@@ -199,17 +202,19 @@ public class CollectionPanelUI : MonoBehaviour
             bg.pixelsPerUnitMultiplier = 2.2f;
         }
 
-        Image icon = CreateImage(cellRect, "Icon", new Vector2(0.14f, 0.28f), new Vector2(0.86f, 0.94f),
-                                 unlocked ? Color.white : LockedIconColor);
+        // 2026-08-26 사용자 지적: 자물쇠를 없애는 대신 실루엣(그림)을 더 크게 - "잠금 표시는
+        // 우상단으로 배치하고 차라리 다른 요소를 크게 쓰거나 그림을 크게 만들어라".
+        Image icon = CreateImage(cellRect, "Icon", new Vector2(0.08f, 0.24f), new Vector2(0.92f, 0.95f), Color.white);
         icon.sprite = ResolveIcon(entry);
         icon.preserveAspect = true;
         icon.raycastTarget = false;
+        ItemCellUI.SetIconLockState(icon, unlocked, LockedIconColor);
 
         if (!unlocked)
         {
-            // 잠긴 항목은 실루엣만 보여주고 그 위에 자물쇠를 얹는다(무엇이 있는지는 알되
-            // 정체는 가린다 - 해금 기획서 목업과 같은 표현).
-            Image padlock = CreateImage(cellRect, "Lock", new Vector2(0.34f, 0.42f), new Vector2(0.66f, 0.80f), Color.white);
+            // 잠긴 항목은 실루엣만 보여주고 우상단에 작은 자물쇠 배지를 얹는다(무엇이 있는지는
+            // 알되 정체는 가린다) - 자물쇠가 칸 중앙을 덮어 실루엣을 가리지 않게 모서리로 뺐다.
+            Image padlock = CreateImage(cellRect, "Lock", new Vector2(0.70f, 0.76f), new Vector2(0.92f, 0.94f), Color.white);
             padlock.sprite = UiIconLibrary.Lock();
             padlock.preserveAspect = true;
             padlock.raycastTarget = false;
@@ -286,7 +291,7 @@ public class CollectionPanelUI : MonoBehaviour
         if (detailIcon != null)
         {
             detailIcon.sprite = ResolveIcon(entry);
-            detailIcon.color = unlocked ? Color.white : LockedIconColor;
+            ItemCellUI.SetIconLockState(detailIcon, unlocked, LockedIconColor);
         }
 
         if (detailName != null) detailName.text = unlocked ? ResolveName(entry) : "???";
@@ -503,7 +508,7 @@ public class CollectionPanelUI : MonoBehaviour
 
         var image = go.GetComponent<Image>();
         image.color = Color.white;
-        Sprite art = Resources.Load<Sprite>("UI/Purple_ui02");
+        Sprite art = Resources.Load<Sprite>("UI/Purple_button00");
         if (art != null)
         {
             image.sprite = art;

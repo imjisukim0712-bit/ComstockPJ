@@ -55,14 +55,6 @@ public static class RunState
     public static int CoreExp { get; set; } = 0;
     public static int CoreLevel { get; set; } = 1;
 
-    /// <summary>
-    /// 메모리 파츠(뉴럴 캐시)의 "AI 코어 시작 레벨 +N"으로 <b>이미 지급한</b> 레벨 수.
-    /// 파츠는 런 중에 부품 상자로 얻으므로 "런 시작"에 한 번만 줄 수가 없다 - 장착한 순간
-    /// 부족한 만큼만 채워주고, 여기 기록해서 등급을 오르내려도 중복 지급되지 않게 한다
-    /// (내렸을 때 레벨을 빼앗지는 않는다 - 이미 쓴 업그레이드를 되돌릴 방법이 없다).
-    /// </summary>
-    public static int CoreStartLevelGranted { get; set; } = 0;
-
     // AI 코어 업그레이드로 누적된 스탯 보너스(RobotStats.Compute가 반영). 레벨업했지만
     // 아직 정비 시간에 카드를 선택하지 않은 건수(GameFlowManager가 이 값을 보고 업그레이드 카드를 띄운다)
     public static Dictionary<StatType, float> CoreStatBonuses { get; private set; } = new Dictionary<StatType, float>();
@@ -171,7 +163,6 @@ public static class RunState
         goldFraction = 0f;
         CoreExp = 0;
         CoreLevel = 1;
-        CoreStartLevelGranted = 0;
         CoreStatBonuses.Clear();
         PendingCoreUpgradeChoices = 0;
         EquippedWeapons.Clear();

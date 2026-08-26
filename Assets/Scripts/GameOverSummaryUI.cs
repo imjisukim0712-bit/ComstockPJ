@@ -112,11 +112,11 @@ public class GameOverSummaryUI : MonoBehaviour
             $"{Loc.T("modding.head")}: {GetRobotName(player)}\n" +
             $"{Loc.T("partslot.helmet")}: {PartLine(modding, PartSlot.Helmet)}\n" +
             $"{BuildWeaponSocketPartsBlock(modding, socketCount)}\n" +
-            $"{Loc.T("partslot.armarmor")}: {PartLine(modding, PartSlot.ArmArmor)}\n" +
-            $"{Loc.T("partslot.magneticcore")}: {PartLine(modding, PartSlot.MagneticCore)}\n" +
             $"{Loc.T("partslot.leg")}: {PartLine(modding, PartSlot.Leg)}\n" +
             $"{Loc.T("partslot.legarmor")}: {PartLine(modding, PartSlot.LegArmor)}\n" +
-            $"{Loc.T("partslot.foot")}: {PartLine(modding, PartSlot.Foot)}\n" +
+            // 2026-08-26: 발(Foot) 줄을 뺐다. 발은 2026-08-18에 폐지된 슬롯이라 PartsCatalog에
+            // 파츠 자체가 없고, 그래서 이 줄은 항상 "발: (없음)"만 찍고 있었다(같은 날 지운
+            // 팔장갑/자기장 코어와 같은 정리 - PartSlot.cs 참고).
             $"{Loc.T("partslot.discslot")}: {PartLine(modding, PartSlot.DiscSlot)}\n" +
             $"{Loc.T("modding.weight")} {(modding != null ? modding.GetTotalWeight() : 0f):0.#} / " +
             $"{(modding != null ? modding.GetTotalWeightCapacity() : 0f):0.#}";

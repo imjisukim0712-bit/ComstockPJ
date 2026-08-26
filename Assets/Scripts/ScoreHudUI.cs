@@ -60,7 +60,12 @@ public class ScoreHudUI : MonoBehaviour
     {
         if (content == null) return;
 
+        // IsFullScreenPanelOpen: 정비·상점 패널이 실제로 켜져 있으면 무조건 숨긴다.
+        // IsIntermission 플래그만 보면 플래그와 화면이 어긋난 순간 이 라벨이 상점 오른쪽 위
+        // [Next Wave] 버튼 위에 겹쳐 그려진다(2026-08-26 사용자 리포트 "상점에서 점수랑
+        // 다음 웨이브랑 겹쳐있음"). 자세한 내용은 GameFlowManager.IsFullScreenPanelOpen 주석.
         bool visible = !GameFlowManager.IsIntermission
+                       && !GameFlowManager.IsFullScreenPanelOpen
                        && !GameOverManager.IsGameOver
                        && !GameWinManager.IsGameWon
                        && !(PauseMenuUI.Instance != null && PauseMenuUI.Instance.IsOpen);

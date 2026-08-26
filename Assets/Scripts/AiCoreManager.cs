@@ -52,8 +52,6 @@ public class AiCoreManager : MonoBehaviour
     {
         int maxLevel = MaxLevel;
 
-        ApplyPartStartLevelBonus(maxLevel);
-
         if (RunState.CoreLevel >= maxLevel) return;
 
         int level_before = RunState.CoreLevel;
@@ -124,32 +122,6 @@ public class AiCoreManager : MonoBehaviour
         }
 
         return multiplier;
-    }
-
-    /// <summary>
-    /// 메모리 파츠(뉴럴 캐시)의 "AI 코어 시작 레벨 +N"을 반영한다.
-    ///
-    /// 파츠는 런 중에 부품 상자로 얻으므로 "런을 시작할 때 한 번"이라는 처리가 불가능하다 -
-    /// 장착한 순간에 <b>아직 못 받은 만큼만</b> 레벨을 채워주고 지급량을
-    /// <see cref="RunState.CoreStartLevelGranted"/>에 기록해 중복 지급을 막는다.
-    /// 레벨업으로 취급하므로 업그레이드 카드도 그만큼 쌓인다(공짜 레벨이 아니라 실제 성장이다).
-    /// </summary>
-    private void ApplyPartStartLevelBonus(int maxLevel)
-    {
-        if (ModdingManager.Instance == null) return;
-
-        int bonus = ModdingManager.Instance.CoreStartLevel - 1; // CoreStartLevel은 1이 기본이다
-        int missing = bonus - RunState.CoreStartLevelGranted;
-        if (missing <= 0) return;
-
-        RunState.CoreStartLevelGranted = bonus;
-
-        for (int i = 0; i < missing && RunState.CoreLevel < maxLevel; i++)
-        {
-            RunState.CoreLevel++;
-            RunState.PendingCoreUpgradeChoices++;
-            UnlockTracker.ReportLevelUp();
-        }
     }
 
     /// <summary>HUD의 경험치 바 표시용. 최대 레벨이면 다음 레벨이 없다는 뜻으로 -1을 돌려준다.</summary>

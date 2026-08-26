@@ -946,10 +946,19 @@ public class ProceduralCharacterRig : MonoBehaviour
     {
         // 이동 방향은 월드 벡터라, 로컬(=몸통 기준, facingSign 반전이 걸려 있는) 공간으로
         // 옮겨야 스텝 오버슈트 방향이 실제 화면 이동 방향과 맞는다.
+        //
+        // <b>2026-08-26 - 반드시 InverseTransformVector여야 한다(Direction이 아니라).</b>
+        // Unity의 TransformDirection/InverseTransformDirection은 <b>스케일을 무시</b>하고 회전만
+        // 적용한다. spiderRoot는 오른쪽을 볼 때 localScale.x = -1로 좌우 반전되는데(ApplyAltVisualFacing),
+        // 발 위치는 TransformPoint/InverseTransformPoint로 오가므로 x가 뒤집힌 로컬 공간을 쓴다.
+        // 방향만 반전을 안 받으면 오른쪽으로 갈 때 "앞서 짚을 거리"(stepLead)가 <b>뒤로</b> 붙어,
+        // 발이 매번 몸 뒤에 착지하고 곧바로 다시 뒤처져 <b>발이 땅에 끌려다녔다</b>
+        // (사용자 리포트: "거미다리로 오른쪽으로 움직이면 모션이 안 나오고 질질 끌려간다").
+        // InverseTransformVector는 스케일까지 반영하므로 위치 변환과 부호 관례가 일치한다.
         Vector2 moveDirLocal = Vector2.zero;
         if (velocity.sqrMagnitude > 1f)
         {
-            Vector3 localDir = spiderRoot.InverseTransformDirection(new Vector3(velocity.x, velocity.y, 0f));
+            Vector3 localDir = spiderRoot.InverseTransformVector(new Vector3(velocity.x, velocity.y, 0f));
             moveDirLocal = ((Vector2)localDir).normalized;
         }
 

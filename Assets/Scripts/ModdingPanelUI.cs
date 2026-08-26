@@ -117,12 +117,75 @@ public class ModdingPanelUI : MonoBehaviour
     // 정비 중에는 Time.timeScale이 0이지만 Update는 계속 호출되므로 문제없다.
     private void Update()
     {
+        // 칸을 만들기 전에 두 격자를 배경 패널의 테두리 안쪽으로 먼저 밀어 넣는다
+        // (LayoutSlotPanelRows 주석 참고 - 안 하면 칸이 패널 테두리 위에 얹힌다).
+        LayoutSlotPanelRows();
+
         if (inventoryContent != null) EnsureGrid(inventoryContent, inventoryCellSize, inventoryColumns);
         if (slotContent != null) EnsureGrid(slotContent, slotCellSize, slotColumns, SlotRowCount);
 
         // 2026-08-18 UI 기획서 반영 - 머리 + 무기 소켓은 한 줄(1행)에 나란히 그린다.
         // 소켓 수(WeaponSocketCount)만큼 열이 늘어나므로 여기서 매 프레임 열 수를 다시 맞춘다.
         if (headSocketRow != null) EnsureGrid(headSocketRow, slotCellSize, 1 + WeaponSocketCount, fitRows: 1);
+    }
+
+    /// <summary>
+    /// 머리+소켓 줄과 파츠 격자를 <b>SlotPanel 배경 아트의 실제 9-slice 테두리 안쪽</b>에 앉힌다.
+    ///
+    /// <para>2026-08-26 사용자 지적("패널과 카드가 겹친다"). 씬에는 두 컨테이너가 패널의 2%
+    /// (정규화)만 들여쓴 채로 놓여 있었는데, 배경 <c>Black_ui01</c>의 테두리는 <b>34px 고정</b>이라
+    /// 1920x1080 실측에서 좌우 13.8px·아래 24.5px씩 테두리를 파고들었다. <b>9-slice 테두리는 rect
+    /// 크기와 무관하게 항상 같은 픽셀이므로 정규화 상수로는 원리상 피할 수 없다</b>
+    /// (프로젝트 안내 "UI 제작 규칙" - 아이템 칸에서 이미 같은 결론을 냈다).</para>
+    ///
+    /// <para>대신 <b>씬이 정한 비율을 그대로 쓰되, 실제 테두리보다 좁아지지는 않게</b> 픽셀로
+    /// 올려친다(<c>Max(비율 여백, 테두리 + 여유)</c>). 그래서 1080p에서는 디자인이 의도한
+    /// 여백이 그대로 유지되고, 창이 작아져 비율 여백이 테두리보다 얇아지는 순간부터만 테두리가
+    /// 이긴다. 두 컨테이너의 세로 배분(머리줄 : 틈 : 격자)도 씬의 비율을 그대로 옮긴다.</para>
+    /// </summary>
+    private void LayoutSlotPanelRows()
+    {
+        if (slotContent == null && headSocketRow == null) return;
+
+        RectTransform panel = (slotContent != null ? slotContent.parent : headSocketRow.parent) as RectTransform;
+        if (panel == null) return;
+
+        Rect area = panel.rect;
+        if (area.width <= 10f || area.height <= 10f) return;   // 아직 레이아웃 전
+
+        Vector4 bezel = UiSafeArea.GetBorderPixels(panel.GetComponent<Image>());
+        const float pad = 6f;      // 테두리 선에 아슬아슬하게 닿지 않도록 한 번 더
+        const float rowGap = 6f;
+
+        // 씬 원본 비율: 좌우 0.02 / 아래 0.02 / 위 0.10(‘Equipped Parts’ 배너 자리)
+        float left = Mathf.Max(bezel.x + pad, 0.02f * area.width);
+        float right = Mathf.Max(bezel.z + pad, 0.02f * area.width);
+        float bottom = Mathf.Max(bezel.y + pad, 0.02f * area.height);
+        float top = Mathf.Max(bezel.w + pad, 0.10f * area.height);
+
+        float inner = area.height - bottom - top;
+        if (inner <= 10f) return;
+
+        // 씬 원본 세로 배분: 머리줄 0.20 / 틈 0.04 / 격자 0.64 (합 0.88)
+        float rowHeight = inner * (0.20f / 0.88f);
+        float gap = Mathf.Max(rowGap, inner * (0.04f / 0.88f));
+
+        if (headSocketRow != null)
+        {
+            // 위 앵커선 하나에 min/max를 걸면 offset이 곧 픽셀이라 해상도가 바뀌어도 테두리를 지킨다.
+            headSocketRow.anchorMin = new Vector2(0f, 1f);
+            headSocketRow.anchorMax = new Vector2(1f, 1f);
+            headSocketRow.offsetMin = new Vector2(left, -(top + rowHeight));
+            headSocketRow.offsetMax = new Vector2(-right, -top);
+        }
+
+        if (slotContent != null)
+        {
+            slotContent.anchorMin = new Vector2(0f, 0f);
+            slotContent.anchorMax = new Vector2(1f, 1f);
+            slotContent.offsetMin = new Vector2(left, bottom);
+            slotContent.offsetMax = new Vector2(-right, -(top + (headSocketRow != null ? rowHeight + gap : 0f)));
+        }
     }
 
     /// <summary>파츠 슬롯(slotContent) 칸 수 기준 행 수. headSocketRow가 따로 있으면 머리·무기
@@ -179,8 +242,10 @@ public class ModdingPanelUI : MonoBehaviour
     /// 숫자로 정하지 말라고 한다. <see cref="UiSafeArea"/>가 배경 스프라이트의 실제 9-slice
     /// border에서 역산하므로, 나중에 배경 아트가 바뀌어도 이 코드를 고칠 필요가 없다.</para>
     ///
-    /// <para>상단 배너(<c>Purple_ui02</c>)는 좌우 끝이 뾰족한 모양이라 <b>좌우만</b> 맞춘다 -
-    /// 세로 테두리(25px)는 장식용 베벨이라 그만큼 안쪽으로 밀면 글자가 불필요하게 작아진다.</para>
+    /// <para>상단 배너는 <b>좌우만</b> 맞춘다 - 세로 테두리는 장식용 베벨이라 그만큼 안쪽으로
+    /// 밀면 글자가 불필요하게 작아진다(2026-08-25 도입 당시 배너가 <c>Purple_ui02</c>라는
+    /// 사다리꼴 아트였던 이유로 정한 규칙인데, 2026-08-26 사다리꼴 UI 정리로 배너 아트를
+    /// <c>Panel02</c>(사각형)로 바꾼 뒤에도 좌우만 맞추는 동작 자체는 그대로 둔다.</para>
     /// </summary>
     private void ApplyTextSafeArea()
     {

@@ -893,7 +893,16 @@ public class PlayerShootManager : MonoBehaviour
         // 감지거리 = 적을 감지해 발사를 시작하는 거리. 탄이 날아가는 최대 거리(사거리)와는
         // 별개이며, 둘 다 무기 기본값(weapon_range)에 소켓 등급 배율을 곱해서 얻는다.
         float detect_range = GetDetectRange(weapon, slot_index);
-        EnemyUnit target = FindNearestEnemyInRange(pivot.position, detect_range);
+
+        // 근접은 <b>판정과 같은 높이</b>에서 거리를 잰다. 소켓은 어깨 높이(플레이어 발밑 기준
+        // y +0.79)에 있고 적 원점은 발밑에 있는데, 이 게임의 y는 화면 높이와 진행 방향을 겸하므로
+        // 소켓 위치 그대로 재면 수평으로 코앞에 있는 적도 0.79만큼 멀게 계산된다.
+        // ApplyMeleeHitAtBlade가 판정 높이를 내리는 것과 같은 보정이다(찌르는 중에는 위에서
+        // 이미 반환했으므로 지금 pivot은 항상 대기 위치 = 소켓 홈이다).
+        Vector3 detect_origin = pivot.position;
+        if (is_melee && player_stats != null) detect_origin.y -= pivot.position.y - player_stats.transform.position.y;
+
+        EnemyUnit target = FindNearestEnemyInRange(detect_origin, detect_range);
         if (target != null) IsTargetingEnemy = true;
 
         // 이 소켓에 이전에 총이 장착돼 있었다면 ApplyAngleFlip이 flipY/localRotation을 남겨뒀을 수
@@ -997,12 +1006,62 @@ public class PlayerShootManager : MonoBehaviour
     /// </summary>
     private float GetDetectRange(WeaponData weapon, int slot_index)
     {
+        // 근접무기는 weapon_range/weapon_detect가 아니라 <b>찌르기가 실제로 닿는 거리</b>에서
+        // 감지 거리를 뽑는다 - 아래 GetMeleeReach 주석 참고.
+        if (weapon.weapon_firemode == WeaponFireMode.MeleeSwing)
+        {
+            float reach = GetMeleeReach(weapon, slot_index);
+            return max_detect_range > 0f ? Mathf.Min(reach, max_detect_range) : reach;
+        }
+
         float detect = weapon.DetectRange * GetWeaponRangeBonusMultiplier()
                        * HeadEffects.RangeMultiplier(weapon);
         detect = Mathf.Min(detect, GetTravelRange(weapon, slot_index));
 
         if (max_detect_range > 0f) detect = Mathf.Min(detect, max_detect_range);
         return detect;
+    }
+
+    /// <summary>적의 콜라이더 반폭 몫(유닛). 판정은 OverlapSphere라 적 콜라이더가 칼 구체에
+    /// 닿기만 하면 맞는데, 감지 쪽은 적의 <b>원점</b>까지의 거리를 재므로 그만큼을 더해 줘야
+    /// 기준이 같아진다. 좀비 콜라이더 실측 반폭 0.5보다 조금 짧게 잡아 보수적으로 둔다.</summary>
+    private const float MeleeTargetRadiusAllowance = 0.4f;
+
+    /// <summary>
+    /// 근접무기가 이번에 찌르면 <b>실제로 닿는 거리</b>(소켓 기준, 유닛).
+    ///
+    /// <b>2026-08-26 사용자 리포트</b>: "근접무기 장착하고 사거리 늘어나면 감지 거리는 늘어나는데
+    /// 무기 자체의 사거리는 늘어나지 않은건지 찌르는 시늉만 하고 실제 데미지는 안 들어가."
+    ///
+    /// 원인은 두 거리가 <b>서로 다른 값에서</b> 나오고 있었다는 것이다.
+    ///  - 감지: weapon_detect(1.54~1.76) x 사거리배율
+    ///  - 도달: weapon_atsize(0.99~1.155) x 사거리배율 <b>+ 칼 그림 반경(배율을 안 받는 상수)</b>
+    /// weapon_detect 값은 2026-08-13에 "칼 그림 반경·소켓 위치까지 포함한 실측 도달 거리"로
+    /// 잡은 값인데, <b>배율은 그중 찌르는 거리에만 곱해진다</b>. 그래서 배율이 커질수록 두 값이
+    /// 벌어졌다(픽시 x2에서 감지 3.08 vs 도달 약 2.3 → 그 사이의 적에게는 헛손질).
+    ///
+    /// 이제 감지 거리를 <b>판정과 같은 재료</b>로 계산한다: 찌르는 거리 + 칼 그림 반경 + 적 반폭.
+    /// 앞의 둘은 <see cref="StartMeleeThrustVisual"/>·<see cref="ApplyMeleeHitAtBlade"/>가 쓰는 값
+    /// 그대로다 - "보이는 것 = 맞는 것 = 노리는 것"이 구조적으로 보장되고, 배율이 얼마가 되든
+    /// 어긋날 수 없다(이 프로젝트에서 반복된 "시각/판정이 서로 다른 상수를 쓰는" 버그 계열).
+    /// </summary>
+    private float GetMeleeReach(WeaponData weapon, int slot_index)
+    {
+        float thrust = weapon.ProjectileSize * GetWeaponRangeBonusMultiplier()
+                       * HeadEffects.RangeMultiplier(weapon);
+
+        float blade_radius = 0f;
+        if (slot_index >= 0 && slot_index < weapon_slots.Count)
+        {
+            SpriteRenderer blade = weapon_slots[slot_index].hand_sprite_renderer;
+            if (blade != null && blade.sprite != null)
+            {
+                Bounds bounds = blade.bounds; // 판정과 같은 값(월드 AABB)
+                blade_radius = Mathf.Max(bounds.extents.x, bounds.extents.y);
+            }
+        }
+
+        return thrust + blade_radius + MeleeTargetRadiusAllowance;
     }
 
     /// <summary>
@@ -1230,7 +1289,8 @@ public class PlayerShootManager : MonoBehaviour
         switch (weapon.weapon_firemode)
         {
             case WeaponFireMode.Beam:
-                FireBeam(weapon, fire_origin, aim_direction, damage, slot_index, is_crit);
+                FireBeam(weapon, fire_origin, aim_direction, damage, slot_index, is_crit,
+                         slot.rig_point != null ? slot.rig_point : slot.muzzle_point);
                 attack_duration = Mathf.Max(0f, weapon.weapon_duration);
                 break;
 
@@ -1563,7 +1623,10 @@ public class PlayerShootManager : MonoBehaviour
     }
 
     /// <summary>지속시간 동안 직선 범위를 태우는 빔을 만든다(플라즈마 캐논).</summary>
-    private void FireBeam(WeaponData weapon, Vector3 origin, Vector3 direction, float total_damage, int slot_index, bool isCrit)
+    /// <param name="followPivot">발사한 소켓의 리깅 포인트. 빔이 매 프레임 이 위치를 따라가게
+    /// 한다(2026-08-26 - 예전엔 발사 순간 위치에 고정돼 캐릭터가 이동하면 바닥에 남았다).</param>
+    private void FireBeam(WeaponData weapon, Vector3 origin, Vector3 direction, float total_damage, int slot_index,
+                          bool isCrit, Transform followPivot)
     {
         Sprite[] visual_frames = ResolveBeamFrames(beam_sprite_name);
 
@@ -1573,7 +1636,7 @@ public class PlayerShootManager : MonoBehaviour
 
         BeamProjectile.Fire(visual_frames, origin, direction, GetTravelRange(weapon, slot_index), weapon.ProjectileSize,
                             total_damage, weapon.weapon_duration, def_ignore, weapon.weapon_knockback,
-                            weapon.weapon_id, isCrit);
+                            weapon.weapon_id, isCrit, followPivot);
     }
 
     /// <summary>

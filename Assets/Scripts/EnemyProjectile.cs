@@ -69,6 +69,18 @@ public class EnemyProjectile : MonoBehaviour
 
         float visual_multiplier = visualSize > 0f ? visualSize : 1f;
         transform.localScale = Vector3.one * visual_multiplier;
+
+        // 날아가는 방향으로 그림을 돌린다(2026-08-26 사용자 리포트: "스피터 투사체가 어디를
+        // 보고 쏴도 왼쪽만 보고 날아간다"). 예전에는 회전을 아예 주지 않아서 <b>이동 방향과
+        // 무관하게 항상 원본 그림 방향</b>이었다.
+        //
+        // 원본 그림(Resources/SpitterProjectile.png)은 이 프로젝트의 아트 관례대로 <b>왼쪽</b>을
+        // 향한다 - 불투명 픽셀을 실측하면 덩어리가 왼쪽(무게중심 x=52.2 < 중심 60)에 있고
+        // 흩날리는 물방울 꼬리가 오른쪽(x 최대 113)으로 길게 늘어져 있다. 그래서 진행 각도에
+        // 180도를 더해야 덩어리가 앞, 꼬리가 뒤가 된다.
+        // 콜라이더는 SphereCollider라 회전의 영향을 받지 않는다("보이는 크기 = 맞는 크기" 유지).
+        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg + 180f;
+        transform.rotation = Quaternion.Euler(0f, 0f, angle);
     }
 
     private void Update()

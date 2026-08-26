@@ -8,7 +8,8 @@ using UnityEngine;
 ///   (예전에는 플레이어가 버튼으로 하나씩 열었고, 열자마자 즉시 장착됐다).
 /// - 교체는 인벤토리 ↔ 슬롯 <b>맞교환</b>이다. 슬롯에서 빠진 파츠는 인벤토리로 들어간다.
 /// - 임시 인벤토리는 정비 화면을 닫을 때 통째로 비워진다(사용자 확정 사항).
-/// - 무기 소켓의 타입 제한, 자기장 코어+다리의 무게 제한 검증(ShopManager가 무기 구매 시 이 검증을 통과해야 한다).
+/// - 무기 소켓의 타입 제한, 다리의 무게 제한 검증(ShopManager가 무기 구매 시 이 검증을 통과해야 한다).
+///   (2026-08-26 자기장 코어 삭제 전에는 "코어+다리"의 합이었다 - PartSlot.cs 참고)
 /// </summary>
 public class ModdingManager : MonoBehaviour
 {
@@ -84,6 +85,9 @@ public class ModdingManager : MonoBehaviour
             // 이 슬롯의 파츠 데이터 자체가 없다). 건너뛰지 않으면 매 런마다
             // "PartsCatalog에 발 슬롯의 기본 파츠가 없습니다" 경고만 찍힌다.
             if (slot == PartSlot.Foot) continue;
+
+            // 2026-08-26 팔장갑/자기장 코어 시스템 삭제 - 위와 같은 이유로 건너뛴다.
+            if (slot == PartSlot.ArmArmor || slot == PartSlot.MagneticCore) continue;
 
             string key = slot.ToString();
             if (RunState.EquippedPartIds.ContainsKey(key)) continue;
@@ -227,26 +231,6 @@ public class ModdingManager : MonoBehaviour
                 : 0;
 
             return DefaultCoreMaxLevel + bonus;
-        }
-    }
-
-    /// <summary>
-    /// AI 코어의 시작 레벨(뉴럴 캐시 = PartEffect.CoreStartLevel). 파츠가 없으면 1이다.
-    /// 런을 시작할 때 AiCoreManager가 이 값을 읽어 코어 레벨을 올려둔다.
-    /// </summary>
-    public int CoreStartLevel
-    {
-        get
-        {
-            int bonus = 0;
-
-            foreach (PartSlot slot in System.Enum.GetValues(typeof(PartSlot)))
-            {
-                if (!TryGetEquippedPart(slot, out PartData part)) continue;
-                if (part.effect == PartEffect.CoreStartLevel) bonus += Mathf.RoundToInt(part.effectAmount);
-            }
-
-            return Mathf.Max(1, 1 + bonus);
         }
     }
 
@@ -536,11 +520,11 @@ public class ModdingManager : MonoBehaviour
     // 무게 / 무기 타입 제약 (상점 구매 시 ShopManager가 사용)
     // ---------------------------------------------------------------------
 
-    /// <summary>자기장 코어 + 다리의 weightCapacity 합 = 무게를 지탱할 수 있는 총량.</summary>
+    /// <summary>다리(Leg)의 weightCapacity = 무게를 지탱할 수 있는 총량(2026-08-26 자기장 코어
+    /// 삭제 전에는 코어+다리 합이었다 - PartSlot.cs 참고).</summary>
     public float GetTotalWeightCapacity()
     {
         float total = 0f;
-        if (TryGetEquippedPart(PartSlot.MagneticCore, out PartData core)) total += core.weightCapacity;
         if (TryGetEquippedPart(PartSlot.Leg, out PartData leg)) total += leg.weightCapacity;
         return total;
     }
@@ -643,7 +627,7 @@ public class ModdingManager : MonoBehaviour
     public float GetTotalWeight() => GetEquippedWeaponWeightSum() + GetEquippedPartsWeightSum();
 
     /// <summary>
-    /// 이 소켓에 이 무기를 넣었을 때 무게(타입 불일치 배율 반영)가 지탱력(자기장 코어+다리)을
+    /// 이 소켓에 이 무기를 넣었을 때 무게(타입 불일치 배율 반영)가 지탱력(다리)을
     /// 넘지 않는지 확인한다. <b>더 이상 장착을 막지 않는다</b> - 반환값은 UI 경고 표시용일
     /// 뿐이며, 초과분은 RobotStats.Compute의 이동속도 감소로만 반영된다(2026-08-12 플랜).
     /// </summary>
@@ -658,16 +642,14 @@ public class ModdingManager : MonoBehaviour
     /// 이 파츠로 교체했을 때 무게가 지탱력을 넘지 않는지 확인한다(UI 경고 표시용 - 더 이상
     /// 교체를 막지 않는다). 파츠에도 무게가 있기 때문에(사용자 확정 사항) 무기와 같은 계산을 쓴다.
     ///
-    /// 주의: 교체하려는 파츠가 자기장 코어/다리면 지탱력 자체가 바뀌므로,
+    /// 주의: 교체하려는 파츠가 다리면 지탱력 자체가 바뀌므로,
     /// 새 파츠의 weightCapacity를 반영한 지탱력과 비교해야 한다.
     /// </summary>
     public bool CheckPartWeightLimit(PartData newPart, out float totalAfter, out float capacity)
     {
         totalAfter = GetEquippedWeaponWeightSum() + GetEquippedPartsWeightSum(newPart.slot) + newPart.weight;
 
-        capacity = 0f;
-        capacity += GetCapacityAfterSwap(PartSlot.MagneticCore, newPart);
-        capacity += GetCapacityAfterSwap(PartSlot.Leg, newPart);
+        capacity = GetCapacityAfterSwap(PartSlot.Leg, newPart);
 
         return totalAfter <= capacity;
     }

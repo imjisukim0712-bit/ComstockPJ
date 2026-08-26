@@ -29,7 +29,7 @@ public class PartsCatalog : ScriptableObject
                  "쓰이지 않는다</b>(그 역할은 위 type = 무기 카테고리가 맡는다) - 지금은 상점 표시용이다")]
         public WeaponClass weaponClass;
 
-        [Tooltip("자기장 코어 + 다리의 weightCapacity 합과 비교되는 무게")]
+        [Tooltip("다리의 weightCapacity와 비교되는 무게")]
         public float weight;
     }
 
@@ -129,7 +129,7 @@ public class PartsCatalog : ScriptableObject
              "장착 자체는 항상 허용되고 이 배율만큼 무게만 늘어난다(2026-08-12 사용자 확정)")]
     [SerializeField] private float mismatchWeightMultiplier = 2.0f;
 
-    [Tooltip("총 무게가 지탱력(자기장 코어+다리)을 초과했을 때, 초과분 1당 이동속도가 깎이는 양. " +
+    [Tooltip("총 무게가 지탱력(다리)을 초과했을 때, 초과분 1당 이동속도가 깎이는 양. " +
              "지탱력 초과는 더 이상 장착을 막지 않고(하드 캡 제거) 이 감속으로만 반영된다")]
     [SerializeField] private float overweightSpeedPenaltyPerUnit = 0.05f;
 

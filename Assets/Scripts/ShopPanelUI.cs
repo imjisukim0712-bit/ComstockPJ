@@ -109,7 +109,9 @@ public class ShopPanelUI : MonoBehaviour
         for (int i = 0; i < offerSlots.Length; i++)
         {
             int index = i; // 클로저가 반복 변수를 그대로 잡지 않도록 복사
-            if (offerSlots[i].cardButton != null) offerSlots[i].cardButton.onClick.AddListener(() => HandleOfferClicked(index));
+            // 카드 전체가 아니라 "구매" 버튼(가격 표시부)을 눌러야 구매되게 한다(2026-08-26
+            // 사용자 지적: "카드 눌러서 바로 사져버리는데 구매버튼 눌러서 사게 만들어") -
+            // 실제 구매 리스너는 BuildCardDecor가 만드는 PriceBox 버튼에 연결한다.
             if (offerSlots[i].lockButton != null) offerSlots[i].lockButton.onClick.AddListener(() => HandleLockClicked(index));
         }
 
@@ -174,6 +176,21 @@ public class ShopPanelUI : MonoBehaviour
         UiSafeArea.ApplyTextMarginsFromSibling(statsText, 8f, true);
         UiSafeArea.ApplyTextMarginsFromSibling(refreshText, 5f);
         UiSafeArea.ApplyTextMarginsFromSibling(messageText, 5f);
+
+        // 2026-08-26 사용자 지적: 메시지가 없을 때도 빈 배경 막대가 항상 떠 있어 "필요 없는
+        // UI"로 보였다("상점의 UI 안의 UI와 바깥 UI의 간섭이 너무 심함" 지적과 같은 맥락).
+        // 배경만 끄고 글자는 그대로 둔다 - 실제 안내 문구(구매 완료/실패 등)가 뜰 때는 배경
+        // 없이 글자만 나타나고, 비어 있을 때는 아무것도 보이지 않는다. 다른 패널이 아래로
+        // 늘어나며 이 자리를 덮게 되므로 글자가 그 위에 그려지도록 맨 앞으로 올린다.
+        Image messageBackground = transform.Find("MessageText_BG")?.GetComponent<Image>();
+        if (messageBackground != null) messageBackground.enabled = false;
+        if (messageText != null)
+        {
+            // 2026-08-26: 패널과 겹치던 자리를 떠나 카드 위 얇은 전체폭 띠로 옮겼다 - 가운데
+            // 정렬이 아니면 넓은 띠의 왼쪽 끝에 글자가 외롭게 붙는다.
+            messageText.alignment = TextAlignmentOptions.Center;
+            messageText.transform.SetAsLastSibling();
+        }
     }
 
     public void Close()
@@ -181,6 +198,40 @@ public class ShopPanelUI : MonoBehaviour
         SetCombatHudVisible(true);
         if (detail_popup != null) detail_popup.Hide();
         gameObject.SetActive(false);
+    }
+
+    // 상점이 <b>열려 있는 동안</b> 창 크기가 바뀌면 격자가 옛 픽셀 크기 그대로 남는다
+    // (2026-08-26 사용자 리포트 "창모드 플레이 시 UI 내부 텍스트 및 리소스 축소로 비율이
+    // 맞지 않음"의 원인). 실측: 1920x1080에서 연 상점을 1366x768로 줄이면 [Discs] 6칸이
+    // [Equipped Weapons]·[Current Stats]·[Reroll Shop] 위를 덮었다. <b>같은 해상도에서
+    // 새로 열면 멀쩡했으므로 레이아웃 자체가 아니라 "다시 계산하지 않는 것"이 원인이다.</b>
+    //
+    // Canvas가 ConstantPixelSize라 컨테이너의 픽셀 폭은 화면을 따라 줄어드는데,
+    // GridLayoutGroup.cellSize는 ItemCellUI.EnsureGrid가 <b>만들 때 한 번</b> 계산한 고정
+    // 픽셀이라 따라오지 않는다(ItemCellUI.EnsureGrid 주석 참고). ModdingPanelUI는 Update()에서
+    // 매 프레임 EnsureGrid를 다시 돌려 이 문제가 없었고, 이 화면에만 그 장치가 없었다.
+    //
+    // 다만 여기는 칸 수가 데이터에 따라 달라져(소켓 수·디스크 수) EnsureGrid만으로는 부족하고
+    // 칸을 다시 만드는 Refresh()가 필요하다. 그래서 매 프레임이 아니라 <b>해상도가 실제로
+    // 바뀐 프레임에만</b> 돈다. 패널이 꺼져 있으면 Update 자체가 호출되지 않으므로 전투 중
+    // 비용은 0이다.
+    private Vector2Int last_screen_size;
+
+    private void Update()
+    {
+        Vector2Int now = new Vector2Int(Screen.width, Screen.height);
+        if (now == last_screen_size) return;
+        last_screen_size = now;
+
+        // 격자 컨테이너는 테두리(고정 픽셀)와 제목 띠(화면 비례)를 섞어 놓기 때문에 해상도가
+        // 바뀌면 다시 계산해야 한다. 참조를 비워 두면 EnsureEquipGrids가 새로 만든다.
+        partsGrid = null;
+        weaponsGrid = null;
+        discsGrid = null;
+
+        // 여백은 배경 아트의 실제 픽셀 크기에서 역산하므로(UiSafeArea) 이것도 다시 잡아야 한다.
+        ApplyTextPolish();
+        Refresh();
     }
 
     private void SetCombatHudVisible(bool visible)
@@ -542,7 +593,7 @@ public class ShopPanelUI : MonoBehaviour
                 decor.lockIcon.color = Color.white;
             }
 
-            if (ui.cardButton != null) ui.cardButton.interactable = !offer.Purchased;
+            if (decor.buyButton != null) decor.buyButton.interactable = !offer.Purchased;
             if (ui.lockButton != null) ui.lockButton.interactable = !offer.Purchased;
             if (ui.lockText != null) ui.lockText.text = offer.Locked ? Loc.T("shop.unlock") : Loc.T("shop.lock");
         }
@@ -564,6 +615,7 @@ public class ShopPanelUI : MonoBehaviour
         public TextMeshProUGUI nameText;
         public TextMeshProUGUI priceText;
         public Image priceCoin;
+        public Button buyButton;    // 가격 표시부 자체(카드 전체가 아니라 이 버튼을 눌러야 구매된다)
         public GameObject stamp;    // 빨간 대각선 "구매 완료"
         public GameObject lockGlow; // 잠긴 카드를 감싸는 노란 테두리
         public Image lockIcon;      // 잠금 버튼의 자물쇠
@@ -624,38 +676,77 @@ public class ShopPanelUI : MonoBehaviour
         if (layout == null) layout = card.gameObject.AddComponent<ShopCardLayout>();
         layout.SetBackground(card.GetComponent<Image>());
 
-        // 씬의 BodyText를 "능력치" 자리로 좁힌다. 이 파일의 EnsureGridContainer가 보유 목록
-        // 제목 텍스트를 같은 방식으로 옮기고 있어서 새로운 수법은 아니다.
-        if (offerSlots[index].bodyText != null)
-        {
-            layout.Track(offerSlots[index].bodyText.rectTransform,
-                         new Vector2(0.05f, 0.26f), new Vector2(0.95f, 0.54f));
-            offerSlots[index].bodyText.alignment = TextAlignmentOptions.TopLeft;
-            ItemCellUI.ApplyTextSizing(offerSlots[index].bodyText, 20f);
-            offerSlots[index].bodyText.margin = new Vector4(8f, 4f, 8f, 4f);
-        }
-
-        // 아이콘·종류 줄은 씬이 소유한 요소다 - 설계 좌표를 여기 적어 두고 함께 사상한다
-        // (씬 파일은 건드리지 않는다는 이 화면의 기존 관례를 유지한다).
-        TrackSceneCardChild(layout, root, "IconImage_BG", 0.04f, 0.72f, 0.19f, 0.98f);
-        TrackSceneCardChild(layout, root, "IconImage", 0.05f, 0.74f, 0.18f, 0.96f);
-        TrackSceneCardChild(layout, root, "HeaderText_BG", 0.18f, 0.72f, 0.97f, 0.98f);
-        TrackSceneCardChild(layout, root, "HeaderText", 0.20f, 0.74f, 0.95f, 0.96f);
+        // 아이콘 뒤 박스, 종류 배지 박스를 없앤다(2026-08-26 사용자 지적: "이런 작은 카드
+        // 안에 또 UI가 들어가있는 상황은 없어야 해" - 카드 자체가 이미 배경인데 그 위에 테두리
+        // 있는 작은 패널(HeaderText_BG)을 얹으면 프레임 안에 프레임이 생긴다. ItemCellUI가
+        // 슬롯 칸에서 이미 지키는 규칙("아이콘 뒤에 별도 사각형을 깔지 않는다")을 상점 카드에도
+        // 맞춘다. 씬 오브젝트는 지우지 않고 렌더링만 끈다(이 화면의 "씬 수정 0건" 관례 유지).
+        Image iconBackground = root.Find("IconImage_BG")?.GetComponent<Image>();
+        if (iconBackground != null) iconBackground.enabled = false;
 
         TextMeshProUGUI header = root.Find("HeaderText")?.GetComponent<TextMeshProUGUI>();
         Image headerBackground = root.Find("HeaderText_BG")?.GetComponent<Image>();
-        UiSafeArea.ApplyTextMargins(header, headerBackground, 4f);
+        if (headerBackground != null) headerBackground.enabled = false;
 
-        decor.nameText = MakeText(root, "NameText", 0.05f, 0.55f, 0.95f, 0.70f, 30f, TextAlignmentOptions.Left);
-        layout.Track(decor.nameText.rectTransform, new Vector2(0.05f, 0.55f), new Vector2(0.95f, 0.70f));
+        // 내용 위계 재정렬(2026-08-26 사용자 지적: "등급이 중요한게 아니라 아이템 이름과
+        // 그림이 더 중요한데 등급 표시가 제일 크게 나와있어"). 아이콘을 크게 키워 중앙에 두고,
+        // 이름을 큼직하게 그 아래 배치한다. 등급·종류는 이름보다 작은 보조 정보로 내린다 -
+        // 어차피 등급색은 이름 글자색에 이미 드러나므로 배지를 키워 다시 강조할 필요가 없다.
+        // 카드 세로 배분(설계 좌표 0~1 - ShopCardLayout이 카드 베젤 안쪽 밴드로 사상한다).
+        //
+        // <b>TMP 자동 크기는 "칸이 커져야" 커진다 - 상한만 올려서는 아무 일도 안 일어난다.</b>
+        // 2026-08-26 1차에서 등급 표기 상한을 16 → 24pt로 올렸는데 실측 폰트는 14.2pt 그대로였다
+        // ("여전히 너무 작아"). 띠가 20.6px뿐이라 20.6 / 1.45 = 14.2pt가 실질 상한이었던 것이다
+        // (줄 높이 = 글자 크기 x 1.45). 그래서 2차에서는 <b>띠 높이 자체를 늘렸다</b>:
+        //
+        //   카드를 세로로 확대(씬 OfferCard1~4 min.y 0.05 → 0.025, 안쪽 밴드 240 → 267px)
+        //   아이콘 0.36 → 0.221 / 이름 0.13 / 등급·종류 0.085 → 0.116 /
+        //   설명 0.14 → 0.19 / 구매 버튼 0.185 → 0.26
+        //
+        // 아이콘은 preserveAspect라 띠가 줄어든 만큼 작아질 뿐 잘리지 않는다.
+        TrackSceneCardChild(layout, root, "IconImage", 0.28f, 0.764f, 0.72f, 0.985f);
+
+        if (header != null)
+        {
+            layout.Track(header.rectTransform, new Vector2(0.05f, 0.494f), new Vector2(0.95f, 0.610f));
+            header.alignment = TextAlignmentOptions.Center;
+            ItemCellUI.ApplyTextSizing(header, 30f);
+            header.textWrappingMode = TextWrappingModes.NoWrap;
+            header.margin = Vector4.zero;
+        }
+
+        decor.nameText = MakeText(root, "NameText", 0.05f, 0.622f, 0.95f, 0.752f, 32f, TextAlignmentOptions.Center);
+        layout.Track(decor.nameText.rectTransform, new Vector2(0.05f, 0.622f), new Vector2(0.95f, 0.752f));
+        decor.nameText.fontStyle = FontStyles.Bold;
         decor.nameText.margin = new Vector4(8f, 0f, 8f, 0f);
 
-        // 가격 박스 - 카드 안쪽 박스라 아이콘 칸(IconImage_BG)과 같은 아트를 써서 톤을 맞춘다.
-        RectTransform priceBox = MakeChild(root, "PriceBox", 0.05f, 0.05f, 0.95f, 0.24f,
+        // 씬의 BodyText를 "능력치" 자리로 좁힌다. 이 파일의 EnsureGridContainer가 보유 목록
+        // 제목 텍스트를 같은 방식으로 옮기고 있어서 새로운 수법은 아니다. 아래 구매 버튼을
+        // 키운 만큼(2026-08-26) 이 칸은 조금 줄었다.
+        if (offerSlots[index].bodyText != null)
+        {
+            // 설명 칸(위 세로 배분 주석 참고). 자동 크기가 실제로 커지려면 칸 자체가 커져야 한다.
+            layout.Track(offerSlots[index].bodyText.rectTransform,
+                         new Vector2(0.05f, 0.292f), new Vector2(0.95f, 0.482f));
+            offerSlots[index].bodyText.alignment = TextAlignmentOptions.TopLeft;
+            ItemCellUI.ApplyTextSizing(offerSlots[index].bodyText, 26f);
+            offerSlots[index].bodyText.margin = new Vector4(8f, 4f, 8f, 4f);
+        }
+
+        // 구매 버튼 - 예전엔 배경이 카드와 다른 사각 패널(Black_ui04)이라 "카드 안에 또 카드"
+        // 처럼 보였다(2026-08-26 사용자 지적). 다른 화면의 진짜 버튼과 같은 아트(Purple_button00)를
+        // 쓰고, 실제 클릭 대상도 카드 전체가 아니라 <b>이 버튼 하나</b>로 좁힌다(2026-08-26 사용자
+        // 지적: "카드 눌러서 바로 사져버리는데 구매버튼 눌러서 사게 만들어" - 실수 구매 방지).
+        // 처음엔 카드 폭 90%짜리 얇고 넓은 막대였는데 사용자가 "상하로 더 길고 좌우로는 짧게,
+        // 비율이 이상해 규칙도 어긴다"고 재지적했다 - 폭을 줄이고(60%) 높이를 늘려(21%) 다른
+        // 실제 버튼들과 비슷한 세로:가로 비율로 맞추고 가운데 정렬했다.
+        // 2026-08-26 (2차) "구매버튼 높이가 너무 짧아" - 0.185 → 0.26으로 늘렸다. 안의 가격
+        // 글자도 자동 크기라 버튼이 높아진 만큼 함께 커진다(상한 30pt).
+        RectTransform priceBox = MakeChild(root, "PriceBox", 0.20f, 0.02f, 0.80f, 0.28f,
                                            typeof(CanvasRenderer), typeof(Image));
-        layout.Track(priceBox, new Vector2(0.05f, 0.05f), new Vector2(0.95f, 0.24f));
+        layout.Track(priceBox, new Vector2(0.20f, 0.02f), new Vector2(0.80f, 0.28f));
         var boxImage = priceBox.GetComponent<Image>();
-        Sprite boxSprite = Resources.Load<Sprite>("UI/Black_ui04");
+        Sprite boxSprite = Resources.Load<Sprite>("UI/Purple_button00");
         if (boxSprite != null)
         {
             boxImage.sprite = boxSprite;
@@ -666,9 +757,24 @@ public class ShopPanelUI : MonoBehaviour
         {
             boxImage.color = new Color(0f, 0f, 0f, 0.45f); // 아트를 못 찾으면 단색 박스
         }
-        boxImage.raycastTarget = false;
+        boxImage.raycastTarget = true; // 이제 이 박스 자체가 버튼이라 클릭을 받아야 한다
 
-        RectTransform coin = MakeChild(priceBox, "Coin", 0.03f, 0.14f, 0.20f, 0.86f,
+        var buyButton = priceBox.gameObject.AddComponent<Button>();
+        buyButton.targetGraphic = boxImage;
+        var buyColors = buyButton.colors;
+        buyColors.highlightedColor = new Color(1.15f, 1.15f, 1.15f, 1f);
+        buyColors.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+        buyButton.colors = buyColors;
+        int offerIndex = index; // 람다 클로저 캡처용 로컬
+        buyButton.onClick.AddListener(() => HandleOfferClicked(offerIndex));
+        decor.buyButton = buyButton;
+
+        // 카드 전체를 덮던 옛 버튼은 완전히 꺼서(클릭도 안 받고 호버 틴트도 안 생기게) 구매
+        // 버튼과 헷갈리지 않게 한다 - Button.interactable=false는 targetGraphic을 회색으로
+        // 물들이므로(등급색 배경이 죽는다) 컴포넌트 자체를 비활성화한다.
+        card.enabled = false;
+
+        RectTransform coin = MakeChild(priceBox, "Coin", 0.06f, 0.16f, 0.22f, 0.84f,
                                         typeof(CanvasRenderer), typeof(Image));
         decor.priceCoin = coin.GetComponent<Image>();
         decor.priceCoin.sprite = Resources.Load<Sprite>("Gold"); // 헤더 골드 = 인게임 드랍 금화와 같은 코인
@@ -676,8 +782,13 @@ public class ShopPanelUI : MonoBehaviour
         decor.priceCoin.raycastTarget = false;
         decor.priceCoin.enabled = decor.priceCoin.sprite != null;
 
-        decor.priceText = MakeText(priceBox, "PriceText", 0.23f, 0.05f, 0.97f, 0.95f, 28f,
+        decor.priceText = MakeText(priceBox, "PriceText", 0.26f, 0.05f, 0.97f, 0.95f, 30f,
                                     TextAlignmentOptions.Left);
+        // 텍스트가 버튼의 실제 9-slice 테두리를 침범하지 않도록 실측 border에서 좌우 여백을
+        // 역산한다("UI 제작 규칙" - 임의의 숫자로 여백을 정하지 않는다). 이 버튼은 카드 폭에 비해
+        // 얇은 가로 막대라 세로 테두리는 장식용 베벨이다 - vertical:true를 줬다가 세로 여백이
+        // 버튼 높이를 다 먹어 글자가 통째로 사라지는 회귀를 겪었다(2026-08-26). 좌우만 맞춘다.
+        UiSafeArea.ApplyTextMargins(decor.priceText, boxImage, 6f);
 
         // 잠긴 카드 강조 - 카드 전체를 감싸는 노란 테두리.
         RectTransform glow = MakeChild(root, "LockGlow", 0f, 0f, 1f, 1f,
@@ -716,23 +827,22 @@ public class ShopPanelUI : MonoBehaviour
         decor.stamp = stamp.gameObject;
         stamp.gameObject.SetActive(false);
 
-        // 잠금 버튼에 자물쇠 아이콘을 붙이고 글자 자리를 오른쪽으로 밀어 준다.
+        // 잠금 버튼 - 2026-08-26 사용자 지적: "상점 잠금은 오른쪽 위로 사각형 UI에 넣어서
+        // 옮기고 카드 자체를 위아래로 더 늘려. 잠금이 저렇게 큰 비율을 차지할 이유가 없음."
+        // 예전엔 카드 폭 전체를 쓰는 "Lock" 글자 버튼이었는데(씬에서 카드 우상단의 작은 정사각형
+        // 배지로 옮겨 앉혔다 - RectTransform 자체는 이 스크립트가 만들지 않고 씬이 소유하므로,
+        // 이 함수에서는 글자를 숨기고 아이콘만 정사각형 전체를 채우게 한다.
         Button lockButton = offerSlots[index].lockButton;
         if (lockButton != null)
         {
             var lockRoot = (RectTransform)lockButton.transform;
             DestroyIfExists(lockRoot, "LockIcon");
 
-            if (offerSlots[index].lockText != null)
-            {
-                RectTransform label = offerSlots[index].lockText.rectTransform;
-                label.anchorMin = new Vector2(0.30f, 0f);
-                label.anchorMax = new Vector2(1f, 1f);
-                label.offsetMin = Vector2.zero;
-                label.offsetMax = Vector2.zero;
-            }
+            // 배지가 작아 "잠금"/"해제" 글자가 들어갈 자리가 없다 - 아이콘 하나로만 상태를
+            // 표현한다(도감 화면의 자물쇠 배지와 같은 관례).
+            if (offerSlots[index].lockText != null) offerSlots[index].lockText.gameObject.SetActive(false);
 
-            RectTransform icon = MakeChild(lockRoot, "LockIcon", 0.06f, 0.14f, 0.26f, 0.86f,
+            RectTransform icon = MakeChild(lockRoot, "LockIcon", 0.1f, 0.1f, 0.9f, 0.9f,
                                             typeof(CanvasRenderer), typeof(Image));
             decor.lockIcon = icon.GetComponent<Image>();
             decor.lockIcon.sprite = UiIconLibrary.Lock();
@@ -856,22 +966,21 @@ public class ShopPanelUI : MonoBehaviour
 
         var panel = (RectTransform)transform;
 
+        // 격자는 <b>각자의 배경 패널에 맞춰</b> 놓는다 - 좌표를 여기에 박아 두지 않으므로
+        // 씬에서 패널을 옮겨도 격자가 저절로 따라온다(예전에는 정규화 상수를 양쪽에 이중으로
+        // 적어 두고 "씬 값과 함께 고쳐야 한다"고 주석을 달아야 했다).
+        // 테두리를 피하는 방법은 EnsureGridContainer 주석 참고.
+        // 제목 띠 높이. 무기·디스크는 2026-08-26 "(상세)" 안내 줄을 빼면서 <b>한 줄</b>이 되어
+        // 0.070/0.060 → 0.042로 줄였고, 그만큼 격자가 세로로 넓어진다. 파츠는 둘째 줄
+        // (AI 코어 레벨·무게)이 실제 정보라 남아 있어 두 줄 높이를 그대로 쓴다.
         partsGrid = EnsureGridContainer(panel, "PartsGrid", moddingStatusText,
-                                        0.02f, 0.44f, 0.30f, 0.88f, 0.825f);
+                                        panel.Find("ModdingStatusText_BG") as RectTransform, 0.055f);
         weaponsGrid = EnsureGridContainer(panel, "WeaponsGrid", equippedWeaponsText,
-                                          0.32f, 0.68f, 0.60f, 0.88f, 0.825f);
+                                          panel.Find("EquippedWeaponsText_BG") as RectTransform, 0.042f);
         discsGrid = EnsureGridContainer(panel, "DiscsGrid", equippedDiscsText,
-                                        0.32f, 0.44f, 0.60f, 0.66f, 0.605f);
+                                        panel.Find("EquippedDiscsText_BG") as RectTransform, 0.042f);
 
-        // 장착 무기 제목 줄의 오른쪽 끝에 "위치 교체" 버튼이 들어가므로 제목 영역을 그만큼 좁힌다
-        // (안 좁히면 제목 글자와 버튼이 겹친다 - 실측 캡처로 확인).
-        if (equippedWeaponsText != null)
-        {
-            RectTransform titleRect = equippedWeaponsText.rectTransform;
-            titleRect.anchorMax = new Vector2(0.495f, titleRect.anchorMax.y);
-        }
-
-        EnsureWeaponSwapButton(panel);
+        EnsureWeaponSwapButton(panel, equippedWeaponsText);
     }
 
     // ── 장착 무기 위치 교체 (2026-08-24 사용자 요청) ────────────────────────────
@@ -887,30 +996,65 @@ public class ShopPanelUI : MonoBehaviour
     private bool weapon_swap_mode;
     private int weapon_swap_source = -1;
 
-    private void EnsureWeaponSwapButton(RectTransform panel)
+    /// <summary>"위치 교체" 버튼의 폭(px). 제목 줄 오른쪽 끝에 이만큼을 떼어 준다.</summary>
+    private const float WeaponSwapButtonWidth = 150f;
+
+    /// <summary>버튼과 제목 글자 사이 간격(px).</summary>
+    private const float WeaponSwapButtonGap = 8f;
+
+    /// <summary>
+    /// "위치 교체" 버튼을 <b>무기 제목 줄의 오른쪽 끝</b>에 앉히고, 제목 글자 영역을 그만큼 좁힌다
+    /// (안 좁히면 제목이 버튼 밑으로 들어간다).
+    ///
+    /// <para>2026-08-26: 예전에는 ShopPanel 기준 정규화 상수(0.640~0.727, 0.805~0.865)로 박혀
+    /// 있었는데, "(상세)" 안내 줄을 빼면서 제목 띠를 줄이자 <b>버튼이 무기 칸 위에 겹쳤다</b>.
+    /// 이제 <b>제목의 앵커·세로 띠를 그대로 물려받아</b> 제목이 어디로 가든 따라간다 -
+    /// 이 화면의 다른 좌표들과 같은 방침이다(EnsureGridContainer 주석 참고).</para>
+    /// </summary>
+    private void EnsureWeaponSwapButton(RectTransform panel, TextMeshProUGUI title)
     {
-        if (weapon_swap_button != null) return;
-
-        DestroyIfExists(panel, "WeaponSwapButton");
-
-        RectTransform rect = MakeChild(panel, "WeaponSwapButton", 0.500f, 0.828f, 0.600f, 0.880f,
-                                       typeof(CanvasRenderer), typeof(Image), typeof(Button));
-
-        var image = rect.GetComponent<Image>();
-        Sprite plate = Resources.Load<Sprite>("UI/Purple_button00");
-        if (plate != null)
+        if (weapon_swap_button == null)
         {
-            image.sprite = plate;
-            image.type = Image.Type.Sliced; // UI 아트는 전부 9-슬라이스다(프로젝트 안내.md 참고)
+            DestroyIfExists(panel, "WeaponSwapButton");
+
+            RectTransform created = MakeChild(panel, "WeaponSwapButton", 0f, 0f, 1f, 1f,
+                                              typeof(CanvasRenderer), typeof(Image), typeof(Button));
+
+            var image = created.GetComponent<Image>();
+            Sprite plate = Resources.Load<Sprite>("UI/Purple_button00");
+            if (plate != null)
+            {
+                image.sprite = plate;
+                image.type = Image.Type.Sliced; // UI 아트는 전부 9-슬라이스다(프로젝트 안내.md 참고)
+            }
+            image.color = Color.white;
+
+            weapon_swap_label = MakeText(created, "Label", 0.05f, 0.05f, 0.95f, 0.95f, 20f, TextAlignmentOptions.Center);
+            weapon_swap_label.text = Loc.T("shop.swap");
+            UiSafeArea.ApplyTextMargins(weapon_swap_label, image, 3f);
+
+            weapon_swap_button = created.GetComponent<Button>();
+            weapon_swap_button.onClick.AddListener(ToggleWeaponSwapMode);
         }
-        image.color = Color.white;
 
-        weapon_swap_label = MakeText(rect, "Label", 0.05f, 0.05f, 0.95f, 0.95f, 20f, TextAlignmentOptions.Center);
-        weapon_swap_label.text = Loc.T("shop.swap");
-        UiSafeArea.ApplyTextMargins(weapon_swap_label, image, 3f);
+        // 자리 잡기는 <b>매번</b> 한다 - 제목 띠는 해상도에 따라 높이가 달라지고, 격자를 다시
+        // 만들 때마다 EnsureGridContainer가 제목 offset을 새로 쓰기 때문이다.
+        if (title == null) return;
 
-        weapon_swap_button = rect.GetComponent<Button>();
-        weapon_swap_button.onClick.AddListener(ToggleWeaponSwapMode);
+        RectTransform titleRect = title.rectTransform;
+        var buttonRect = (RectTransform)weapon_swap_button.transform;
+
+        // <b>좌우 앵커를 제목의 오른쪽 앵커선 하나로 모은다.</b> 앵커가 벌어져 있으면
+        // offsetMin.x는 왼쪽 앵커선, offsetMax.x는 오른쪽 앵커선을 기준으로 재므로 둘을 섞어
+        // 폭을 계산할 수 없다(그대로 복사했다가 버튼 폭이 150px 대신 975px이 됐다 - 2026-08-26 실측).
+        // 한 선에 모으면 두 offset이 같은 기준을 써서 그 차이가 곧 픽셀 폭이 된다.
+        buttonRect.anchorMin = new Vector2(titleRect.anchorMax.x, titleRect.anchorMin.y);
+        buttonRect.anchorMax = new Vector2(titleRect.anchorMax.x, titleRect.anchorMax.y);
+        buttonRect.offsetMin = new Vector2(titleRect.offsetMax.x - WeaponSwapButtonWidth, titleRect.offsetMin.y);
+        buttonRect.offsetMax = new Vector2(titleRect.offsetMax.x, titleRect.offsetMax.y);
+
+        titleRect.offsetMax = new Vector2(titleRect.offsetMax.x - WeaponSwapButtonWidth - WeaponSwapButtonGap,
+                                          titleRect.offsetMax.y);
     }
 
     private void ToggleWeaponSwapMode()
@@ -977,17 +1121,61 @@ public class ShopPanelUI : MonoBehaviour
     }
 
     /// <param name="titleBottom">제목 줄의 아래쪽 경계(정규화). 격자는 이 아래를 쓴다.</param>
+    /// <summary>
+    /// 제목 줄과 아이콘 격자를 <b>배경 패널의 실제 9-slice 테두리 안쪽</b>에 배치한다.
+    ///
+    /// <para>2026-08-26 사용자 지적("패널과 카드가 겹친다"). 예전에는 좌표를 ShopPanel 기준
+    /// 정규화 상수로 박아 두고 배경보다 0.008(약 15px)만 안쪽으로 들여썼는데, 배경 아트
+    /// <c>Black_ui01</c>의 테두리는 <b>34px</b>이라 격자가 좌우 18.6px·아래 28.6px씩 테두리를
+    /// 파고들고 있었다(실측 1920x1080). <b>9-slice 코너는 rect 크기와 무관하게 항상 같은
+    /// 픽셀 수로 그려지므로 정규화 상수로는 원리상 피할 수 없다</b>("UI 제작 규칙" - 정비/상점
+    /// 아이템 칸에서 이미 같은 결론을 냈다).</para>
+    ///
+    /// <para>그래서 앵커는 <b>배경 패널의 앵커를 그대로 복사</b>하고(둘 다 ShopPanel의 자식이라
+    /// 기준이 같다), 안쪽으로 미는 양은 <see cref="UiSafeArea.GetBorderPixels"/>가 스프라이트에서
+    /// 읽어온 <b>픽셀</b>로 준다. 나중에 배경 아트가 바뀌어도 이 코드는 고칠 필요가 없다.</para>
+    /// </summary>
+    /// <param name="background">이 격자가 올라앉는 씬의 배경 패널. null이면 패널 전체를 쓴다.</param>
+    /// <param name="titleHeightRatio">제목 띠 높이(화면 높이 대비 비율). 글자 크기가
+    /// <see cref="ResponsiveTextScaler"/>로 화면에 비례하므로 띠도 비례해야 한다 - 테두리와 달리
+    /// 고정 픽셀로 두면 작은 창에서 띠만 두꺼워진다.</param>
     private static RectTransform EnsureGridContainer(RectTransform panel, string name, TextMeshProUGUI title,
-                                                     float xMin, float yMin, float xMax, float yMax,
-                                                     float titleBottom)
+                                                     RectTransform background, float titleHeightRatio)
     {
+        Vector4 bezel = background != null
+            ? UiSafeArea.GetBorderPixels(background.GetComponent<Image>())
+            : Vector4.zero;
+
+        const float pad = 6f;  // 테두리 선에 아슬아슬하게 닿지 않도록 한 번 더 띄운다
+        float left = bezel.x + pad;
+        float bottom = bezel.y + pad;
+        float right = bezel.z + pad;
+        float top = bezel.w + pad;
+
+        Vector2 anchorMin = background != null ? background.anchorMin : Vector2.zero;
+        Vector2 anchorMax = background != null ? background.anchorMax : Vector2.one;
+
+        float titleHeight = Mathf.Max(1f, titleHeightRatio * Screen.height);
+        const float titleGap = 4f;
+
+        // <b>제목 글자는 격자보다 테두리 쪽으로 더 붙인다</b>(2026-08-26 사용자 지시: "상점에서
+        // 글씨가 패널에 조금만 더 가까웠으면 좋겠어. 패널끝과 현재 위치의 중간 정도 위치로").
+        // 테두리는 장식 베벨이라 글자가 그 위에 조금 얹혀도 읽히는 데 지장이 없다 - 상단 배너에서
+        // 이미 쓰는 관례다(ModdingPanelUI.ApplyTextSafeArea 주석). 칸(아이콘)은 아트가 통째로
+        // 잘려 보이므로 그대로 테두리 안쪽에 둔다.
+        float titleLeft = left * 0.5f;
+        float titleRight = right * 0.5f;
+        float titleTop = top * 0.5f;
+
         if (title != null)
         {
             RectTransform t = title.rectTransform;
-            t.anchorMin = new Vector2(xMin, titleBottom);
-            t.anchorMax = new Vector2(xMax, yMax);
-            t.offsetMin = Vector2.zero;
-            t.offsetMax = Vector2.zero;
+            // 제목은 배경 위쪽 앵커선 하나에 min/max를 모두 걸어 <b>offset이 곧 픽셀</b>이 되게 한다.
+            // 그래야 테두리 두께(고정 픽셀)를 해상도와 무관하게 그대로 지킬 수 있다.
+            t.anchorMin = new Vector2(anchorMin.x, anchorMax.y);
+            t.anchorMax = new Vector2(anchorMax.x, anchorMax.y);
+            t.offsetMin = new Vector2(titleLeft, -(titleTop + titleHeight));
+            t.offsetMax = new Vector2(-titleRight, -titleTop);
             title.alignment = TextAlignmentOptions.Left;
             ItemCellUI.ApplyTextSizing(title, 30f);
             // 제목/보조 안내의 줄 경계는 문자열에서 명시한다. 자동 줄바꿈에 맡기면 영문
@@ -996,15 +1184,18 @@ public class ShopPanelUI : MonoBehaviour
         }
 
         Transform existing = panel.Find(name);
-        if (existing != null) Destroy(existing.gameObject);
+        if (existing != null) DestroyImmediate(existing.gameObject);
 
         var go = new GameObject(name, typeof(RectTransform));
         go.transform.SetParent(panel, false);
         var rect = (RectTransform)go.transform;
-        rect.anchorMin = new Vector2(xMin, yMin);
-        rect.anchorMax = new Vector2(xMax, titleBottom - 0.005f);
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.offsetMin = new Vector2(left, bottom);
+        // 격자 위쪽은 "테두리"와 "제목 아래" 중 더 아래쪽에 맞춘다 - 제목을 테두리 쪽으로 당겨도
+        // (titleLeft/Top 참고) 격자가 제목 밑으로 파고들지 않게 한다.
+        float gridTop = title != null ? Mathf.Max(top, titleTop + titleHeight + titleGap) : top;
+        rect.offsetMax = new Vector2(-right, -gridTop);
         return rect;
     }
 
@@ -1040,7 +1231,9 @@ public class ShopPanelUI : MonoBehaviour
             string weightLine = weight > capacity
                 ? $"<color=#FF5555>{weight:0.#}/{capacity:0.#}</color>"
                 : $"{weight:0.#}/{capacity:0.#}";
-            moddingStatusText.text = $"{Loc.T("modding.equipped_parts")}\n<size=75%>{Loc.T("modding.core_lv", RunState.CoreLevel)} · {Loc.T("modding.weight")} {weightLine} {DetailHint}</size>";
+            // "(Click for details)"는 2026-08-26 사용자 지시로 뺐다(DetailHint 주석 참고).
+            // AI 코어 레벨·무게는 실제 정보라 남긴다.
+            moddingStatusText.text = $"{Loc.T("modding.equipped_parts")}\n<size=75%>{Loc.T("modding.core_lv", RunState.CoreLevel)} · {Loc.T("modding.weight")} {weightLine}</size>";
         }
 
         // 아이콘은 지금 선택된 머리의 실제 아트다(2026-08-19 - 이전에는 Parts/Body 하드코딩).
@@ -1079,10 +1272,22 @@ public class ShopPanelUI : MonoBehaviour
     {
         if (weaponsGrid == null) return;
 
-        int columns = 3;
+        // 열 수를 실제 소켓 수에 맞춘다. 예전엔 3열 고정이라 소켓이 2개인 기본 로봇에서
+        // 오른쪽 1/3이 빈 칸으로 남았다(2026-08-26 사용자 지적: "위쪽 UI들이 엉망").
+        //
+        // <b>상한을 3에서 MaxWeaponSockets(6)로 올려 항상 한 줄로 만든다</b>(2026-08-26).
+        // 3열 상한이면 소켓이 4개 이상인 로봇에서 2행이 되는데, 이 컨테이너는 높이가 고정이라
+        // 행이 늘면 칸 높이가 절반이 된다. 실측(1366x768 · 소켓 6개): 칸 높이 37.3px →
+        // 베젤을 뺀 안쪽 13.3px → 이름표 띠 11.3px인데 자동 크기 하한이 11.38pt여서
+        // <b>"Socket 1~6"이 한 글자도 그려지지 않았다</b>(ItemCellLayout.CaptionHeight 및
+        // ResponsiveTextScaler의 하한 보정 주석 참고). 한 줄로 두면 칸이 컨테이너 높이를
+        // 그대로 쓰므로 이름표 띠가 26px 이상 확보돼 같은 창 크기에서도 전부 읽힌다.
+        // 정비 화면의 머리+소켓 줄(headSocketRow)이 이미 쓰는 관례와 같다.
+        int columns = Mathf.Clamp(socketCount, 1, MaxWeaponSockets);
         int rows = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(1, socketCount) / (float)columns));
 
-        ItemCellUI.EnsureGrid(weaponsGrid, new Vector2(120f, 92f), columns, rows);
+        // 정사각형(2026-08-26 사용자 지시). 가로/세로 중 작은 쪽에 맞추고 가운데로 모은다.
+        ItemCellUI.EnsureGrid(weaponsGrid, new Vector2(100f, 100f), columns, rows, square: true);
         ItemCellUI.ClearChildren(weaponsGrid);
 
         // 개수 표기(2026-08-18 `UI 기획서.pdf` Phase C-4) - 디스크 줄의 "N/M"과 같은 형식으로
@@ -1098,12 +1303,14 @@ public class ShopPanelUI : MonoBehaviour
 
         if (equippedWeaponsText != null)
         {
-            // 제목 영역이 "위치 교체" 버튼 자리만큼 좁아졌으므로 이 줄만 짧은 안내를 쓴다.
-            // 교체 모드에서는 문구를 바꿔 "지금 무엇을 하는 중인지" 제목 줄에서 바로 보이게 한다.
+            // 2026-08-26 사용자 지시로 "(상세)" 안내를 뺐다 - 칸을 누르면 상세가 열린다는 것은
+            // 이미 학습된 조작이라 매번 한 줄을 쓸 값어치가 없었고, 그 한 줄이 제목 띠를 두 배로
+            // 만들어 <b>격자에서 세로 공간을 빼앗고 있었다</b>(작은 창에서 칸이 23px까지 눌린
+            // 원인 중 하나). 교체 모드 안내는 "지금 무엇을 하는 중인지" 알려야 하므로 남긴다.
             string hint = weapon_swap_mode
-                ? $"<size=70%><color=#FFD37A>({Loc.T("shop.swap.pick_hint")})</color></size>"
-                : $"<size=70%><color=#8FB8FF>({Loc.T("common.detail")})</color></size>";
-            equippedWeaponsText.text = $"{Loc.T("modding.equipped_weapons")} · {equippedWeapons}/{socketCount}\n{hint}";
+                ? $"\n<size=70%><color=#FFD37A>({Loc.T("shop.swap.pick_hint")})</color></size>"
+                : string.Empty;
+            equippedWeaponsText.text = $"{Loc.T("modding.equipped_weapons")} · {equippedWeapons}/{socketCount}{hint}";
         }
 
         if (weapon_swap_label != null) weapon_swap_label.text = Loc.T(weapon_swap_mode ? "shop.swap.cancel" : "shop.swap");
@@ -1129,9 +1336,13 @@ public class ShopPanelUI : MonoBehaviour
                 ? (System.Action)(() => HandleWeaponCellClicked(index))
                 : null;
 
+            // 2026-08-26 사용자 지시: "소켓 기본적으로 다 정사각형 형태로, 소켓 번호만 오른쪽
+            // 위로, 소켓 글자는 없이". 이름표를 번호 하나로 줄이고 우상단 배지로 보내면
+            // 아이콘이 칸 안쪽을 전부 쓸 수 있다(무기 그림이 주인공인 칸이라 그 편이 맞다).
+            // 번호는 서수라 번역이 필요 없어 Loc를 거치지 않는다.
             ItemCellUI.CreateIconCell(weaponsGrid, $"Cell_Weapon_{i}", icon,
                                       has ? grade : ItemGrade.Normal, cellTint,
-                                      $"{Loc.T("shop.socket_n", i + 1)}", has, onClick);
+                                      (i + 1).ToString(), has, onClick, cornerCaption: true);
         }
     }
 
@@ -1148,14 +1359,18 @@ public class ShopPanelUI : MonoBehaviour
 
         int slotCount = shopManager != null ? shopManager.DiscSlotCount : 0;
         int cellCount = Mathf.Max(slotCount, RunState.EquippedDiscIds.Count);
-        int columns = 4;
+        // 3열로 두면 기본 6슬롯이 2행에 정확히 들어차 빈 칸이 남지 않는다(예전 4열에서는
+        // 둘째 행에 2칸만 차고 오른쪽 절반이 비었다 - 2026-08-26 사용자 지적).
+        int columns = 3;
         int rows = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(1, cellCount) / (float)columns));
 
         ItemCellUI.EnsureGrid(discsGrid, new Vector2(120f, 92f), columns, rows);
         ItemCellUI.ClearChildren(discsGrid);
 
+        // 안내 줄("(Click for details)")은 2026-08-26 사용자 지시로 뺐다 - 제목이 한 줄이 되어
+        // 그만큼 격자가 세로로 넓어진다(DetailHint 주석 참고).
         if (equippedDiscsText != null)
-            equippedDiscsText.text = $"{Loc.T("modding.discs")} {RunState.EquippedDiscIds.Count}/{slotCount}\n<size=70%>{DetailHint}</size>";
+            equippedDiscsText.text = $"{Loc.T("modding.discs")} {RunState.EquippedDiscIds.Count}/{slotCount}";
 
         for (int i = 0; i < cellCount; i++)
         {
@@ -1263,7 +1478,13 @@ public class ShopPanelUI : MonoBehaviour
     // 보유 장비 상세 보기 - 링크 태그 생성과 클릭 처리
     // ─────────────────────────────────────────────────────────────────
 
-    /// <summary>목록 제목 옆에 붙이는 "클릭하면 상세를 볼 수 있다"는 안내.</summary>
+    /// <summary>
+    /// 목록 제목 옆에 붙이던 "클릭하면 상세를 볼 수 있다"는 안내.
+    /// <b>2026-08-26 사용자 지시로 화면에서 뺐다</b>("(Click for Details) 이런 문구는 없애고
+    /// 공간 넓혀") - 칸을 누르면 상세가 열린다는 것은 이미 학습된 조작이라 매번 한 줄을 쓸
+    /// 값어치가 없었고, 그 한 줄이 제목 띠를 두 배로 만들어 <b>격자에서 세로 공간을 빼앗고
+    /// 있었다</b>. 번역 키(<c>common.click_detail</c>)와 이 속성은 되돌리기 쉽도록 남겨 둔다.
+    /// </summary>
     // 언어가 바뀌면 문구도 바뀌어야 하므로 const 가 아니라 조회식으로 둔다
     // (const 는 컴파일 타임에 굳어 번역이 안 붙는다).
     private static string DetailHint => $"<size=70%><color=#8FB8FF>({Loc.T("common.click_detail")})</color></size>";

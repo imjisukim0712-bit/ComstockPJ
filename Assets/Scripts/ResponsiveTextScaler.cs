@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// 화면에 보이는 <b>자동 크기 TMP 글자의 상한/하한</b>을 화면 높이에 비례시킨다
@@ -38,6 +39,13 @@ public class ResponsiveTextScaler : MonoBehaviour
 
     /// <summary>해상도가 그대로여도 이 주기마다 한 번씩 새로 만들어진 글자를 훑는다(초, unscaled).</summary>
     private const float RescanInterval = 0.5f;
+
+    /// <summary>TMP 한 줄이 차지하는 높이 ÷ 글자 크기. ItemCellLayout이 이름표 띠 상한을
+    /// 38px(26pt 한 줄)로 잡은 것과 같은 근거다(38 ÷ 26 ≒ 1.46).</summary>
+    private const float LineHeightRatio = 1.45f;
+
+    /// <summary>칸이 아무리 낮아도 여기까지만 내린다. 이보다 작으면 어차피 못 읽는다.</summary>
+    private const float AbsoluteMinFontSize = 6f;
 
     private static ResponsiveTextScaler instance;
 
@@ -97,6 +105,18 @@ public class ResponsiveTextScaler : MonoBehaviour
             // 여기서 상한까지 올리면 배율이 두 번 곱해진다.
             if (text.GetComponentInParent<ResponsiveHudScaler>() != null) continue;
 
+            // Title처럼 CanvasScaler가 ScaleWithScreenSize인 화면은 엔진이 이미 캔버스 전체를
+            // 화면 비례로 통째로 확대/축소한다(Ground01은 ConstantPixelSize라 이 보정이 유일한
+            // 수단이지만, Title은 아니다) - 여기서 Screen.height/1080 배율을 또 곱하면 이중
+            // 스케일이 걸려 작은 창에서 글자가 배경보다 과하게 작아진다(2026-08-26, "창모드에서
+            // 텍스트·리소스 비율이 안 맞는다" 리포트의 원인).
+            Canvas canvas = text.canvas;
+            if (canvas != null)
+            {
+                CanvasScaler scaler = canvas.GetComponent<CanvasScaler>();
+                if (scaler != null && scaler.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize) continue;
+            }
+
             if (!design_font_range.TryGetValue(text, out Vector2 design))
             {
                 // 처음 보는 글자 - <b>지금 값이 곧 1080p 설계값</b>이다. 씬/코드에 박힌 authored
@@ -110,6 +130,30 @@ public class ResponsiveTextScaler : MonoBehaviour
 
             float min = design.x * scale;
             float max = design.y * scale;
+
+            // <b>하한이 글자 칸보다 커지면 TMP는 글자를 한 개도 그리지 않는다.</b>
+            // 자동 크기는 하한 밑으로는 못 내려가고, 이 프로젝트의 칸 이름표는
+            // overflowMode = Ellipsis라 말줄임표조차 없이 <b>통째로 사라진다</b>.
+            //
+            // 2026-08-26 실측(소켓 6개 + 1366x768): 무기 칸 이름표 띠가 11.32px인데 하한이
+            // 11.38pt(=설계 16pt × 768/1080)여서 "Socket 1~6"이 전부 안 보였다
+            // (TMP_TextInfo.characterCount == 0으로 확인). 그 건 자체는 무기 칸을 한 줄로
+            // 바꿔 해결했지만(ShopPanelUI.RefreshWeaponsGrid), <b>"칸이 충분히 작아지면 글자가
+            // 사라진다"는 함정은 화면 어디에나 있으므로</b> 하한을 소유한 여기서 막는다.
+            //
+            // 줄 높이는 글자 크기의 약 1.45배다(ItemCellLayout의 이름표 띠 상한 38px ÷ 26pt와
+            // 같은 근거). 칸에 한 줄이 못 들어가면 들어갈 수 있는 크기까지 하한을 내려
+            // <b>작게라도 반드시 보이게</b> 한다 - 안 보이는 것보다는 작은 편이 낫다.
+            float band = text.rectTransform.rect.height;
+            if (band > 1f)
+            {
+                float fits = band / LineHeightRatio;
+                if (min > fits)
+                {
+                    min = Mathf.Max(AbsoluteMinFontSize, fits);
+                    if (max < min) max = min;
+                }
+            }
 
             // 값이 실제로 달라질 때만 쓴다 - TMP는 대입할 때마다 레이아웃을 다시 계산한다.
             if (!Mathf.Approximately(text.fontSizeMin, min)) text.fontSizeMin = min;

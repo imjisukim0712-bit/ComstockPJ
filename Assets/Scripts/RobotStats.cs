@@ -21,8 +21,9 @@ public struct AggregatedRobotStats
 /// 로봇의 최종 스탯 = 머리(로봇) 기본값(RobotData)
 ///                  + AI 코어 업그레이드 누적(RunState.CoreStatBonuses)
 ///                  + 장착 디스크 증감(RunState.DiscStatBonuses, 하락분은 음수로 들어있다)
-///                  + 장착 파츠 보너스(RunState.PartStatBonuses, 팔장갑/다리장갑=방어력,
-///                    다리=회피, 발=이동속도).
+///                  + 장착 파츠 보너스(RunState.PartStatBonuses, 헬멧/다리장갑=방어력,
+///                    다리=회피+이동속도). 2026-08-26 팔장갑, 2026-08-18 발이 삭제되어
+///                    그 두 슬롯은 더 이상 보너스를 만들지 않는다(PartSlot.cs 참고).
 /// </summary>
 public static class RobotStats
 {
@@ -67,7 +68,7 @@ public static class RobotStats
         // 방어력 %증가는 가산·파생이 모두 끝난 값에 곱해져야 한다.
         PartEffects.ApplyStatBonuses(ref result);
 
-        // 2026-08-12 "무기 소켓 개별화" 플랜 - 무게 지탱력(자기장 코어+다리) 초과는 더 이상
+        // 2026-08-12 "무기 소켓 개별화" 플랜 - 무게 지탱력(다리) 초과는 더 이상
         // 장착 자체를 막지 않는 대신(ModdingManager의 하드 캡 제거), 초과분에 비례해 이동속도를
         // 깎는다. ModdingManager.Instance가 없으면(씬 배치 누락 등) 패널티 없이 통과시킨다.
         ModdingManager modding = ModdingManager.Instance;

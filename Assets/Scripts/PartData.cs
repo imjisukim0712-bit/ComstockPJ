@@ -74,10 +74,10 @@ public struct PartData
 
     [Header("무게")]
     [Tooltip("이 파츠 자체의 무게. 장착된 무기 무게와 함께 합산되어 " +
-             "(자기장 코어 + 다리)의 weightCapacity와 비교된다. 디스크에는 무게가 없다")]
+             "다리의 weightCapacity와 비교된다. 디스크에는 무게가 없다")]
     public float weight;
 
-    [Header("무게 지탱 (자기장 코어, 다리 전용)")]
+    [Header("무게 지탱 (다리 전용)")]
     [Tooltip("장착된 모든 무기 + 파츠의 무게 합이 이 값을 넘으면 초과분만큼 이동속도가 깎인다")]
     public float weightCapacity;
 
@@ -198,8 +198,6 @@ public struct PartData
                 return Loc.T("parteffect.lowhp_def", effectAmount.ToString("0.##"));
             case PartEffect.MeleeReflectPercent:
                 return Loc.T("parteffect.melee_reflect", effectAmount.ToString("0.##"));
-            case PartEffect.CoreStartLevel:
-                return Loc.T("parteffect.core_startlevel", effectAmount.ToString("0.##"));
             case PartEffect.PerDiscStat:
                 return Loc.T("parteffect.per_disc", StatTypeNames.ToDisplayName(effectStat), effectAmount.ToString("0.##"));
             case PartEffect.PerSymphonyDiscAtk:

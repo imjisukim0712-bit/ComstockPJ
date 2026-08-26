@@ -174,7 +174,7 @@ public class NicknameInputPopup : MonoBehaviour
 
         var image = go.GetComponent<Image>();
         image.color = Color.white;
-        Sprite art = Resources.Load<Sprite>("UI/Purple_ui02");
+        Sprite art = Resources.Load<Sprite>("UI/Purple_button00");
         if (art != null) { image.sprite = art; image.type = Image.Type.Sliced; }
         else image.color = new Color(0.30f, 0.24f, 0.52f, 1f);
 

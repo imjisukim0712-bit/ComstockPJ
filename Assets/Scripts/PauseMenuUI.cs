@@ -8,11 +8,15 @@ using UnityEngine.UI;
 /// ESC 일시정지 메뉴(기획서 p.3 "일시정지 / 설정 메뉴"). 씬에 배치하지 않고 GameFlowManager가
 /// Canvas 밑에 코드로 붙인다(<c>EquipmentDetailPopup</c>·<c>AiCoreExtraButtonsUI</c>와 같은 방식).
 ///
-/// ESC로 열고 닫는다. <b>Time.timeScale은 열기 직전 값을 그대로 기억했다가 닫을 때 되돌린다</b> -
-/// `GameFlowManager.IsIntermission`을 보고 0/1 중 하나로 판단하는 대신, 실제 값을 저장해 두면
-/// 앞으로 timeScale을 다른 값(예: 슬로우 모션 연출)으로 쓰게 되어도 안전하다. 다만 일시정지는
-/// <see cref="GameFlowManager.CurrentState"/>가 Combat일 때만 열리도록 막아서(정비/상점 화면은
-/// 이미 그 자체로 전체 화면 UI이자 timeScale=0 상태다) 지금은 항상 1을 저장하고 1로 복귀한다.
+/// ESC로 열고 닫는다. <b>정지·복귀는 <see cref="GameFlowManager.SetPaused"/>에 통째로 맡긴다</b> -
+/// 이 화면은 Time.timeScale을 직접 건드리지 않는다.
+///
+/// <b>2026-08-26 버그 수정</b> - 예전에는 "열기 직전 값을 기억했다가 닫을 때 되돌리는" 방식이었다.
+/// 그런데 웨이브 시작 배너가 떠 있는 1.2초 동안에도 이 메뉴가 열리므로, 그때 ESC를 누르면
+/// <b>timeScale=0을 "원래 값"으로 기억</b>해 버렸다. 배너 코루틴은 실시간으로 계속 돌아 1.2초 뒤
+/// 배속을 1로 되돌리는데, 그 뒤에 메뉴를 닫으면 기억해 둔 0이 다시 적용돼 게임이 영구히 멈췄다
+/// (사용자 리포트: "웨이브 UI가 뜬 상태에서 ESC → 설정 → 복귀하면 캐릭터를 못 움직임").
+/// 이제 "일시정지가 아닐 때의 배속"은 GameFlowManager 한 곳만 소유하므로 둘이 싸울 수 없다.
 ///
 /// 랭킹·도감 버튼은 사용자 확정(2026-08-18: "버튼만 배치, 비활성")에 따라 눌러도 아무 동작이
 /// 없다 - 화면 기획과 데이터 설계가 아직 없어서 이번 범위 밖이다.
@@ -29,7 +33,6 @@ public class PauseMenuUI : MonoBehaviour
     private GameObject content;
     private SettingsPanelUI settingsPanel;
     private RankingPanelUI rankingPanel;
-    private float savedTimeScale = 1f;
 
     public bool IsOpen => content != null && content.activeSelf;
 
@@ -164,9 +167,7 @@ public class PauseMenuUI : MonoBehaviour
 
     private void OpenPause()
     {
-        savedTimeScale = Time.timeScale;
-        Time.timeScale = 0f;
-        GameFlowManager.SetPaused(true);
+        GameFlowManager.SetPaused(true); // timeScale=0은 여기서 함께 처리된다
         content.SetActive(true);
     }
 
@@ -176,8 +177,9 @@ public class PauseMenuUI : MonoBehaviour
         if (rankingPanel != null) rankingPanel.Close();
 
         content.SetActive(false);
+        // 일시정지를 연 시점의 값이 아니라 "지금 이 게임이 돌아가야 할 배속"으로 복귀한다
+        // (일시정지 중에 웨이브 배너가 끝나 배속이 0 → 1로 바뀌었을 수 있다 - 위 클래스 주석 참고).
         GameFlowManager.SetPaused(false);
-        Time.timeScale = savedTimeScale;
     }
 
     private void OpenSettings()
@@ -218,7 +220,7 @@ public class PauseMenuUI : MonoBehaviour
     // (되돌리지 않으면 타이틀 화면 자체가 멈춘 채로 시작된다).
     private void FinishQuitToTitle()
     {
-        Time.timeScale = 1f;
+        GameFlowManager.SetTimeScale(1f);
         GameFlowManager.SetPaused(false);
         SceneManager.LoadScene(TitleSceneName);
     }

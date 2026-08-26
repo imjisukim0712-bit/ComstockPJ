@@ -12,8 +12,14 @@
 public enum PartSlot
 {
     ArmWeaponSocket, // 팔 - 무기 소켓 (장착 가능 무기 타입을 결정)
-    ArmArmor,        // 팔 - 팔 장갑 (방어력)
-    MagneticCore,    // 팔 - 자기장 코어 (지탱 가능 무기 무게)
+
+    // 2026-08-26 사용자 지시로 팔장갑/자기장 코어 시스템 완전 삭제. enum은 int로 직렬화되므로
+    // Foot과 같은 이유(위 클래스 주석 참고)로 자리만 남겨둔다 - PartsCatalog에는 이 두 슬롯의
+    // 파츠 데이터가 이제 없고(GetDefaultPart가 null 반환), DisplayOrder에도 없어 UI 어디에도
+    // 나타나지 않는다. 자기장 코어가 주던 무기 무게 지탱력은 다리(Leg)만으로 계산된다
+    // (ModdingManager.GetTotalWeightCapacity 참고).
+    ArmArmor,        // (미사용) 팔 - 팔 장갑
+    MagneticCore,    // (미사용) 팔 - 자기장 코어
     Leg,             // 다리 (무게 지탱 + 회피, 2026-08-18부터 이동속도까지 - 아래 Foot 참고)
     LegArmor,        // 다리 - 다리 장갑 (방어력)
 
@@ -38,16 +44,14 @@ public static class PartSlotExtensions
     /// 소켓 인덱스별로 카드가 N개(ModdingManager.ActiveSocketCount) 그려지므로, 이 슬롯 하나로
     /// 표현할 수 없어 UI가 별도로 처리한다(ModdingPanelUI.RebuildSlots 참고).
     /// </summary>
-    /// <summary>2026-08-18 `UI 기획서.pdf` 반영 - 메모리/헬멧/팔장갑 3열, 다리/코어/다리장갑
-    /// 3열, 디스크 슬롯 1개가 그 아래 홀로 남는 배치(3열 그리드에 7개를 순서대로 채우면
-    /// 자동으로 이 모양이 된다). Foot은 더 이상 나열하지 않는다.</summary>
+    /// <summary>2026-08-26 팔장갑/자기장 코어 삭제로 5칸(메모리/헬멧/다리/다리장갑/디스크
+    /// 슬롯)만 남았다(3열 그리드에 순서대로 채우면 2행, 마지막 행은 2칸만 찬다). Foot·ArmArmor·
+    /// MagneticCore는 더 이상 나열하지 않는다.</summary>
     public static readonly PartSlot[] DisplayOrder =
     {
         PartSlot.Memory,          // 머리
         PartSlot.Helmet,          // 머리
-        PartSlot.ArmArmor,        // 팔
         PartSlot.Leg,             // 다리
-        PartSlot.MagneticCore,    // 팔
         PartSlot.LegArmor,        // 다리
         PartSlot.DiscSlot         // 머리
     };
@@ -58,8 +62,10 @@ public static class PartSlotExtensions
         switch (slot)
         {
             case PartSlot.ArmWeaponSocket: return Loc.T("partslot.weaponsocket");
-            case PartSlot.ArmArmor: return Loc.T("partslot.armarmor");
-            case PartSlot.MagneticCore: return Loc.T("partslot.magneticcore");
+            // ArmArmor/MagneticCore는 2026-08-26 삭제된 슬롯이라 case가 없다 - 번역 키
+            // (partslot.armarmor/magneticcore)도 함께 지웠으므로 Loc.T를 부르면 키 문자열이
+            // 그대로 화면에 나올 뿐이다. default로 떨어져 enum 이름을 돌려준다(어차피
+            // DisplayOrder에 없어 UI에는 나타나지 않는다).
             case PartSlot.Leg: return Loc.T("partslot.leg");
             case PartSlot.LegArmor: return Loc.T("partslot.legarmor");
             case PartSlot.Foot: return Loc.T("partslot.foot");

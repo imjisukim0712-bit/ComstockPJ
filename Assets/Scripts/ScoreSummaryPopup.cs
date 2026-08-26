@@ -90,6 +90,13 @@ public class ScoreSummaryPopup : MonoBehaviour
 
         if (breakdownText != null)
         {
+            // 패널(Panel)은 정규화 앵커라 화면 비례로 커지고 줄어드는데, 이 글자는 표 줄바꿈이
+            // 깨지지 않도록 fontSize를 고정해 뒀다(Build() 참고 - ApplyTextSizing의 자동 크기 대신
+            // 고정 크기 + Overflow를 쓴 이유는 그쪽 주석 참고). 고정 크기라 ResponsiveTextScaler가
+            // 못 건드리므로(enableAutoSizing=false는 스캔에서 제외됨) 같은 비율을 여기서 직접 준다
+            // (2026-08-26, "창모드에서 텍스트·리소스 비율이 안 맞는다" 리포트 대응).
+            breakdownText.fontSize = 26f * Mathf.Clamp(Screen.height / ResponsiveTextScaler.DesignHeight, 0.6f, 2f);
+
             breakdownText.text =
                 // 2026-08-20: WaveNumber/CoreLevel은 "현재 값"(1부터 시작)이라 그대로 곱하면
                 // 시작하자마자 기본점수가 붙는다(RunScore.ComputeBreakdown 참고) - 실제 계산과

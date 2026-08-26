@@ -28,7 +28,10 @@ public class HeadSelectPanelUI : MonoBehaviour
     private static readonly Color CellHoverColor = new Color(0.24f, 0.26f, 0.30f, 1f);
 
     /// <summary>해금 전인 머리의 실루엣 색(2026-08-19 Phase E).</summary>
-    private static readonly Color LockedIconColor = new Color(0.10f, 0.10f, 0.12f, 1f);
+    // 2026-08-26 사용자 지적: "해금화면에서는 각 이미지 실루엣만 보여줘야지, 어둡게 보여주면
+    // 안됨" - 옛 값(0.10)은 칸 배경보다도 어두워 실루엣이 거의 안 보였다. 배경보다 밝은
+    // 회색으로 올려 모양은 뚜렷하되 색상 정보는 드러나지 않는 실루엣으로 만든다.
+    private static readonly Color LockedIconColor = new Color(0.42f, 0.44f, 0.48f, 1f);
 
     private sealed class HeadCell
     {
@@ -177,15 +180,17 @@ public class HeadSelectPanelUI : MonoBehaviour
         // 해금 전인 머리는 실루엣 + 자물쇠로만 보여주고 고를 수 없다(2026-08-19 Phase E).
         bool unlocked = UnlockState.IsUnlocked(info.robotId);
 
-        Image icon = CreateImage(cellRect, "Icon", new Vector2(0.13f, 0.26f), new Vector2(0.87f, 0.95f),
-                                 unlocked ? Color.white : LockedIconColor);
+        // 2026-08-26 사용자 지적(도감 화면과 같은 함정): 자물쇠가 칸 중앙을 덮어 실루엣을 가릴
+        // 만큼 컸다 - 우상단 작은 배지로 옮기고 그 대신 실루엣(그림)을 더 크게 키웠다.
+        Image icon = CreateImage(cellRect, "Icon", new Vector2(0.08f, 0.22f), new Vector2(0.92f, 0.96f), Color.white);
         icon.sprite = HeadSpriteLibrary.GetIcon(info);
         icon.preserveAspect = true;
         icon.raycastTarget = false;
+        ItemCellUI.SetIconLockState(icon, unlocked, LockedIconColor);
 
         if (!unlocked)
         {
-            Image padlock = CreateImage(cellRect, "Lock", new Vector2(0.33f, 0.45f), new Vector2(0.67f, 0.82f), Color.white);
+            Image padlock = CreateImage(cellRect, "Lock", new Vector2(0.70f, 0.76f), new Vector2(0.92f, 0.94f), Color.white);
             padlock.sprite = UiIconLibrary.Lock();
             padlock.preserveAspect = true;
             padlock.raycastTarget = false;
@@ -436,7 +441,7 @@ public class HeadSelectPanelUI : MonoBehaviour
 
         var image = go.GetComponent<Image>();
         image.color = Color.white;
-        Sprite art = Resources.Load<Sprite>("UI/Purple_ui02");
+        Sprite art = Resources.Load<Sprite>("UI/Purple_button00");
         if (art != null)
         {
             image.sprite = art;
