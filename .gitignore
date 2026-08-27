@@ -108,3 +108,7 @@ InitTestScene*.unity*
 # ===== External assets (never commit) =====
 /[Aa]ssets/ExternalAssets/
 /[Aa]ssets/ExternalAssets.meta
+
+# ===== PV 렌더 생성물 (스크립트로 다시 뽑을 수 있고 용량이 크다) =====
+/PV/out/
+/PV/__pycache__/
