@@ -57,8 +57,30 @@ public static class Loc
         new LanguageInfo("en", "English", SystemLanguage.English),
     };
 
-    /// <summary>기준 언어 코드. 번역이 비어 있으면 최종적으로 이 언어의 문자열을 쓴다.</summary>
+    /// <summary>
+    /// <b>번역 폴백</b> 기준 언어 코드. 번역이 비어 있으면 최종적으로 이 언어의 문자열을 쓴다.
+    /// <para><b>이 값을 "en"으로 바꾸지 말 것.</b> <see cref="DataNames"/>는 <see cref="Has(string)"/>로
+    /// "번역 키가 있나?"를 먼저 묻고, 없으면 <b>에셋에 든 한글 원문</b>을 쓴다. 그런데 기준 테이블이
+    /// 영어가 되면 <c>strings_en.json</c>에만 있는 키(무기·로봇·몬스터 이름 등 329개)를
+    /// <see cref="Has(string)"/>이 "있다"고 답해버려서, <b>한국어로 플레이해도 이름이 전부 영어로 나온다</b>.
+    /// 첫 실행 기본 언어는 <see cref="DefaultCode"/>가 따로 담당하므로 둘을 합치지 말 것.</para>
+    /// </summary>
     public const string BaseCode = "ko";
+
+    /// <summary>
+    /// <b>첫 실행 기본 언어</b> 코드(2026-08-27, 사용자 지시). 기기 언어가 지원 목록에 없으면 이 언어로 뜬다.
+    /// <para>itch.io 공개 이후로는 한국어를 못 읽는 플레이어가 대부분이라, 판정에 실패했을 때
+    /// 한국어보다 영어로 떨어지는 편이 낫다. <see cref="BaseCode"/>와 <b>일부러 다른 값</b>이다.</para>
+    /// </summary>
+    public const string DefaultCode = "en";
+
+    /// <summary>
+    /// 언어 버튼에 쓰는 <b>고정 라벨 - 번역하지 않는다</b>(2026-08-27, 사용자 지시).
+    /// <para>게임이 자기가 못 읽는 언어로 떠 있을 때도 언어를 바꿀 방법은 찾을 수 있어야 하므로,
+    /// 이 한 단어만은 어떤 언어에서도 항상 영어로 둔다. 같은 이유로 <c>title.language</c> 키는
+    /// 번역 파일에서 <b>지웠다</b> - JSON에 남겨두면 언어를 추가하는 사람이 선의로 번역해서 규칙이 깨진다.</para>
+    /// </summary>
+    public const string LanguageButtonLabel = "Language";
 
     private const string PrefsKey = "Comstock.Language";
     private const string ResourceFolder = "Localization/strings_";
@@ -116,7 +138,11 @@ public static class Loc
     }
 
     /// <summary>
-    /// 첫 실행일 때 OS 언어로 자동 선택한다. 지원 목록에 없는 OS 언어면 기준 언어로 떨어진다.
+    /// 첫 실행일 때 기기 언어로 자동 선택한다. 지원 목록에 없는 언어면 <see cref="DefaultCode"/>(영어)로 떨어진다.
+    /// <para>WebGL에서 <see cref="Application.systemLanguage"/>는 브라우저의 <c>navigator.language</c>에서 온다.
+    /// <c>en-US</c>/<c>en-GB</c>처럼 지역이 달라도 Unity가 <see cref="SystemLanguage.English"/> 하나로 모아주므로
+    /// 지역 코드를 따로 처리할 필요가 없고, 알 수 없는 언어는 <see cref="SystemLanguage.Unknown"/>으로 와서
+    /// 아래 폴백을 탄다.</para>
     /// </summary>
     private static string DetectSystemLanguage()
     {
@@ -125,7 +151,7 @@ public static class Loc
         {
             if (Supported[i].System == sys) return Supported[i].Code;
         }
-        return BaseCode;
+        return IsSupported(DefaultCode) ? DefaultCode : Supported[0].Code;
     }
 
     /// <summary>

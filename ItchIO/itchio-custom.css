@@ -1,24 +1,30 @@
-/* itch.io 커스텀 CSS 권한이 있을 때 Edit theme > Custom CSS에 붙여 넣습니다. */
+/* itch.io 커스텀 CSS 권한이 있을 때 Edit theme > Custom CSS에 붙여 넣습니다.
+ *
+ * 레이아웃 출처: https://itch.io/jam/gbjam-14
+ * 그 페이지의 문법을 그대로 옮겼습니다.
+ *   - 주제마다 둥근 색 블록(.custom-section)이고 배경색이 번갈아 바뀐다
+ *   - 제목 h2는 크고 가운데, 리드문 p는 폭 80%로 좁혀 가운데
+ *   - 본문은 둥근 카드 2열 그리드, 카드마다 픽셀아트 삽화가 하나씩
+ *   - 목록은 96x96 아이콘이 좌우로 번갈아 붙는 지그재그
+ *   - 마지막은 가로로 흐르는 갤러리
+ * 원본은 flex(ul>li)로 짜여 있지만 여기서는 table로 옮겼습니다.
+ * itch.io가 인라인 style을 지우기 때문에, CSS가 없어도 2열이 유지되어야 하기 때문입니다.
+ */
 
 #wrapper .formatted_description .custom-comstock-description {
-  --custom-ink: #15121c;
-  --custom-panel: #292238;
-  --custom-purple: #9a67d6;
-  --custom-mint: #74ded4;
+  --custom-ink: #1c1a19;        /* 페이지 바탕 */
+  --custom-sect-a: #231f1d;     /* 섹션 바탕 A */
+  --custom-sect-b: #2a2624;     /* 섹션 바탕 B (번갈아) */
+  --custom-card: #332e2b;       /* 카드 바탕 */
+  --custom-accent: #fa5c2f;
+  --custom-amber: #ffc061;
+  --custom-line: #4a403a;
   box-sizing: border-box;
-  padding: 24px;
-  color: #eee9f2;
-  background:
-    repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.025) 0,
-      rgba(255, 255, 255, 0.025) 1px,
-      transparent 1px,
-      transparent 5px
-    ),
-    var(--custom-ink);
-  border: 4px solid var(--custom-purple);
-  box-shadow: 10px 10px 0 #09070d;
+  padding: 18px;
+  color: #f2ece7;
+  background: var(--custom-ink);
+  border: 4px solid var(--custom-accent);
+  box-shadow: 10px 10px 0 #0c0a09;
   font-family: Consolas, "Courier New", monospace;
   line-height: 1.65;
 }
@@ -28,141 +34,331 @@
   box-sizing: border-box;
 }
 
-#wrapper .formatted_description .custom-comstock-description .custom-boot {
-  margin: -24px -24px 24px;
-  padding: 18px 16px 16px;
-  color: var(--custom-ink);
-  background: var(--custom-mint);
-  border-bottom: 4px solid #09070d;
-  letter-spacing: 0.09em;
+/* ---------------------------------------------------------------- 섹션 블록
+ * 레퍼런스: .custom-section { margin: 2em auto; padding: 1em; border-radius: 1em }
+ * 배경색이 섹션마다 번갈아 바뀌는 것이 이 레이아웃의 뼈대다. */
+#wrapper .formatted_description .custom-comstock-description .custom-section {
+  display: block;
+  margin: 22px 0;
+  padding: 16px;
+  overflow: auto;
+  background: var(--custom-sect-a);
+  border-radius: 16px;
 }
 
-#wrapper .formatted_description .custom-comstock-description .custom-boot strong {
-  font-size: 1.3em;
+#wrapper .formatted_description .custom-comstock-description .custom-section-controls,
+#wrapper .formatted_description .custom-comstock-description .custom-section-loop,
+#wrapper .formatted_description .custom-comstock-description .custom-section-enemies {
+  background: var(--custom-sect-b);
 }
 
-#wrapper .formatted_description .custom-comstock-description .custom-boot code {
-  color: var(--custom-ink);
-  background: transparent;
+/* 논지에 해당하는 섹션 하나만 강조색을 쓴다(레퍼런스의 bright 섹션 자리). */
+#wrapper .formatted_description .custom-comstock-description .custom-section-build {
+  background: #3a211a;
+  box-shadow: inset 0 0 0 2px var(--custom-accent);
 }
 
-#wrapper .formatted_description .custom-comstock-description h2 {
-  margin: 32px 0 14px;
-  padding: 9px 12px;
+#wrapper .formatted_description .custom-comstock-description .custom-section:first-child {
+  margin-top: 0;
+}
+
+/* 큰 가운데 제목. 레퍼런스는 4em이지만 본문 칸이 553px이라 그대로 쓰면 넘친다. */
+#wrapper .formatted_description .custom-comstock-description .custom-section h2 {
+  margin: 4px 0 2px;
+  padding: 0;
   color: #fff;
-  background: var(--custom-panel);
+  background: none;
   border: 0;
-  border-left: 8px solid var(--custom-purple);
-  border-bottom: 2px solid var(--custom-mint);
-  font: 700 1.15em/1.3 Consolas, "Courier New", monospace;
+  font: 700 1.75em/1.25 Consolas, "Courier New", monospace;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-section-build h2 {
+  color: var(--custom-amber);
+}
+
+/* 리드문: 폭 80%로 좁혀 가운데. 레퍼런스의 `.custom-section > p`와 같은 규칙. */
+#wrapper .formatted_description .custom-comstock-description .custom-section > p {
+  display: block;
+  width: 80%;
+  margin: 12px auto 18px;
+  font-size: 1.08em;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- 인트로
+ * 레퍼런스: .custom-section-intro { display: flex; align-items: center } */
+#wrapper .formatted_description .custom-comstock-description .custom-introgrid,
+#wrapper .formatted_description .custom-comstock-description .custom-cards,
+#wrapper .formatted_description .custom-comstock-description .custom-wide,
+#wrapper .formatted_description .custom-comstock-description .custom-criteria,
+#wrapper .formatted_description .custom-comstock-description .custom-gallery {
+  width: 100%;
+  margin: 0;
+  background: transparent;
+  border-collapse: separate;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-introgrid td {
+  padding: 8px;
+  background: transparent;
+  border: 0;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-tagline {
+  margin: 0 0 8px;
+  color: var(--custom-amber);
+  font-size: 1.12em;
+  line-height: 1.45;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-introgrid p {
+  margin: 0 0 6px;
+}
+
+/* ---------------------------------------------------------------- 카드 그리드
+ * 레퍼런스: li { width: 47.5%; margin: 1.25%; padding: 1em 2em; border-radius: 1em } */
+#wrapper .formatted_description .custom-comstock-description .custom-cards {
+  border-spacing: 10px;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-cards td {
+  padding: 14px 18px;
+  background: var(--custom-card);
+  border: 0;
+  border-radius: 16px;
+  text-align: center;
+  vertical-align: top;
+}
+
+/* 카드 안 삽화는 글 위에 가운데. 레퍼런스: .custom-rules-img { display:block; margin:auto } */
+#wrapper .formatted_description .custom-comstock-description .custom-card-img {
+  display: block;
+  margin: 0 auto 8px;
+}
+
+/* 레퍼런스: .custom-rules h3 { font-size: 30px; text-align: center; margin: 0 } */
+#wrapper .formatted_description .custom-comstock-description .custom-section h3 {
+  margin: 0 0 6px;
+  padding: 0;
+  color: var(--custom-amber);
+  background: none;
+  border: 0;
+  font: 700 1.05em/1.3 Consolas, "Courier New", monospace;
   letter-spacing: 0.03em;
 }
 
-#wrapper .formatted_description .custom-comstock-description blockquote {
-  margin: 22px 0;
-  padding: 14px 16px;
-  color: inherit;
-  background: var(--custom-panel);
-  border: 2px solid var(--custom-mint);
-  border-left-width: 8px;
+#wrapper .formatted_description .custom-comstock-description .custom-cards h3 {
+  text-align: center;
 }
 
-#wrapper .formatted_description .custom-comstock-description .custom-alert {
-  border-color: var(--custom-purple);
+#wrapper .formatted_description .custom-comstock-description .custom-cards p,
+#wrapper .formatted_description .custom-comstock-description .custom-wide p,
+#wrapper .formatted_description .custom-comstock-description .custom-criteria p {
+  margin: 0;
+  font-size: 0.95em;
+}
+
+/* ---------------------------------------------------------------- 넓은 카드
+ * 레퍼런스: .custom-rules-accuracy { display:flex; align-items:center; width:97.5% }
+ *           .custom-rules-accuracy img { width: 238px } */
+#wrapper .formatted_description .custom-comstock-description .custom-wide {
+  border-spacing: 10px;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-wide td {
+  padding: 14px 18px;
+  background: var(--custom-card);
+  border: 0;
+  border-radius: 16px;
+  vertical-align: middle;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-wide td:first-child {
+  padding: 10px;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-wide-img {
+  display: block;
+  margin: 0 auto;
+}
+
+/* ---------------------------------------------------------------- 지그재그 목록
+ * 레퍼런스 그대로다.
+ *   ul.custom-criteria li { display:flex; align-items:center }
+ *   li:nth-of-type(2n)    { flex-direction: row-reverse }
+ *   .custom-criteria-img  { width:96px; height:96px }
+ *   li .custom-textblock  { width: calc(100% - 96px); padding: 0 1em }
+ * 여기만 table을 안 쓴다 - table 자동 레이아웃은 지정 폭을 최솟값으로만 보기 때문에
+ * 아이콘 칸이 계속 반쪽까지 벌어졌다. */
+#wrapper .formatted_description .custom-comstock-description .custom-criteria {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-criteria li {
+  display: flex;
+  align-items: center;
+  margin: 0 0 6px;
+  padding: 6px 4px;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-criteria li::marker {
+  content: none;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-criteria li:nth-of-type(2n) {
+  flex-direction: row-reverse;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-criteria-img {
+  display: block;
+  flex: 0 0 96px;
+  width: 96px;
+  height: 96px;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-criteria .custom-textblock {
+  width: calc(100% - 96px);
+  padding: 0 14px;
+}
+
+/* 홀수 항목은 그림이 왼쪽이므로 글을 오른쪽으로 붙인다(레퍼런스와 같은 지그재그). */
+#wrapper .formatted_description .custom-comstock-description .custom-criteria li:nth-of-type(2n-1) .custom-textblock {
+  text-align: right;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-criteria p {
+  margin: 0;
+  font-size: 0.95em;
+}
+
+/* ---------------------------------------------------------------- 갤러리
+ * 레퍼런스: .custom-splash-container { display:flex; flex-wrap:wrap; justify-content:center } */
+#wrapper .formatted_description .custom-comstock-description .custom-gallery {
+  border-spacing: 2px;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-gallery td {
+  padding: 4px 2px;
+  background: transparent;
+  border: 0;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-gallery-img {
+  display: block;
+  margin: 0 auto;
+}
+
+#wrapper .formatted_description .custom-comstock-description .custom-gallery-labels td {
+  color: var(--custom-amber);
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+}
+
+/* ---------------------------------------------------------------- 픽셀아트 규칙
+ * ★ 늘리지 않는다. 원본 크기 1:1이 기본이고, 줄어들 때도 계단을 유지한다. */
+#wrapper .formatted_description .custom-comstock-description .custom-pixel-img {
+  max-width: 100%;
+  height: auto;
+  border: 0;
+  image-rendering: pixelated;
+}
+
+/* ---------------------------------------------------------------- 나머지 요소 */
+#wrapper .formatted_description .custom-comstock-description blockquote {
+  margin: 18px auto 4px;
+  padding: 12px 16px;
+  width: 92%;
+  color: inherit;
+  background: rgba(12, 10, 9, 0.45);
+  border: 0;
+  border-left: 6px solid var(--custom-accent);
+  border-radius: 10px;
+  text-align: center;
 }
 
 #wrapper .formatted_description .custom-comstock-description blockquote p {
   margin: 0;
 }
 
-#wrapper .formatted_description .custom-comstock-description .custom-kicker {
-  margin: 26px 0;
-  color: var(--custom-mint);
-  letter-spacing: 0.08em;
-}
-
-#wrapper .formatted_description .custom-comstock-description table {
+#wrapper .formatted_description .custom-comstock-description .custom-readout {
   width: 100%;
-  margin: 14px 0 24px;
-  color: inherit;
+  margin: 16px 0 0;
   background: transparent;
   border-collapse: separate;
-  border-spacing: 6px;
+  border-spacing: 4px;
 }
 
-#wrapper .formatted_description .custom-comstock-description table td {
-  padding: 12px;
-  background: var(--custom-panel);
-  border: 2px solid #4e4263;
+#wrapper .formatted_description .custom-comstock-description .custom-readout td {
+  padding: 8px 12px;
+  background: var(--custom-card);
+  border: 0;
+  border-radius: 8px;
 }
 
-#wrapper .formatted_description .custom-comstock-description .custom-loop strong,
 #wrapper .formatted_description .custom-comstock-description .custom-readout strong {
-  color: var(--custom-mint);
-}
-
-#wrapper .formatted_description .custom-comstock-description .custom-controls td:first-child {
-  color: #fff;
-  background: var(--custom-purple);
-  border-color: var(--custom-purple);
-}
-
-#wrapper .formatted_description .custom-comstock-description .custom-controls code {
-  color: #fff;
-  background: transparent;
-  font-size: 1.1em;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-}
-
-#wrapper .formatted_description .custom-comstock-description li {
-  margin-bottom: 8px;
-}
-
-#wrapper .formatted_description .custom-comstock-description li::marker {
-  color: var(--custom-purple);
+  color: var(--custom-amber);
 }
 
 #wrapper .formatted_description .custom-comstock-description code {
   padding: 2px 5px;
-  color: var(--custom-mint);
-  background: #0c0a10;
-}
-
-#wrapper .formatted_description .custom-comstock-description hr {
-  height: 4px;
-  margin: 34px 0 26px;
-  background: var(--custom-purple);
-  border: 0;
-}
-
-#wrapper .formatted_description .custom-comstock-description .custom-footnote {
-  color: #bbb2c8;
+  color: var(--custom-amber);
+  background: #0e0c0b;
 }
 
 #wrapper .formatted_description .custom-comstock-description .custom-final {
-  margin-bottom: 0;
-  color: var(--custom-mint);
+  margin: 8px 0 0;
+  color: var(--custom-amber);
   font-size: 1.08em;
   letter-spacing: 0.04em;
+  text-align: center;
 }
 
+/* ---------------------------------------------------------------- 좁은 화면
+ * 레퍼런스도 카드 폭이 47.5%라 좁아지면 자연히 한 줄로 떨어진다.
+ * table은 스스로 그러지 못하므로 여기서 블록으로 풀어 준다. */
 @media (max-width: 680px) {
   #wrapper .formatted_description .custom-comstock-description {
-    padding: 16px;
+    padding: 12px;
     border-width: 3px;
-    box-shadow: 6px 6px 0 #09070d;
+    box-shadow: 6px 6px 0 #0c0a09;
   }
 
-  #wrapper .formatted_description .custom-comstock-description .custom-boot {
-    margin: -16px -16px 18px;
+  #wrapper .formatted_description .custom-comstock-description .custom-section h2 {
+    font-size: 1.35em;
   }
 
-  #wrapper .formatted_description .custom-comstock-description .custom-loop,
-  #wrapper .formatted_description .custom-comstock-description .custom-loop tbody,
-  #wrapper .formatted_description .custom-comstock-description .custom-loop tr,
-  #wrapper .formatted_description .custom-comstock-description .custom-loop td {
+  #wrapper .formatted_description .custom-comstock-description .custom-section > p {
+    width: 100%;
+  }
+
+  #wrapper .formatted_description .custom-comstock-description .custom-cards,
+  #wrapper .formatted_description .custom-comstock-description .custom-cards tbody,
+  #wrapper .formatted_description .custom-comstock-description .custom-cards tr,
+  #wrapper .formatted_description .custom-comstock-description .custom-cards td,
+  #wrapper .formatted_description .custom-comstock-description .custom-introgrid,
+  #wrapper .formatted_description .custom-comstock-description .custom-introgrid tbody,
+  #wrapper .formatted_description .custom-comstock-description .custom-introgrid tr,
+  #wrapper .formatted_description .custom-comstock-description .custom-introgrid td,
+  #wrapper .formatted_description .custom-comstock-description .custom-wide,
+  #wrapper .formatted_description .custom-comstock-description .custom-wide tbody,
+  #wrapper .formatted_description .custom-comstock-description .custom-wide tr,
+  #wrapper .formatted_description .custom-comstock-description .custom-wide td {
     display: block;
     width: 100%;
+  }
+
+  #wrapper .formatted_description .custom-comstock-description .custom-cards td {
+    margin-bottom: 10px;
+  }
+
+  /* ★ 좁은 화면에서 갤러리 아이콘은 정확히 절반(48px)으로 줄인다.
+   * 칸 폭에 맡기면 87px 같은 비정수 배율이 걸려 픽셀 크기가 들쭉날쭉해진다. */
+  #wrapper .formatted_description .custom-comstock-description .custom-gallery-img {
+    width: 48px;
+    height: 48px;
   }
 }

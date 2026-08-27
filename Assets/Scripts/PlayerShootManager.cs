@@ -1404,9 +1404,11 @@ public class PlayerShootManager : MonoBehaviour
     /// (<see cref="SFXManager.PlayThrottled"/> 주석 참고) - 초당 20번으로 제한한다.</summary>
     private const float WeaponSfxMinInterval = 0.05f;
 
-    /// <summary>빔(플라즈마 캐논) 전용 간격. 이 소리만 4.6초로 길어서, 짧은 간격으로 겹치면
+    /// <summary>빔(플라즈마 캐논) 전용 간격. 이 소리만 유독 길어서, 짧은 간격으로 겹치면
     /// 같은 소리가 서너 겹 쌓여 볼륨이 튄다(빔 1회가 3초 + 대기 2초라 원래 겹칠 일이 없지만,
-    /// 소켓 여러 개가 동시에 쏘거나 공격속도 버프가 붙으면 겹친다).</summary>
+    /// 소켓 여러 개가 동시에 쏘거나 공격속도 버프가 붙으면 겹친다).
+    /// <para>2026-08-27에 이 소리가 <b>4.61초 → 2.10초</b>로 교체됐다. 값 2초는 그대로 둔다 -
+    /// 클립보다 길거나 같으면 겹침이 원천적으로 불가능하고, 빔이 3초라 소리가 먼저 끝난다.</para></summary>
     private const float BeamSfxMinInterval = 2f;
 
     private static void PlayWeaponFireSfx(WeaponData weapon)
@@ -1421,8 +1423,8 @@ public class PlayerShootManager : MonoBehaviour
     /// 그다음 무기 카테고리(<see cref="WeaponType"/>, PartsCatalog.weaponMeta)를 본다 -
     /// 빔(플라즈마 캐논)과 근접은 카테고리와 상관없이 소리가 정해져 있기 때문이다.
     ///
-    /// 정밀화기는 전용 파일이 아직 없어 연사 소리를 함께 쓴다(사용자가 나중에
-    /// <c>Resources/SFX/Weapon_Precision.wav</c>를 넣으면 여기 한 줄만 늘리면 된다).
+    /// 정밀화기는 2026-08-27부터 전용 소리(<see cref="SFXManager.WeaponPrecisionClipName"/>)를 쓴다 -
+    /// 그전까지는 전용 파일이 없어 연사 소리를 함께 썼다.
     /// </summary>
     private static string ResolveWeaponFireClip(WeaponData weapon)
     {
@@ -1435,13 +1437,14 @@ public class PlayerShootManager : MonoBehaviour
             switch (meta.type)
             {
                 case WeaponType.Shotgun: return SFXManager.WeaponShotgunClipName;
+                case WeaponType.Precision: return SFXManager.WeaponPrecisionClipName;
                 case WeaponType.Explosive: return SFXManager.WeaponExplosiveClipName;
                 case WeaponType.Energy: return SFXManager.WeaponLaserPistolClipName; // 빔이 아닌 에너지 = 레이저 피스톨 계열
                 case WeaponType.Melee: return SFXManager.WeaponMeleeClipName;
             }
         }
 
-        return SFXManager.WeaponRapidFireClipName; // 연사 + 정밀 + 메타 누락 폴백
+        return SFXManager.WeaponRapidFireClipName; // 연사 + 메타 누락 폴백
     }
 
     /// <summary>

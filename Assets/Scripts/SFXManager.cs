@@ -21,6 +21,9 @@ public class SFXManager : MonoBehaviour
     /// <summary>Resources 안의 효과음 폴더. 폴더가 없어도 Resources.LoadAll은 빈 배열을 돌려줄 뿐 예외를 던지지 않는다.</summary>
     private const string SfxFolder = "SFX";
 
+    /// <summary>플레이어(로봇) 피격음. <b>2026-08-27부터 실제 파일이 있다</b>(사용자 제공
+    /// <c>로봇_피격_효과음.wav</c>). 그전까지는 파일이 없어 <see cref="EnsurePlaceholderClip"/>가
+    /// 만드는 880Hz 비프음이 대신 나고 있었다.</summary>
     private const string PlayerHitClipName = "Player_Hit";
 
     /// <summary>UI 버튼 클릭음(2026-08-25 사용자 제공 <c>23_ui_click.wav</c>).
@@ -39,7 +42,7 @@ public class SFXManager : MonoBehaviour
     //
     // 원본 파일명 → 이 프로젝트 이름:
     //   01_weapon_melee_attack     → Weapon_Melee
-    //   02_weapon_rapid_fire       → Weapon_RapidFire   (정밀화기도 이 소리를 함께 쓴다 - 전용 파일 없음)
+    //   02_weapon_rapid_fire       → Weapon_RapidFire   (연사화기 전용. 정밀화기는 2026-08-27부터 자기 소리가 있다)
     //   03_weapon_shotgun_fire     → Weapon_Shotgun
     //   06_weapon_explosive_launch → Weapon_Explosive
     //   Laser_pistol               → Weapon_LaserPistol (에너지 계열 중 투사체 무기)
@@ -48,12 +51,33 @@ public class SFXManager : MonoBehaviour
     //   01_cartoon_zombie_classic_splat → Enemy_Death
     //   보스 사운드/02~04          → Boss_Hit_A/B/C
     //   보스 사운드/05_heavy_burst → Boss_Death
+    //
+    // ── 2026-08-27 사용자 제공 교체분(`새사운드/` 폴더) ──────────────────
+    //   좀비_사망음               → Enemy_Death        (교체. 0.66초 → 0.58초)
+    //   플라즈마캐논_발사_효과음  → Weapon_PlasmaCannon(교체. 4.61초 → 2.10초 - 아래 빔 간격 주석 참고)
+    //   로봇_피격_효과음          → Player_Hit         (신규. 비프음 placeholder를 대체)
+    //   정밀형화기_발사_효과음    → Weapon_Precision   (신규. 그전까지 연사 소리를 빌려 썼다)
+    //   디스럽터_폭발음           → Enemy_DisruptorExplode(신규. 자폭 적 전용 - 아래 주석 참고)
+    // 나머지 7개(근접/레이저피스톨/산탄/연사/폭발/좀비피격/보스BGM)는 이미 적용된 것과
+    // 바이트 단위로 같아서 할 일이 없었다(해시 대조로 확인).
     public const string WeaponMeleeClipName = "Weapon_Melee";
     public const string WeaponRapidFireClipName = "Weapon_RapidFire";
     public const string WeaponShotgunClipName = "Weapon_Shotgun";
     public const string WeaponExplosiveClipName = "Weapon_Explosive";
     public const string WeaponLaserPistolClipName = "Weapon_LaserPistol";
     public const string WeaponPlasmaCannonClipName = "Weapon_PlasmaCannon";
+    /// <summary>정밀화기(대물저격총·지정사수소총) 전용 발사음(2026-08-27 신규).
+    /// 2.10초로 다른 발사음(0.14~0.62초)보다 길지만, 앞 0.6초만 실제 소리이고 나머지는 잔향이라
+    /// 발사 간격(<c>1/atsp</c> = 1.8~4초)과 겹치지 않는다.</summary>
+    public const string WeaponPrecisionClipName = "Weapon_Precision";
+
+    /// <summary>디스럽터(자폭하는 적)의 폭발음(2026-08-27 신규).
+    /// <see cref="DisruptorUnit"/>이 <c>PlayDeathSfx</c>를 오버라이드해 일반 사망음 대신 낸다.
+    /// <para><b>참고</b>: 사용자가 준 이 파일은 <c>Boss_Death.wav</c>와 바이트 단위로 같은 소리다 -
+    /// 별도 에셋으로 둔 이유는 이 클래스의 "이름으로 교체" 규칙을 살려서, 나중에 둘 중 하나만
+    /// 다른 소리로 바꿀 수 있게 하기 위해서다.</para></summary>
+    public const string EnemyDisruptorExplodeClipName = "Enemy_DisruptorExplode";
+
     public const string EnemyDeathClipName = "Enemy_Death";
     public const string BossDeathClipName = "Boss_Death";
 
@@ -122,6 +146,8 @@ public class SFXManager : MonoBehaviour
         }
 
         // 실제 파일이 없는 키만 절차적 비프음으로 채운다 - 폴더 스캔이 이미 채운 키는 건드리지 않는다.
+        // 2026-08-27에 Player_Hit.wav가 들어와서 지금은 이 줄이 아무것도 하지 않는다.
+        // 그래도 남겨둔다 - 파일이 빠지면 소리가 조용히 사라지는 대신 비프음으로 티가 난다.
         EnsurePlaceholderClip(PlayerHitClipName, frequency: 880f, duration: 0.08f);
     }
 

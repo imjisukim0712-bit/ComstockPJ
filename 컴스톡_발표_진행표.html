@@ -1,0 +1,918 @@
+<title>컴스톡 발표 시나리오</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=Orbitron:wght@500;700&display=swap">
+
+<style>
+  :root {
+    --ground:      #FAF6F2;
+    --surface:     #FFFFFF;
+    --surface-2:   #F3ECE5;
+    --line:        #E4D8CD;
+    --line-strong: #CDBBAE;
+    --ink:         #231A16;
+    --ink-2:       #55453C;
+    --muted:       #8B7A70;
+    --accent:      #C8431A;
+    --accent-2:    #8A3B22;
+    --accent-wash: #F8E5D9;
+    --on-accent:   #FFFFFF;
+    --gamer:       #1B6A5C;
+    --gamer-wash:  #DFF0EB;
+    --investor:    #4E3F94;
+    --investor-wash:#E7E2F6;
+    --shadow:      0 1px 2px rgba(35,26,22,.05), 0 8px 24px -16px rgba(35,26,22,.28);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #14100E;
+      --surface:     #1C1613;
+      --surface-2:   #241B17;
+      --line:        #372A23;
+      --line-strong: #4E3C31;
+      --ink:         #F2E8E1;
+      --ink-2:       #C6B3A7;
+      --muted:       #97847A;
+      --accent:      #FA5C2F;
+      --accent-2:    #FFD29B;
+      --accent-wash: #33190F;
+      --on-accent:   #17100E;
+      --gamer:       #57C9AE;
+      --gamer-wash:  #122A26;
+      --investor:    #AFA1F5;
+      --investor-wash:#201B33;
+      --shadow:      0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:      #14100E;
+    --surface:     #1C1613;
+    --surface-2:   #241B17;
+    --line:        #372A23;
+    --line-strong: #4E3C31;
+    --ink:         #F2E8E1;
+    --ink-2:       #C6B3A7;
+    --muted:       #97847A;
+    --accent:      #FA5C2F;
+    --accent-2:    #FFD29B;
+    --accent-wash: #33190F;
+    --on-accent:   #17100E;
+    --gamer:       #57C9AE;
+    --gamer-wash:  #122A26;
+    --investor:    #AFA1F5;
+    --investor-wash:#201B33;
+    --shadow:      0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans KR", system-ui, -apple-system, "Malgun Gothic", sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1.72;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+    padding: 0 20px 96px;
+  }
+
+  .wrap { max-width: 960px; margin: 0 auto; }
+
+  /* ---------- shared type ---------- */
+  .eyebrow {
+    font-family: Orbitron, "IBM Plex Mono", monospace;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 .5rem;
+  }
+  h1, h2, h3, h4 { text-wrap: balance; margin: 0; font-weight: 600; letter-spacing: -.01em; }
+  h1 { font-size: clamp(2rem, 1.3rem + 2.6vw, 3.1rem); line-height: 1.16; font-weight: 700; }
+  h2 { font-size: clamp(1.3rem, 1.06rem + .9vw, 1.72rem); line-height: 1.3; }
+  h3 { font-size: 1.06rem; line-height: 1.45; }
+  h4 { font-size: .95rem; line-height: 1.45; }
+  p  { margin: 0; }
+  a  { color: var(--accent); text-underline-offset: 3px; }
+  strong { font-weight: 600; color: var(--ink); }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  :where(a, button, summary):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead { padding: 72px 0 40px; border-bottom: 1px solid var(--line); }
+  .mast-tag {
+    font-family: Orbitron, monospace; font-size: .66rem; font-weight: 700;
+    letter-spacing: .24em; color: var(--muted); margin: 0 0 1.1rem;
+  }
+  .mast-tag b { color: var(--accent); font-weight: 700; }
+  .masthead h1 span { color: var(--accent); }
+  .lede {
+    margin-top: 1.3rem; max-width: 60ch;
+    font-size: 1.06rem; color: var(--ink-2); font-weight: 300;
+  }
+  .facts {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-top: 1.8rem;
+  }
+  .fact {
+    display: flex; align-items: baseline; gap: .5rem;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 2px; padding: .5rem .8rem;
+    font-size: .82rem; color: var(--ink-2);
+  }
+  .fact b {
+    font-family: Orbitron, monospace; font-size: .74rem; letter-spacing: .1em;
+    color: var(--muted); font-weight: 700; text-transform: uppercase;
+  }
+
+  /* ---------- timeline strip ---------- */
+  .strip-block { margin: 44px 0 8px; }
+  .strip-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 16px; flex-wrap: wrap; margin-bottom: .9rem;
+  }
+  .strip-head p { font-size: .84rem; color: var(--muted); }
+  .strip {
+    display: flex; width: 100%; height: 58px;
+    border: 1px solid var(--line-strong); border-radius: 3px; overflow: hidden;
+    background: var(--surface);
+  }
+  .seg {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; min-width: 0; padding: 0 2px;
+    border-right: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .seg:last-child { border-right: 0; }
+  .seg-no {
+    font-family: Orbitron, monospace; font-size: .8rem; font-weight: 700;
+    color: var(--ink-2); line-height: 1;
+  }
+  .seg-t {
+    font-family: "IBM Plex Mono", monospace; font-size: .62rem;
+    color: var(--muted); line-height: 1; white-space: nowrap;
+  }
+  .seg.hot { background: var(--accent-wash); }
+  .seg.hot .seg-no { color: var(--accent); }
+  .seg.qa { background: var(--surface-2); }
+  .strip-key {
+    display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: .8rem;
+    font-size: .78rem; color: var(--muted);
+  }
+  .strip-key span::before {
+    content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 6px;
+    border: 1px solid var(--line-strong); vertical-align: 1px;
+  }
+  .strip-key .k-hot::before { background: var(--accent-wash); border-color: var(--accent); }
+  .strip-key .k-qa::before  { background: var(--surface-2); }
+
+  /* ---------- act ---------- */
+  .acts { display: flex; flex-direction: column; gap: 0; margin-top: 56px; }
+  .act {
+    display: grid; grid-template-columns: 124px 1fr; gap: 0 32px;
+    padding: 34px 0; border-top: 1px solid var(--line);
+  }
+  .act:first-child { border-top: 2px solid var(--line-strong); }
+  .rail { position: sticky; top: 20px; align-self: start; }
+  .act-no {
+    font-family: Orbitron, monospace; font-size: 2.5rem; font-weight: 700;
+    line-height: .9; color: var(--accent); letter-spacing: -.02em;
+  }
+  .act-clock {
+    font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums;
+    font-size: .82rem; color: var(--ink-2); margin-top: .7rem; line-height: 1.5;
+  }
+  .act-dur {
+    font-size: .74rem; color: var(--muted); margin-top: .1rem;
+    letter-spacing: .02em;
+  }
+  .act-body { min-width: 0; }
+  .goal {
+    margin-top: .85rem; padding-left: 14px;
+    border-left: 3px solid var(--accent);
+    color: var(--ink-2); font-size: .95rem;
+  }
+
+  /* beats */
+  .beats { display: flex; flex-direction: column; gap: 18px; margin-top: 1.6rem; }
+  .beat {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 3px; padding: 16px 18px; box-shadow: var(--shadow);
+  }
+  .beat-head {
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+    margin-bottom: .5rem;
+  }
+  .beat-t {
+    font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums;
+    font-size: .72rem; color: var(--on-accent); background: var(--accent-2);
+    padding: 2px 6px; border-radius: 2px; white-space: nowrap;
+  }
+  .beat p + p { margin-top: .6rem; }
+  .beat p { font-size: .94rem; color: var(--ink-2); }
+
+  .screen {
+    display: flex; gap: 10px; align-items: flex-start;
+    margin-top: .8rem; padding-top: .8rem; border-top: 1px dashed var(--line);
+    font-size: .88rem; color: var(--ink-2);
+  }
+  .screen b {
+    flex: none; font-family: Orbitron, monospace; font-size: .62rem; font-weight: 700;
+    letter-spacing: .12em; color: var(--muted); text-transform: uppercase;
+    border: 1px solid var(--line-strong); border-radius: 2px;
+    padding: 2px 6px; margin-top: 3px;
+  }
+
+  .say {
+    margin: .9rem 0 0; padding: 12px 16px;
+    background: var(--accent-wash); border-radius: 3px;
+    font-size: .95rem; color: var(--ink); font-weight: 400;
+  }
+  .say .say-label {
+    display: block; font-family: Orbitron, monospace; font-size: .6rem; font-weight: 700;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--accent);
+    margin-bottom: .35rem;
+  }
+
+  /* audience tracks */
+  .tracks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 1.4rem; }
+  .track { border-radius: 3px; padding: 12px 14px; font-size: .88rem; line-height: 1.6; }
+  .track b {
+    display: block; font-family: Orbitron, monospace; font-size: .6rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; margin-bottom: .3rem;
+  }
+  .t-gamer    { background: var(--gamer-wash);    color: var(--ink-2); }
+  .t-gamer b  { color: var(--gamer); }
+  .t-inv      { background: var(--investor-wash); color: var(--ink-2); }
+  .t-inv b    { color: var(--investor); }
+
+  /* number row */
+  .nums { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 1px;
+          background: var(--line); border: 1px solid var(--line); border-radius: 3px;
+          overflow: hidden; margin-top: 1.5rem; }
+  .num { background: var(--surface); padding: 14px 12px; }
+  .num-v {
+    font-family: Orbitron, monospace; font-size: 1.42rem; font-weight: 700;
+    color: var(--ink); line-height: 1.1; font-variant-numeric: tabular-nums;
+  }
+  .num-v small { font-size: .7rem; font-weight: 500; color: var(--muted); margin-left: 2px; }
+  .num-k { font-size: .74rem; color: var(--muted); margin-top: .3rem; }
+
+  /* milestone list */
+  .miles { list-style: none; margin: 1.4rem 0 0; padding: 0;
+           display: flex; flex-direction: column; gap: 0; }
+  .miles li {
+    display: grid; grid-template-columns: 78px 1fr; gap: 14px;
+    padding: 10px 0; border-top: 1px solid var(--line); font-size: .92rem; color: var(--ink-2);
+  }
+  .miles li:first-child { border-top: 0; }
+  .miles .d {
+    font-family: "IBM Plex Mono", monospace; font-size: .8rem; color: var(--muted);
+    font-variant-numeric: tabular-nums; padding-top: 1px;
+  }
+  .miles li.pivot .d { color: var(--accent); }
+  .miles li.pivot strong { color: var(--accent); }
+
+  /* ---------- appendix ---------- */
+  .appendix { margin-top: 76px; padding-top: 8px; border-top: 2px solid var(--line-strong); }
+  .apx { padding: 34px 0; border-top: 1px solid var(--line); }
+  .apx:first-of-type { border-top: 0; }
+  .apx > h2 { margin-bottom: .3rem; }
+  .apx > p.sub { color: var(--muted); font-size: .88rem; margin-bottom: 1.3rem; }
+
+  .tw { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: .89rem; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  thead th {
+    background: var(--surface-2); font-family: Orbitron, monospace; font-size: .64rem;
+    font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.mono { white-space: nowrap; color: var(--ink-2); }
+  tbody th {
+    background: var(--surface); font-weight: 600; font-size: .89rem; white-space: nowrap;
+  }
+
+  .qa { display: flex; flex-direction: column; gap: 14px; }
+  .qa-item {
+    border: 1px solid var(--line); border-radius: 3px;
+    background: var(--surface); padding: 14px 16px;
+  }
+  .qa-q { font-weight: 600; font-size: .96rem; }
+  .qa-q::before {
+    content: "Q"; font-family: Orbitron, monospace; font-size: .72rem; color: var(--accent);
+    margin-right: 8px; letter-spacing: .1em;
+  }
+  .qa-a { margin-top: .5rem; font-size: .91rem; color: var(--ink-2); }
+  .qa-a::before {
+    content: "A"; font-family: Orbitron, monospace; font-size: .72rem; color: var(--muted);
+    margin-right: 8px; letter-spacing: .1em;
+  }
+
+  .checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px 26px; }
+  .checks ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+  .checks li { display: flex; gap: 10px; font-size: .91rem; color: var(--ink-2); }
+  .checks li::before {
+    content: ""; flex: none; width: 13px; height: 13px; margin-top: 6px;
+    border: 1px solid var(--line-strong); border-radius: 2px; background: var(--surface);
+  }
+  .checks h4 { margin-bottom: .6rem; color: var(--ink); }
+
+  .dont { display: flex; flex-direction: column; gap: 10px; }
+  .dont li {
+    list-style: none; display: flex; gap: 12px; font-size: .92rem; color: var(--ink-2);
+    padding-left: 0;
+  }
+  .dont li::before {
+    content: "\00d7"; flex: none; font-family: Orbitron, monospace; color: var(--accent);
+    font-weight: 700; line-height: 1.7;
+  }
+  ul.dont { margin: 0; padding: 0; }
+
+  .footnote {
+    margin-top: 56px; padding: 16px 18px; border-radius: 3px;
+    background: var(--surface-2); border: 1px solid var(--line);
+    font-size: .85rem; color: var(--muted); line-height: 1.7;
+  }
+  .footnote b { color: var(--ink-2); font-weight: 600; }
+
+  @media (max-width: 720px) {
+    body { padding: 0 16px 72px; }
+    .masthead { padding: 48px 0 32px; }
+    .act { grid-template-columns: 1fr; gap: 0; padding: 28px 0; }
+    .rail {
+      position: static; display: flex; align-items: baseline; gap: 12px;
+      margin-bottom: .9rem; flex-wrap: wrap;
+    }
+    .act-no { font-size: 1.7rem; }
+    .act-clock, .act-dur { margin-top: 0; }
+    .tracks { grid-template-columns: 1fr; }
+    .seg-t { display: none; }
+    .strip { height: 44px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="mast-tag">PYRAMID STUDIO &nbsp;//&nbsp; <b>COMSTOCK</b> &nbsp;//&nbsp; PITCH RUNSHEET</p>
+    <h1>고철이 될지 전설이 될지,<br><span>다음 웨이브가 결정합니다</span></h1>
+    <p class="lede">
+      컴스톡을 처음 보는 사람에게 15분 안에 “재밌겠다”와 “이 팀이면 되겠다”를
+      동시에 남기기 위한 발표 진행표입니다. 액트 8개, 각 액트의 목적 한 줄,
+      화면에 띄울 것, 실제로 할 말, 그리고 게이머·투자자가 각각 무엇을 들고 나가는지를 적었습니다.
+    </p>
+    <div class="facts">
+      <div class="fact"><b>Runtime</b> 발표 12분 + Q&amp;A 3분</div>
+      <div class="fact"><b>Audience</b> 처음 보는 게이머 · 투자자</div>
+      <div class="fact"><b>Assets</b> PV 30초 · 플레이 가능한 WebGL 빌드</div>
+      <div class="fact"><b>Thread</b> 조립과 포기</div>
+    </div>
+  </header>
+
+  <section class="strip-block">
+    <div class="strip-head">
+      <div>
+        <p class="eyebrow">Time budget</p>
+        <h2>12분을 어디에 쓰는가</h2>
+      </div>
+      <p>폭 = 실제 배정 시간. 게임 소개와 재미요소가 <strong>발표의 절반(5분 30초)</strong>을 차지합니다.</p>
+    </div>
+    <div class="strip" role="img" aria-label="발표 시간 배분: 00 콜드오픈 40초, 01 팀 60초, 02 게임소개 3분20초, 03 핵심재미 2분10초, 04 진행 90초, 05 작업방식 90초, 06 회고 70초, 07 플랜 40초, Q&A 3분">
+      <div class="seg"      style="flex: 40">  <span class="seg-no">00</span><span class="seg-t">0:40</span></div>
+      <div class="seg"      style="flex: 60">  <span class="seg-no">01</span><span class="seg-t">1:00</span></div>
+      <div class="seg hot"  style="flex: 200"> <span class="seg-no">02</span><span class="seg-t">3:20</span></div>
+      <div class="seg hot"  style="flex: 130"> <span class="seg-no">03</span><span class="seg-t">2:10</span></div>
+      <div class="seg"      style="flex: 90">  <span class="seg-no">04</span><span class="seg-t">1:30</span></div>
+      <div class="seg"      style="flex: 90">  <span class="seg-no">05</span><span class="seg-t">1:30</span></div>
+      <div class="seg"      style="flex: 70">  <span class="seg-no">06</span><span class="seg-t">1:10</span></div>
+      <div class="seg"      style="flex: 40">  <span class="seg-no">07</span><span class="seg-t">0:40</span></div>
+      <div class="seg qa"   style="flex: 180"> <span class="seg-no">Q&amp;A</span><span class="seg-t">3:00</span></div>
+    </div>
+    <div class="strip-key">
+      <span class="k-hot">게임 자체를 보여주는 구간 — 여기를 줄이면 발표가 실패합니다</span>
+      <span class="k-qa">질의응답</span>
+    </div>
+  </section>
+
+  <div class="acts">
+
+    <!-- ============ 00 ============ -->
+    <article class="act">
+      <div class="rail">
+        <div class="act-no">00</div>
+        <div class="act-clock">00:00 → 00:40</div>
+        <div class="act-dur">40초</div>
+      </div>
+      <div class="act-body">
+        <p class="eyebrow">Cold open</p>
+        <h2>인사보다 영상이 먼저다</h2>
+        <p class="goal">목적 — 장르를 <em>설명</em>하지 않고 <em>보여준다</em>. 첫 40초 안에 “무슨 게임인지”가 끝나 있어야 뒤가 전부 편해진다.</p>
+
+        <div class="beats">
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">0:00</span><h3>PV 30초를 아무 말 없이 재생</h3></div>
+            <p>자기소개·목차·팀 로고 슬라이드를 앞에 두지 않습니다. 불을 낮추고 바로 영상을 겁니다.
+               이미 만들어 둔 옛날 TV 광고 톤의 30초 PV는 “문제 제기 → 해결책 → 사용 전/후 → 지금 바로”
+               구조라, 그 자체가 완결된 소개입니다.</p>
+            <p>발표장이 해외/혼합이면 <strong>영문판</strong>, 국내면 <strong>한글판</strong>을 씁니다.</p>
+            <div class="screen"><b>Screen</b><span>PV 영상 전체화면 (소리 있음). 영상이 끝나면 검은 화면에 로고만 남기고 정지.</span></div>
+          </div>
+
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">0:30</span><h3>영상이 끝나고 나오는 첫 문장</h3></div>
+            <div class="say">
+              <span class="say-label">이렇게 연다</span>
+              “방금 보신 게 <strong>컴스톡</strong>입니다. 저희가 <strong>25일 동안</strong> 만들었고,
+              오늘 이 자리에서 <strong>바로 플레이해 보실 수 있습니다.</strong>”
+            </div>
+            <p>“25일”과 “지금 플레이 가능”을 첫 문장에 넣는 이유는 이 발표의 두 가지 주장(속도, 완성도)을
+               미리 못 박아 두기 위해서입니다. 뒤의 모든 슬라이드가 이 두 문장의 근거가 됩니다.</p>
+          </div>
+        </div>
+
+        <div class="tracks">
+          <div class="track t-gamer"><b>게이머가 얻는 것</b>“아, 이런 게임이구나” — 장르 용어 없이 그림으로 이해</div>
+          <div class="track t-inv"><b>투자자가 얻는 것</b>완성된 영상이 이미 있다 = 마케팅 자산까지 만들 줄 아는 팀</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ 01 ============ -->
+    <article class="act">
+      <div class="rail">
+        <div class="act-no">01</div>
+        <div class="act-clock">00:40 → 01:40</div>
+        <div class="act-dur">1분</div>
+      </div>
+      <div class="act-body">
+        <p class="eyebrow">Team</p>
+        <h2>팀 소개는 짧게, 증거는 한 줄</h2>
+        <p class="goal">목적 — “이 사람들 말을 들을 이유”만 주고 넘어간다. 이력 나열은 금지, 상세 진행은 04에서 다시 다룬다.</p>
+
+        <div class="beats">
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">0:40</span><h3>이름 · 인원 · 역할, 세 줄</h3></div>
+            <p><strong>피라미드 스튜디오</strong>, 그리고 각자 어느 축을 맡았는지. 얼굴 사진 한 줄 + 담당 한 단어씩이면 충분합니다.
+               (기획 / 시스템·전투 / 콘텐츠·해금 / 연출)</p>
+            <div class="screen"><b>Screen</b><span>팀 슬라이드 1장 — 로고 + 인원 카드. 오늘 발표를 나눠 맡는 사람은 이름 옆에 담당 액트 번호를 작게 표기.</span></div>
+          </div>
+
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">1:10</span><h3>이력 대신 결과물 한 줄</h3></div>
+            <div class="say">
+              <span class="say-label">이렇게 말한다</span>
+              “저희를 소개하는 가장 빠른 방법은 <strong>이 팀이 25일에 무엇을 내놓는가</strong>인 것 같습니다.
+              그건 뒤에서 숫자로 보여드리고, 먼저 게임부터 보시죠.”
+            </div>
+            <p>여기서 바로 게임으로 넘어가는 것이 핵심입니다. 팀 소개가 길어지면 청중은 아직 무슨 게임인지도 모르는 채로 사람 이름을 외워야 합니다.</p>
+          </div>
+        </div>
+
+        <div class="tracks">
+          <div class="track t-gamer"><b>게이머가 얻는 것</b>만든 사람들의 얼굴 — 인디 게임에서 이건 구매 이유가 된다</div>
+          <div class="track t-inv"><b>투자자가 얻는 것</b>역할이 겹치지 않게 나뉘어 있다 = 다음 프로젝트에도 굴러간다</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ 02 ============ -->
+    <article class="act">
+      <div class="rail">
+        <div class="act-no">02</div>
+        <div class="act-clock">01:40 → 05:00</div>
+        <div class="act-dur">3분 20초 · 최대 블록</div>
+      </div>
+      <div class="act-body">
+        <p class="eyebrow">The game</p>
+        <h2>한 문장 → 한 바퀴 → 한 판의 선택</h2>
+        <p class="goal">목적 — 처음 보는 사람이 <em>규칙</em>을 이해하게 만든다. 기능을 나열하는 게 아니라 “한 판이 어떻게 흘러가는지”를 따라가게 한다.</p>
+
+        <div class="beats">
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">1:40</span><h3>A. 한 문장으로 못 박기 <span class="mono" style="color:var(--muted);font-size:.75rem">30초</span></h3></div>
+            <div class="say">
+              <span class="say-label">정의 문장</span>
+              “<strong>자동으로 쏘고, 손으로 구르고, 웨이브마다 로봇을 다시 조립하는 게임</strong>입니다.”
+            </div>
+            <p>그다음 좌표 한 줄: <strong>브로테이토</strong>의 웨이브 구조에 <strong>로봇 파츠 교체(모딩)</strong>를 얹었다.
+               이미 아는 게임을 좌표로 쓰면 투자자는 시장을, 게이머는 손맛을 즉시 떠올립니다.
+               “뱀서라이크”라는 단어는 <strong>한 번만</strong> 쓰고 바로 풀어서 설명하세요.</p>
+            <div class="screen"><b>Screen</b><span>큰 글씨 한 문장 + 게임 타이틀 아트. 텍스트 5줄 넘기지 말 것.</span></div>
+          </div>
+
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">2:10</span><h3>B. 코어 루프 한 바퀴 <span class="mono" style="color:var(--muted);font-size:.75rem">1분 30초</span></h3></div>
+            <p>웨이브 하나가 끝날 때마다 도는 네 단계를, 실제 게임 화면 4장으로 순서대로 넘깁니다.
+               말은 한 단계당 <strong>20초</strong>씩입니다.</p>
+            <p>① <strong>웨이브 전투</strong> — 60초. 무기는 가장 가까운 적을 알아서 쏘고, 플레이어는 이동과 구르기만 한다.<br>
+               ② <strong>AI 코어</strong> — 레벨업하면 증강 3개 중 하나를 골라 이번 판의 방향을 정한다.<br>
+               ③ <strong>정비(모딩)</strong> — 전장에서 주운 부품 상자를 열어 로봇의 부위를 바꿔 낀다.<br>
+               ④ <strong>상점</strong> — 무기와 디스크를 사고, 마음에 드는 품목은 잠가서 다음 기회를 노린다.</p>
+            <div class="screen"><b>Screen</b><span>루프 다이어그램 1장 → 각 단계 실제 스크린샷 4장. 다이어그램은 원형(순환)으로, 화살표가 다시 전투로 돌아오게.</span></div>
+            <div class="say">
+              <span class="say-label">이 블록을 닫는 말</span>
+              “한 판은 이걸 <strong>20번</strong> 반복합니다. 그러니까 이 게임은 전투 게임이라기보다
+              <strong>20번의 조립 결정</strong>을 내리는 게임입니다.”
+            </div>
+          </div>
+
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">3:40</span><h3>C. 무엇을 고르게 되는가 <span class="mono" style="color:var(--muted);font-size:.75rem">1분 20초</span></h3></div>
+            <p>덱빌딩 요소가 네 종류이고 서로 겹치지 않는다는 걸 보여줍니다. 이게 “깊이가 있다”의 근거입니다.</p>
+            <p><strong>AI 코어</strong>(레벨업 3택) · <strong>무기</strong>(상점, 소켓마다 따로 장착) ·
+               <strong>디스크</strong>(한 능력을 올리고 다른 능력을 내린다) · <strong>로봇 = 머리 파츠</strong>(소켓 수·적재량·슬롯을 결정, 판 중에는 고정).</p>
+            <p>여기에 <strong>등급 5단계</strong>(일반 → 레전더리)가 전부에 걸리고, 무기 소켓은 타입이 맞지 않아도
+               <strong>장착은 됩니다</strong> — 대신 무게가 늘어 이동속도를 잃습니다. “막는 대신 대가를 치르게 한다”가 이 게임의 설계 태도입니다.</p>
+            <div class="screen"><b>Screen</b><span>정비 화면 실제 스크린샷 1장(부위가 다 보이는 컷) + 등급 5단계 아이콘 줄.</span></div>
+          </div>
+        </div>
+
+        <div class="tracks">
+          <div class="track t-gamer"><b>게이머가 얻는 것</b>“내가 뭘 고르게 되는지” — 구매 결정은 여기서 난다</div>
+          <div class="track t-inv"><b>투자자가 얻는 것</b>겹치지 않는 성장축 4개 = 콘텐츠를 얹을 자리가 4군데 있다</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ 03 ============ -->
+    <article class="act">
+      <div class="rail">
+        <div class="act-no">03</div>
+        <div class="act-clock">05:00 → 07:10</div>
+        <div class="act-dur">2분 10초</div>
+      </div>
+      <div class="act-body">
+        <p class="eyebrow">The hook</p>
+        <h2>핵심 재미는 세 개로 못 박는다</h2>
+        <p class="goal">목적 — 발표가 끝나고 딱 하나 기억에 남길 문장을 심는다. 네 개 이상 말하면 아무것도 안 남는다.</p>
+
+        <div class="beats">
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">5:00</span><h3>① 손은 쉬는데 머리는 안 쉰다</h3></div>
+            <p>공격이 자동이라 조작은 <strong>이동과 구르기 둘뿐</strong>입니다. 진입 장벽이 거의 없는데,
+               정작 화면에서는 무기 여러 개가 각자의 쿨다운으로 동시에 사격 중이고 플레이어는 포위망을 계속 읽고 있습니다.
+               “쉬운 조작 · 안 쉬운 판단”이 이 장르가 잘 팔리는 이유이고, 컴스톡은 거기에 <strong>구르기(무적 회피)</strong>를 넣어
+               실력이 개입할 여지를 하나 더 뒀습니다. 단, 구르는 동안엔 조준과 사격이 멈춥니다 — 공짜가 아닙니다.</p>
+          </div>
+
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">5:40</span><h3>② 매 웨이브가 리셋이 아니라 재조립이다</h3></div>
+            <p>보통의 웨이브 게임은 스탯이 쌓입니다. 컴스톡은 <strong>부위를 뽑아내고 다른 걸 끼웁니다.</strong>
+               다리를 바꾸면 이동이 바뀌고, 머리를 바꾸면 소켓 수와 적재량이 바뀝니다.
+               그래서 20웨이브를 지나는 동안 기체의 <strong>모양 자체가 달라집니다.</strong></p>
+          </div>
+
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">6:10</span><h3>③ 재미의 정체는 “포기”다 <span class="mono" style="color:var(--accent);font-size:.75rem">핵심 문장</span></h3></div>
+            <p>디스크는 한 능력을 올리는 대가로 다른 능력을 내립니다. 무거운 무기를 달면 느려집니다.
+               타입이 안 맞는 무기도 낄 수 있지만 무게를 두 배로 냅니다.
+               <strong>이 게임은 좋은 걸 모으는 게임이 아니라, 무엇을 포기할지 고르는 게임입니다.</strong></p>
+            <div class="say">
+              <span class="say-label">발표 전체에서 가장 중요한 한 문장</span>
+              “화력, 생존, 기동성 — <strong>셋을 다 가질 수 없다면 무엇을 버리시겠습니까?</strong>
+              컴스톡은 20번에 걸쳐 이 질문을 반복하는 게임입니다.”
+            </div>
+          </div>
+
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">6:40</span><h3>라이브 데모 30~40초 <span class="mono" style="color:var(--muted);font-size:.75rem">선택</span></h3></div>
+            <p>말로 한 세 가지를 눈으로 확인시키는 자리입니다. <strong>웨이브 1개 + 상점 1회</strong>만 보여주고 끊습니다.
+               길어지면 발표가 아니라 시연이 됩니다.</p>
+            <p><strong>반드시 같은 구간의 녹화본을 백업으로 준비하세요.</strong> 라이브가 어긋나면 그대로 녹화본으로 넘어갑니다 —
+               “안 되네요”라고 말하는 순간 앞의 6분이 날아갑니다.</p>
+            <div class="screen"><b>Screen</b><span>브라우저 전체화면(itch.io WebGL) 또는 로컬 빌드. 사전에 소리·해상도·프레임 확인.</span></div>
+          </div>
+        </div>
+
+        <div class="tracks">
+          <div class="track t-gamer"><b>게이머가 얻는 것</b>“이 게임에서 내가 고민하게 될 종류”가 무엇인지</div>
+          <div class="track t-inv"><b>투자자가 얻는 것</b>차별점이 아트가 아니라 <em>설계</em>에 있다 — 베끼기 어렵고 확장 가능하다</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ 04 ============ -->
+    <article class="act">
+      <div class="rail">
+        <div class="act-no">04</div>
+        <div class="act-clock">07:10 → 08:40</div>
+        <div class="act-dur">1분 30초</div>
+      </div>
+      <div class="act-body">
+        <p class="eyebrow">Execution</p>
+        <h2>25일 동안 실제로 일어난 일</h2>
+        <p class="goal">목적 — 감상이 아니라 숫자와 분기점으로 말한다. 여기서 “운이 좋았다”가 아니라 “관리됐다”는 인상을 남긴다.</p>
+
+        <div class="beats">
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">7:10</span><h3>숫자 한 판</h3></div>
+            <p>말은 하나만 하세요. “<strong>이 표에 저희가 한 일이 다 들어 있습니다</strong>” — 나머지는 청중이 읽습니다.</p>
+            <div class="nums">
+              <div class="num"><div class="num-v">25<small>일</small></div><div class="num-k">착수 → 배포</div></div>
+              <div class="num"><div class="num-v">12<small>종</small></div><div class="num-k">기획서 문서</div></div>
+              <div class="num"><div class="num-v">128<small>개</small></div><div class="num-k">C# 스크립트</div></div>
+              <div class="num"><div class="num-v">31,400<small>줄</small></div><div class="num-k">게임 코드</div></div>
+              <div class="num"><div class="num-v">115<small>건</small></div><div class="num-k">기록된 작업 이력</div></div>
+              <div class="num"><div class="num-v">20<small>+∞</small></div><div class="num-k">웨이브 + 엔드리스</div></div>
+            </div>
+            <div class="screen"><b>Screen</b><span>숫자 타일 슬라이드 1장. 애니메이션 없이 한 번에 다 보이게.</span></div>
+          </div>
+
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">7:50</span><h3>분기점이 있었다 — 특히 하나</h3></div>
+            <ul class="miles">
+              <li><span class="d">08.03</span><span>착수. 캐릭터 이동과 무기 시스템부터.</span></li>
+              <li class="pivot"><span class="d">08.06</span><span><strong>장르를 갈아엎음</strong> — 익스트랙션을 포기하고 자동공격 웨이브 서바이벌로 전환. 20웨이브·웨이브당 60초 확정.</span></li>
+              <li><span class="d">08.13</span><span>UI 아트 전면 적용 + BGM 시스템.</span></li>
+              <li><span class="d">08.19</span><span>점수·엔드리스·해금(도감)·머리 선택 화면 — 아웃게임 완성.</span></li>
+              <li><span class="d">08.20</span><span>온라인 랭킹 연동.</span></li>
+              <li><span class="d">08.23</span><span>2페이즈 보스 “좀비 군집체” — 패턴 3종 + 등장/사망 연출.</span></li>
+              <li><span class="d">08.25</span><span>한국어/영어 2개국어.</span></li>
+              <li><span class="d">08.27</span><span>WebGL 배포 + PV 영상 + 스토어 페이지.</span></li>
+            </ul>
+            <div class="say">
+              <span class="say-label">이 슬라이드의 진짜 메시지</span>
+              “착수 <strong>사흘 만에 장르를 통째로 바꿨습니다.</strong> 그때 안 바꿨으면 지금 보신 게임은 없었습니다.
+              저희가 자랑하고 싶은 건 만든 양이 아니라 <strong>버릴 걸 제때 버렸다</strong>는 쪽입니다.”
+            </div>
+          </div>
+        </div>
+
+        <div class="tracks">
+          <div class="track t-gamer"><b>게이머가 얻는 것</b>업데이트가 계속 나올 팀인지에 대한 감</div>
+          <div class="track t-inv"><b>투자자가 얻는 것</b>피벗을 빨리 하는 팀 — 리스크 관리 능력의 직접 증거</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ 05 ============ -->
+    <article class="act">
+      <div class="rail">
+        <div class="act-no">05</div>
+        <div class="act-clock">08:40 → 10:10</div>
+        <div class="act-dur">1분 30초</div>
+      </div>
+      <div class="act-body">
+        <p class="eyebrow">How we built it</p>
+        <h2>작업 방식 자체가 이 팀의 자산이다</h2>
+        <p class="goal">목적 — “25일”이 우연이 아니었음을 설명한다. B2B로 말을 걸 수 있는 유일한 구간이므로 여기서 톤을 한 번 바꾼다.</p>
+
+        <div class="beats">
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">8:40</span><h3>사람이 정하고, 에이전트가 만든다</h3></div>
+            <p>Unity 에디터를 <strong>AI 에이전트가 직접 조작</strong>하도록 붙여 놓고 작업했습니다.
+               씬·오브젝트·에셋·스크립트를 사람이 손으로 옮기는 대신 지시로 처리하고,
+               사람은 <strong>기획 판단, 아트, 그리고 “이게 진짜 되는지” 확인</strong>에 시간을 씁니다.</p>
+            <p>기술 이야기는 여기까지입니다. <strong>30초를 넘기지 마세요</strong> — 청중 절반은 게임을 보러 왔습니다.</p>
+          </div>
+
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">9:10</span><h3>문서 두 개로 굴러간다</h3></div>
+            <p><strong>「프로젝트 안내」</strong>는 항상 <em>지금 상태</em>만 담고, <strong>「작업.md」</strong>는 지운 적 없는 <em>전체 이력</em>입니다.
+               새로 합류한 사람이든 에이전트든 이 두 개만 읽으면 맥락이 복원됩니다.
+               규칙도 세 줄뿐입니다 — 기록은 즉시, 과거 기록은 수정 금지, <strong>고쳤으면 실제로 돌려보고 결과를 남긴다.</strong></p>
+            <div class="say">
+              <span class="say-label">B2B로 문을 여는 문장</span>
+              “저희가 25일 만에 만든 건 게임 하나지만, 같이 만든 건 <strong>다음 게임을 더 빨리 만드는 방식</strong>입니다.
+              이건 이 프로젝트가 끝나도 남습니다.”
+            </div>
+            <div class="screen"><b>Screen</b><span>문서 두 개의 실제 화면 캡처(분량이 보이게) 1장. 코드 스크린샷은 넣지 말 것.</span></div>
+          </div>
+        </div>
+
+        <div class="tracks">
+          <div class="track t-gamer"><b>게이머가 얻는 것</b>“이 팀은 빨리 고치겠구나” — 패치 신뢰</div>
+          <div class="track t-inv"><b>투자자가 얻는 것</b>재현 가능한 생산 파이프라인 = 다음 타이틀의 비용 예측이 선다</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ 06 ============ -->
+    <article class="act">
+      <div class="rail">
+        <div class="act-no">06</div>
+        <div class="act-clock">10:10 → 11:20</div>
+        <div class="act-dur">1분 10초</div>
+      </div>
+      <div class="act-body">
+        <p class="eyebrow">Retrospective</p>
+        <h2>잘한 것 하나, 아팠던 것 하나, 배운 것 하나</h2>
+        <p class="goal">목적 — 솔직한 실패 하나를 먼저 꺼낸다. 그래야 앞에서 한 자랑이 전부 믿기 시작한다.</p>
+
+        <div class="beats">
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">10:10</span><h3>잘한 것 — 재미의 축을 일찍 하나로 좁혔다</h3></div>
+            <p>“무엇을 포기할까”라는 축을 잡고 나서는, 넣을지 말지 애매한 기능이 나올 때마다
+               <strong>그 축을 살리느냐</strong>만 물으면 결정이 났습니다. 필살기를 데모 범위에서 뺀 것도 같은 기준입니다.</p>
+          </div>
+
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">10:35</span><h3>아팠던 것 — “보이는 것”과 “판정되는 것”이 자꾸 어긋났다</h3></div>
+            <p>화면에 무기가 닿는데 데미지가 안 들어가는 문제를 여러 번 겪었습니다. 원인은 늘 같았습니다 —
+               <strong>보여주는 쪽과 판정하는 쪽이 서로 다른 값을 쓰고 있었던 것</strong>입니다.
+               지금은 근접 공격의 타격 판정을 무기 그림 자체로 하게 바꿔서 “보이는 게 맞는 것”이 구조적으로 보장됩니다.</p>
+            <p>정직하게 남은 것도 말하세요: <strong>밸런스 수치는 아직 임시값</strong>입니다. 데모 범위에서 의도적으로 후순위로 뒀습니다.</p>
+          </div>
+
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">11:00</span><h3>배운 것 — 레퍼런스는 겉이 아니라 구조를 봐야 한다</h3></div>
+            <p>스토어 페이지를 레퍼런스대로 만드는 데 <strong>세 번 실패했습니다.</strong>
+               색을 맞추고, 그림체를 맞추고, 크기를 줄여도 계속 다르다는 소리를 들었습니다.
+               정작 옮겨야 했던 건 그림이 아니라 <strong>레이아웃 규칙</strong>이었습니다.
+               게임 개발 전체에 그대로 적용되는 교훈이라 회고에 넣을 값어치가 있습니다.</p>
+            <div class="say">
+              <span class="say-label">회고를 닫는 말</span>
+              “세 번 틀린 뒤에야 <strong>‘무엇을 보고 있는지’를 먼저 확인하게 됐습니다.</strong>”
+            </div>
+          </div>
+        </div>
+
+        <div class="tracks">
+          <div class="track t-gamer"><b>게이머가 얻는 것</b>과장하지 않는 팀이라는 인상</div>
+          <div class="track t-inv"><b>투자자가 얻는 것</b>미완성 부분을 스스로 알고 있다 = 실사에서 놀랄 일이 적다</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ 07 ============ -->
+    <article class="act">
+      <div class="rail">
+        <div class="act-no">07</div>
+        <div class="act-clock">11:20 → 12:00</div>
+        <div class="act-dur">40초</div>
+      </div>
+      <div class="act-body">
+        <p class="eyebrow">What&rsquo;s next</p>
+        <h2>지금 플레이 가능, 다음은 이것</h2>
+        <p class="goal">목적 — 계획을 길게 늘어놓지 않는다. “이미 나와 있다”를 먼저 말하고, 다음 세 개만 짚고 닫는다.</p>
+
+        <div class="beats">
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">11:20</span><h3>현재 — 이미 나가 있습니다</h3></div>
+            <p>itch.io에 <strong>브라우저에서 바로 되는 빌드</strong>가 올라가 있고, 한국어·영어를 지원하며,
+               온라인 랭킹이 붙어 있습니다. 설치도 계정도 필요 없습니다.</p>
+            <div class="screen"><b>Screen</b><span>itch.io 페이지 스크린샷 + QR 코드 하나. QR은 발표 끝까지 화면에 남깁니다.</span></div>
+          </div>
+
+          <div class="beat">
+            <div class="beat-head"><span class="beat-t mono">11:40</span><h3>다음 — 세 개만</h3></div>
+            <p>① <strong>밸런스 수치 확정</strong>(임시값 정리, 보스 스탯 재조정) →
+               ② <strong>콘텐츠 채우기</strong>(필살기, 해금 연출, 무기·파츠 추가) →
+               ③ <strong>플랫폼 확장</strong>(스팀 데모 / 모바일 — 랭킹·해금 백엔드는 이미 붙어 있어 추가 작업이 적습니다).</p>
+            <div class="say">
+              <span class="say-label">클로징 — 오프닝의 문장을 팀 이야기로 돌려준다</span>
+              “컴스톡의 카피는 <strong>‘고철이 될지 전설이 될지, 다음 웨이브가 결정한다’</strong>입니다.
+              저희 팀도 같은 자리에 있습니다. <strong>다음 웨이브를 시작할 준비는 끝났습니다.</strong> 감사합니다.”
+            </div>
+          </div>
+        </div>
+
+        <div class="tracks">
+          <div class="track t-gamer"><b>게이머가 얻는 것</b>지금 당장 해볼 수 있는 주소 — 발표장에서 바로 켜본다</div>
+          <div class="track t-inv"><b>투자자가 얻는 것</b>다음 단계가 3개로 정리돼 있고 각각 비용이 가늠된다</div>
+        </div>
+      </div>
+    </article>
+
+  </div>
+
+  <!-- ============ APPENDIX ============ -->
+  <div class="appendix">
+
+    <section class="apx">
+      <p class="eyebrow">Scaling</p>
+      <h2>발표 시간이 바뀌면</h2>
+      <p class="sub">액트 번호는 그대로 두고 분량만 조정합니다. 무슨 일이 있어도 <strong>02와 03은 마지막에 줄입니다.</strong></p>
+      <div class="tw">
+        <table>
+          <thead>
+            <tr><th>액트</th><th>7분 (짧은 피칭)</th><th>12분 (기준)</th><th>20분 (심사·IR)</th></tr>
+          </thead>
+          <tbody>
+            <tr><th>00 콜드 오픈</th><td class="mono">0:30 (PV만)</td><td class="mono">0:40</td><td class="mono">0:40</td></tr>
+            <tr><th>01 팀</th><td class="mono">0:20 (이름만)</td><td class="mono">1:00</td><td class="mono">1:30 + 각자 한마디</td></tr>
+            <tr><th>02 게임 소개</th><td class="mono">2:20 (A+B만, C 생략)</td><td class="mono">3:20</td><td class="mono">5:00 + 적 6종·보스 소개 추가</td></tr>
+            <tr><th>03 핵심 재미</th><td class="mono">1:40 (데모 생략)</td><td class="mono">2:10</td><td class="mono">4:00 + 라이브 데모 2분</td></tr>
+            <tr><th>04 진행</th><td class="mono">0:40 (숫자만)</td><td class="mono">1:30</td><td class="mono">2:30 + 피벗 상세</td></tr>
+            <tr><th>05 작업 방식</th><td class="mono">0:40</td><td class="mono">1:30</td><td class="mono">3:00 + 파이프라인 상세</td></tr>
+            <tr><th>06 회고</th><td class="mono">0:30 (배운 것만)</td><td class="mono">1:10</td><td class="mono">2:00 (3개 전부)</td></tr>
+            <tr><th>07 플랜 + 클로징</th><td class="mono">0:20</td><td class="mono">0:40</td><td class="mono">1:20</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="apx">
+      <p class="eyebrow">Speakers</p>
+      <h2>누가 어디를 맡는가</h2>
+      <p class="sub">화자를 바꾸면 청중의 집중이 리셋됩니다. 12분이면 <strong>2~3명</strong>이 적당하고, 교대는 액트 경계에서만 합니다.</p>
+      <div class="tw">
+        <table>
+          <thead>
+            <tr><th>구간</th><th>맡는 사람</th><th>왜 그 사람인가</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="mono">00 · 01 · 07</td><th>대표 발표자</th><td>문을 열고 닫는 사람은 하나여야 합니다. 클로징 문장의 주인.</td></tr>
+            <tr><td class="mono">02 · 03</td><th>기획 담당</th><td>게임의 규칙과 재미를 설계한 사람이 말할 때 가장 설득력이 있습니다.</td></tr>
+            <tr><td class="mono">04 · 05 · 06</td><th>개발 담당</th><td>숫자·작업 방식·기술적 실패는 직접 겪은 사람이 말해야 질문을 받아낼 수 있습니다.</td></tr>
+            <tr><td class="mono">Q&amp;A</td><th>전원</th><td>질문의 성격에 따라 답할 사람을 미리 정해 둡니다(아래 예상 질문 참고).</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="apx">
+      <p class="eyebrow">Q&amp;A</p>
+      <h2>거의 확실히 나올 질문 다섯</h2>
+      <p class="sub">답은 <strong>세 문장 안에</strong> 끝냅니다. 길어지는 순간 방어처럼 들립니다.</p>
+      <div class="qa">
+        <div class="qa-item">
+          <p class="qa-q">브로테이토랑 뭐가 다른가요?</p>
+          <p class="qa-a">브로테이토는 아이템이 <em>쌓입니다</em>. 컴스톡은 부위를 <em>바꿔 낍니다</em> —
+             머리를 바꾸면 무기 소켓 수와 적재량이 바뀌고, 기체의 생김새 자체가 달라집니다.
+             그리고 저희는 무거운 조합을 막지 않고 <strong>이동속도로 대가를 치르게</strong> 합니다.</p>
+        </div>
+        <div class="qa-item">
+          <p class="qa-q">한 판이 몇 분입니까? 다시 하고 싶어질까요?</p>
+          <p class="qa-a">웨이브당 60초, 20웨이브니까 전투만 20분, 정비·상점을 넣어 <strong>한 판 25~30분</strong>입니다.
+             보스를 처음 잡으면 엔드리스가 열려서 점수 경쟁으로 이어지고, <strong>온라인 랭킹</strong>이 그 동기를 받아 줍니다.</p>
+        </div>
+        <div class="qa-item">
+          <p class="qa-q">밸런스가 아직 임시값이라고 하셨는데요.</p>
+          <p class="qa-a">맞습니다. 데모 범위에서는 <strong>루프가 도는지</strong>를 먼저 증명하는 게 우선이라 수치를 후순위로 뒀습니다.
+             다음 스프린트 1순위이고, 모든 수치가 데이터 에셋 한 곳에 모여 있어 코드 수정 없이 조정됩니다.</p>
+        </div>
+        <div class="qa-item">
+          <p class="qa-q">AI로 만들었다면 팀은 무엇을 한 건가요?</p>
+          <p class="qa-a">판단을 했습니다. 장르를 바꾼 것도, 무엇을 버릴지 정한 것도, 아트와 기획서도 사람이 했습니다.
+             에이전트는 <strong>결정된 것을 빠르게 구현</strong>했고, 저희는 그만큼을 <strong>검증과 설계</strong>에 썼습니다.</p>
+        </div>
+        <div class="qa-item">
+          <p class="qa-q">수익 모델은요? B2B로는 뭘 하실 수 있죠?</p>
+          <p class="qa-a">B2C는 프리미엄 판매 + 콘텐츠 업데이트를 기본으로 봅니다.
+             B2B로 말씀드릴 수 있는 건 <strong>이 개발 파이프라인 자체</strong>입니다 —
+             25일에 이 정도가 나오는 방식이 문서로 남아 있고, 다른 타이틀에 그대로 적용됩니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="apx">
+      <p class="eyebrow">Checklist</p>
+      <h2>발표 전날까지 준비할 것</h2>
+      <div class="checks">
+        <div>
+          <h4>자료</h4>
+          <ul>
+            <li>PV 영상 <strong>로컬 사본</strong>(EN/KO 둘 다) — 인터넷에 의존하지 않기</li>
+            <li>라이브 데모 구간 <strong>백업 녹화본</strong></li>
+            <li>스크린샷 세트: 전투 / AI코어 / 정비 / 상점 / 보스</li>
+            <li>루프 다이어그램 1장</li>
+            <li>itch.io 주소 QR 코드</li>
+          </ul>
+        </div>
+        <div>
+          <h4>현장</h4>
+          <ul>
+            <li>WebGL 빌드를 <strong>로컬 서버</strong>로도 띄울 수 있게 준비(파일 직접 열기는 반드시 실패합니다)</li>
+            <li>소리 테스트 — PV는 소리가 절반입니다</li>
+            <li>해상도 1920×1080 고정 확인</li>
+            <li>브라우저 탭·알림 정리, 전체화면 단축키 확인</li>
+            <li>발표자 교대 지점 리허설 1회</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="apx">
+      <p class="eyebrow">Guardrails</p>
+      <h2>하지 말 것</h2>
+      <ul class="dont">
+        <li><strong>목차 슬라이드로 시작하기.</strong> 12분짜리 발표에 목차는 시간 낭비입니다. 영상으로 엽니다.</li>
+        <li><strong>장르 용어를 설명 없이 던지기.</strong> “뱀서라이크”, “덱빌딩”, “로그라이트”는 청중 절반이 모릅니다. 쓰려면 바로 다음 문장에서 풀어 주세요.</li>
+        <li><strong>기능 나열형 슬라이드.</strong> “무기 13종, 파츠 134개”는 숫자 슬라이드(04)에서 한 번만. 재미 설명 자리에 넣으면 아무 인상도 안 남습니다.</li>
+        <li><strong>미구현을 있는 것처럼 말하기.</strong> 필살기는 슬롯만 있고 동작하지 않습니다. 질문 한 번이면 들통나고, 그 순간 나머지 발표의 신뢰가 같이 무너집니다.</li>
+        <li><strong>스크린샷 대신 말로 설명하기.</strong> 정비 화면은 한 장 띄우는 게 30초 설명보다 빠릅니다.</li>
+        <li><strong>데모를 끝까지 하기.</strong> 정해 둔 구간에서 반드시 끊습니다. 잘 되고 있어도 끊습니다.</li>
+      </ul>
+    </section>
+
+    <p class="footnote">
+      <b>확인이 필요한 두 가지</b> — ① 발표 분량을 15분(발표 12 + Q&amp;A 3)으로 가정했습니다. 다르면 위 “발표 시간이 바뀌면” 표에서 골라 쓰세요.
+      ② 발표자 분담은 역할 기준으로만 적었습니다. 실제 담당자 이름을 넣어 확정하세요.
+      본문의 수치는 2026-08-27 기준 저장소와 프로젝트 문서에서 뽑은 값입니다.
+    </p>
+
+  </div>
+</div>

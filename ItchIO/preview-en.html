@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>컴스톡 itch.io 설명 미리보기</title>
+  <link rel="stylesheet" href="itchio-custom.css">
+  <style>
+    html { background: #100e0d; }
+    body { margin: 0; color: #f2ece7; background: #1a1817; font-family: Arial, sans-serif; }
+    .preview-topbar { padding: 12px 20px; color: #f2ece7; background: #2f2926;
+                      border-bottom: 4px solid #fa5c2f; font-weight: 700; }
+    #wrapper { width: min(960px, calc(100% - 32px)); margin: 48px auto; }
+    /* itch.io 게임 페이지의 본문 칸 실측 폭(553px)과 같게 맞춘다. */
+    .formatted_description { width: min(553px, 100%); margin: 0 auto; }
+  </style>
+</head>
+<body>
+  <div class="preview-topbar">itch.io / COMSTOCK — DESCRIPTION PREVIEW</div>
+  <div id="wrapper">
+    <main class="formatted_description">
+<!-- itch.io의 Edit game > Description > <> (HTML) 모드에 붙여 넣습니다. -->
+<!-- IMG_* 자리표시자를 itch.io에 업로드한 뒤 받은 https://img.itch.zone/... 주소로 바꿉니다. -->
+<!--                                                                                       -->
+<!-- ★ itch.io는 저장할 때 인라인 style을 지운다. 그래서 style로만 칠한 구역은 실제 페이지에서 -->
+<!--   디자인이 통째로 사라진다. 조작키 안내는 그림 한 장으로 구워(60_controls.png) 그 검열을  -->
+<!--   통과시키고, 나머지는 style이 지워져도 읽히도록 table 속성(width/align)으로 버틴다.     -->
+
+<!-- ============ HOW TO PLAY: 픽셀아트 한 장 ============ -->
+<!-- 키캡·조준 표식·라벨이 전부 그림 안에 들어 있다. CSS 권한과 무관하게 이대로 보인다. -->
+<p class="custom-controls" align="center" style="margin:0 0 20px;">
+  <img class="custom-controls-img" src="images/60_controls.png" width="552"
+       alt="HOW TO PLAY - WASD to move, auto aim and fire at the closest enemy, SPACE to dodge roll"
+       style="display:block;width:100%;max-width:552px;height:auto;margin:0 auto;border-radius:16px;image-rendering:pixelated;">
+</p>
+
+<div class="custom-hero" style="position:relative;border-radius:16px;overflow:hidden;margin-bottom:20px;box-shadow:0 0 0 2px #F07D2E;">
+  <img class="custom-hero-img" style="display:block;width:100%;height:auto;" src="여기에_업로드된_이미지_URL">
+  <div class="custom-hero-caption" style="background:#232323;padding:14px 18px;text-align:center;font-size:1.1em;font-weight:700;color:#EAE6DA;border-top:2px solid #F07D2E;">
+    A smiling face. A city of the dead. Time to clean up.
+  </div>
+</div>
+
+<div class="custom-synopsis" style="background:#232323;border-radius:16px;padding:18px 24px;margin:0 0 20px;border-left:6px solid #F07D2E;color:#EAE6DA;">
+  <p style="font-size:1.05em;line-height:1.5;margin:0;">Zombies ate the world. We sent a smiling robot with a minigun to take it back.</p>
+  <p style="opacity:0.65;font-size:0.85em;margin:6px 0 0;">(웃는 로봇 한 대, 좀비 세상 하나. 정화 시작.)</p>
+</div>
+
+<!-- ============ FEATURES: 카드마다 128px 픽셀아트 아이콘 ============ -->
+<!-- 카드는 style이 지워지면 색을 잃지만 아이콘·제목·설명의 순서는 그대로 남는다. -->
+<h2 style="color:#EAE6DA;text-align:center;margin:0 0 14px;">FEATURES</h2>
+<table class="custom-features" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0;margin:0 0 20px;">
+  <tbody>
+    <tr>
+      <td class="custom-feature-card" width="48%" align="center" valign="top" style="background-color:#4a4358;border:2px solid #F07D2E;border-radius:14px;padding:18px 16px 20px;color:#EAE6DA;">
+        <img class="custom-feature-img" src="images/70_guns.png" width="128" height="128"
+             alt="A minigun rendered in pixel art"
+             style="display:block;margin:0 auto 10px;image-rendering:pixelated;">
+        <span style="color:#F07D2E;font-size:15px;font-weight:700;">Mod Your Guns</span><br><br>
+        <span style="font-size:14px;line-height:1.45;">Scopes, mags, muzzles — real stats, not just reskins.</span>
+      </td>
+      <td width="4%">&nbsp;</td>
+      <td class="custom-feature-card" width="48%" align="center" valign="top" style="background-color:#4a4358;border:2px solid #F07D2E;border-radius:14px;padding:18px 16px 20px;color:#EAE6DA;">
+        <img class="custom-feature-img" src="images/71_bot.png" width="128" height="128"
+             alt="The player robot with a sword and a minigun, in pixel art"
+             style="display:block;margin:0 auto 10px;image-rendering:pixelated;">
+        <span style="color:#F07D2E;font-size:15px;font-weight:700;">Swap Your Bot</span><br><br>
+        <span style="font-size:14px;line-height:1.45;">New head, new arms, new legs. Get weird with it.</span>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="3" height="12" style="height:12px;font-size:1px;line-height:12px;">&nbsp;</td>
+    </tr>
+    <tr>
+      <td class="custom-feature-card" width="48%" align="center" valign="top" style="background-color:#4a4358;border:2px solid #F07D2E;border-radius:14px;padding:18px 16px 20px;color:#EAE6DA;">
+        <img class="custom-feature-img" src="images/72_boss.png" width="128" height="128"
+             alt="The wave 20 boss - a bloated zombie swarm mass, in pixel art"
+             style="display:block;margin:0 auto 10px;image-rendering:pixelated;">
+        <span style="color:#F07D2E;font-size:15px;font-weight:700;">20 Waves, 1 Boss, No Chill</span><br><br>
+        <span style="font-size:14px;line-height:1.45;">Beat the boss, then keep going. Forever.</span>
+      </td>
+      <td width="4%">&nbsp;</td>
+      <td class="custom-feature-card" width="48%" align="center" valign="top" style="background-color:#4a4358;border:2px solid #F07D2E;border-radius:14px;padding:18px 16px 20px;color:#EAE6DA;">
+        <img class="custom-feature-img" src="images/73_cute.png" width="128" height="128"
+             alt="A zombie rendered in pixel art"
+             style="display:block;margin:0 auto 10px;image-rendering:pixelated;">
+        <span style="color:#F07D2E;font-size:15px;font-weight:700;">Cute. But Make It Apocalypse.</span><br><br>
+        <span style="font-size:14px;line-height:1.45;">It's smiling. The world isn't.</span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="custom-specs" style="background:#232323;border-radius:16px;padding:18px 24px;margin:0 0 20px;color:#EAE6DA;">
+  <h2 style="color:#F07D2E;margin:0 0 10px;">SYSTEM REQUIREMENTS</h2>
+  <ul style="list-style:none;padding:0;margin:0;">
+    <li style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.1);"><b style="color:#F07D2E;">OS</b> — Windows 10 / 11 (64-bit)</li>
+    <li style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.1);"><b style="color:#F07D2E;">Storage</b> — ~800MB free space</li>
+    <li style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.1);"><b style="color:#F07D2E;">Graphics</b> — DirectX 12 compatible GPU (2GB VRAM recommended)</li>
+    <li style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.1);"><b style="color:#F07D2E;">Processor</b> — Dual-core 2.5GHz or better</li>
+    <li style="padding:5px 0;"><b style="color:#F07D2E;">Memory</b> — 4GB RAM (8GB recommended)</li>
+  </ul>
+</div>
+
+<div>
+  <span style="display:inline-block;background-color:#F07D2E;color:#161616;font-weight:700;padding:4px 12px;border-radius:999px;font-size:13px;margin:0 6px 6px 0;">Survivors-like</span>
+  <span style="display:inline-block;background-color:#F07D2E;color:#161616;font-weight:700;padding:4px 12px;border-radius:999px;font-size:13px;margin:0 6px 6px 0;">Bullet Heaven</span>
+  <span style="display:inline-block;background-color:#F07D2E;color:#161616;font-weight:700;padding:4px 12px;border-radius:999px;font-size:13px;margin:0 6px 6px 0;">Top-Down Shooter</span>
+  <span style="display:inline-block;background-color:#F07D2E;color:#161616;font-weight:700;padding:4px 12px;border-radius:999px;font-size:13px;margin:0 6px 6px 0;">Roguelite</span>
+  <span style="display:inline-block;background-color:#F07D2E;color:#161616;font-weight:700;padding:4px 12px;border-radius:999px;font-size:13px;margin:0 6px 6px 0;">Zombies</span>
+  <span style="display:inline-block;background-color:#F07D2E;color:#161616;font-weight:700;padding:4px 12px;border-radius:999px;font-size:13px;margin:0 6px 6px 0;">Robots</span>
+  <span style="display:inline-block;background-color:#F07D2E;color:#161616;font-weight:700;padding:4px 12px;border-radius:999px;font-size:13px;margin:0 6px 6px 0;">Cute</span>
+  <span style="display:inline-block;background-color:#F07D2E;color:#161616;font-weight:700;padding:4px 12px;border-radius:999px;font-size:13px;margin:0 6px 6px 0;">Indie</span>
+</div>
+    </main>
+  </div>
+</body>
+</html>

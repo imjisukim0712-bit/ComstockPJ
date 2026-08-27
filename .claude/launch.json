@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8743", "--directory", "Prototype"],
       "port": 8743
+    },
+    {
+      "name": "itchio-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8744", "--directory", "ItchIO"],
+      "port": 8744
     }
   ]
 }

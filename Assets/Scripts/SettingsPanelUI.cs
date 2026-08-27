@@ -157,7 +157,12 @@ public class SettingsPanelUI : MonoBehaviour
         for (int i = 0; i < screenModeBgs.Length; i++)
             screenModeBgs[i].color = i == screenModeIndex ? SelectedColor : NormalColor;
 
+        // WebGL에서는 화면 비율이 캔버스 크기(itch.io 페이지 CSS)와 무관해 적용되지 않는다
+        // (ApplyScreenSettings 참고) - 고를 수 있게 두면 아무 효과 없이 헷갈리기만 한다.
         bool aspectEnabled = screenModeIndex == 0;
+#if UNITY_WEBGL && !UNITY_EDITOR
+        aspectEnabled = false;
+#endif
         for (int i = 0; i < aspectBgs.Length; i++)
         {
             aspectButtons[i].interactable = aspectEnabled;
@@ -178,9 +183,19 @@ public class SettingsPanelUI : MonoBehaviour
     /// <summary>
     /// 저장된 화면 모드/비율을 실제 Screen API에 적용한다. 전체화면일 때만 비율이 의미가 있어
     /// 해상도를 다시 계산하고, 나머지 모드는 모드만 바꾼다(기획서: 비율은 전체화면 전용).
+    ///
+    /// <b>WebGL 예외</b>: itch.io는 캔버스 표시 크기를 페이지(iframe) CSS로 관리한다.
+    /// <see cref="Screen.currentResolution"/>은 그 캔버스가 아니라 모니터 실제 해상도를 돌려주고,
+    /// <see cref="Screen.SetResolution"/>은 캔버스의 내부 렌더 해상도만 강제로 바꿔 CSS가 정한
+    /// 표시 크기와 어긋나게 만든다 - 그 결과 화면이 한쪽 구석(좌하단)으로 찌그러진다(2026-08-27
+    /// 사용자 리포트). <see cref="FullScreenMode"/> 3종의 구분도 브라우저에는 없는 개념이라
+    /// WebGL에서는 브라우저 네이티브 전체화면 API(<see cref="Screen.fullScreen"/>)만 쓴다.
     /// </summary>
     private void ApplyScreenSettings()
     {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        Screen.fullScreen = screenModeIndex == 0;
+#else
         Resolution native = Screen.currentResolution;
 
         if (screenModeIndex == 0)
@@ -197,6 +212,7 @@ public class SettingsPanelUI : MonoBehaviour
         {
             Screen.SetResolution(1280, 720, ScreenModes[2]);
         }
+#endif
     }
 
     // ── 생성 헬퍼 ────────────────────────────────────────────────────

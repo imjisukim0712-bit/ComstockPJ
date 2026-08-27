@@ -89,7 +89,7 @@ public class TitleSceneManager : MonoBehaviour
     {
         if (collectionLabel != null) collectionLabel.text = Loc.T("title.codex");
         if (rankingLabel != null) rankingLabel.text = Loc.T("title.ranking");
-        if (languageLabel != null) languageLabel.text = Loc.T("title.language");
+        if (languageLabel != null) languageLabel.text = Loc.LanguageButtonLabel;
     }
 
     /// <summary>
@@ -191,7 +191,7 @@ public class TitleSceneManager : MonoBehaviour
         labelRect.offsetMax = Vector2.zero;
 
         var label = labelGo.GetComponent<TMPro.TextMeshProUGUI>();
-        label.text = Loc.T("title.language");
+        label.text = Loc.LanguageButtonLabel;   // 번역하지 않는다 - Loc.LanguageButtonLabel 주석 참고
         label.alignment = TMPro.TextAlignmentOptions.Midline;
         label.color = Color.white;
         label.raycastTarget = false;

@@ -148,6 +148,18 @@ public class DisruptorUnit : EnemyUnit
         Explode();
     }
 
+    /// <summary>
+    /// 자폭음(2026-08-27 사용자 제공 <c>디스럽터_폭발음.wav</c>). 일반 좀비의 사망음 대신 낸다 -
+    /// 디스럽터는 "죽는" 게 아니라 "터지는" 적이라 소리가 달라야 한다.
+    /// <para>이 훅은 <b>자폭 경로에서만</b> 불린다. <see cref="TakeDamage"/>가 자폭 임계치에
+    /// 닿는 피해를 <b>아예 넣지 않고</b> 심지로 전환하므로(그 뒤로는 완전 무적), 디스럽터가
+    /// 총에 맞아 죽는 경로 자체가 없다 - 언제나 <see cref="Explode"/> → <c>Die()</c> → 이 훅이다.
+    /// 그래서 폭발 연출(<see cref="DisruptorExplosionEffect"/>)과 소리가 항상 짝을 이룬다.
+    /// 보스가 <c>PlayDeathSfx</c>를 비우고 폭발 프레임에서 직접 내는 것과 같은 계열의 처리다.</para>
+    /// </summary>
+    protected override void PlayDeathSfx()
+        => SFXManager.Play(SFXManager.EnemyDisruptorExplodeClipName, DeathSfxVolume);
+
     private void Explode()
     {
         // 2026-08-21 사용자 제공 폭발 애니메이션(Resources/DisruptorExplosion) - 다른 폭발형
