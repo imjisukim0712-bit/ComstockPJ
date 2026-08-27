@@ -1,26 +1,30 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-컴스톡(Comstock) 게임 PV 렌더러 — 15초 양산형 모바일 게임 광고
-================================================================
+컴스톡(Comstock) 게임 PV 렌더러 — 15초 스팀 트레일러 (캐주얼 뱀서라이크)
+=========================================================================
 
-어디서 본 것 같은 모바일 게임 광고를 그대로 흉내 낸 15초 세로 영상을 만든다.
-가짜 조작 UI, 손가락 커서, 미친 듯이 오르는 숫자, SSR 뽑기 연출, 가짜 선택지,
-가짜 랭킹까지 장르 클리셰를 전부 담는다. 게임에 실제로 들어 있는 스프라이트
-(`Assets/Resources/`)만 재료로 쓰고, 프레임을 한 장씩 합성한 뒤 ffmpeg로
-H.264 MP4를 뽑는다.
+사용자 콘티(2026-08-27)를 그대로 옮긴 6컷 구성이다.
+
+    1. 컴스톡이 등장
+    2. 좀비가 뒤돌아보며 컴스톡을 보고, 대군단이 온다
+    3. 컴스톡이 잡으면서 진행
+    4. 게임으로 전환하면서 게임플레이를 보여준다
+    5. 장비 전환 + 각 컴스톡들을 빠르게 → "합격" 도장
+    6. 게임 로고
+
+톤은 **스팀에 올리는 캐주얼 뱀서라이크 트레일러**다. 세 가지가 이 톤을 만든다.
+
+    · 가로 16:9 (1920x1080) — PC 게임이라는 가장 빠른 신호
+    · 모바일 조작 UI를 걷어내고 PC HUD(상단 경험치 바·웨이브 타이머·재화)로 교체
+    · 자막은 광고 톤이 아니라 하단 스크림 위의 담백한 흰 글씨
+
+게임에 실제로 들어 있는 스프라이트(`Assets/Resources/`)만 재료로 쓰고,
+프레임을 한 장씩 합성한 뒤 ffmpeg로 H.264 MP4를 뽑는다.
 
     python3 PV/make_pv.py            # 전체 영상 렌더 (PV/out/comstock_pv.mp4)
     python3 PV/make_pv.py --stills   # 확인용 정지 프레임만 뽑기
     python3 PV/make_pv.py --preview 7.5   # 특정 시각 한 장만
-
-구조
-----
-- 세로 9:16(1080x1920)이다. 이 장르는 세로 화면 자체가 신호라서, 비율만
-  바꿔도 "모바일 광고"로 읽힌다.
-- 장면은 `TIMELINE`이 `(시작초, 길이, 함수, 이름)`으로 들고 있다.
-- 합성이 끝난 프레임에 후처리(채도 부스트 → 블룸 → 줌 펀치 → 화면 흔들림 →
-  플래시)를 얹는다. 흑백 필름과 정반대로, 눈이 아플 만큼 밝고 선명하게 간다.
 
 에셋은 Git LFS로 관리되므로 실행 전에 `git lfs pull`이 되어 있어야 한다.
 """
@@ -46,7 +50,7 @@ FPS = 30
 DURATION = 15.0
 TOTAL_FRAMES = int(round(FPS * DURATION))
 
-W, H = 1080, 1920          # 세로 9:16
+W, H = 1920, 1080          # 가로 16:9 — 스팀 트레일러 규격
 
 FONT_KR = os.path.join(FONT_DIR, "NotoSansKR", "NotoSansKR-Bold.ttf")
 FONT_KR_R = os.path.join(FONT_DIR, "NotoSansKR", "NotoSansKR-Regular.ttf")
@@ -54,13 +58,14 @@ FONT_EN = os.path.join(FONT_DIR, "Orbitron", "Orbitron-Black.ttf")
 
 SEED = 20260827
 
-# 양산형 광고 팔레트 — 금색 그라데이션이 이 장르의 기본값이다
+# 게임 아트의 색을 그대로 쓴다 — 보라 UI, 주황 포인트, 청록 경험치
+INK = (18, 14, 30)
+WHITE = ((255, 255, 255), (232, 236, 248))
+AMBER = ((255, 226, 150), (255, 148, 32))
+CYAN = ((206, 250, 255), (46, 178, 255))
+LIME = ((236, 255, 186), (108, 214, 44))
 GOLD = ((255, 248, 186), (255, 146, 0))
 FIRE = ((255, 214, 120), (226, 24, 24))
-CYAN = ((214, 252, 255), (0, 156, 255))
-LIME = ((238, 255, 176), (86, 214, 0))
-MAGENTA = ((255, 208, 255), (214, 0, 168))
-PLAIN = ((255, 255, 255), (222, 226, 236))
 
 
 # ------------------------------------------------------------------- 캐시류
@@ -148,13 +153,14 @@ def ease_in(t):
     return clamp(t) ** 3
 
 
-def ease_out_back(t, s=2.6):
+def ease_in_out(t):
+    t = clamp(t)
+    return 3 * t * t - 2 * t * t * t
+
+
+def ease_out_back(t, s=2.2):
     t = clamp(t) - 1.0
     return t * t * ((s + 1) * t + s) + 1.0
-
-
-def pulse(t, period, duty=0.5):
-    return 1.0 if (t % period) / period < duty else 0.0
 
 
 def lerp(a, b, k):
@@ -165,38 +171,26 @@ def lerp(a, b, k):
 
 def put(canvas, sprite, cx, cy, height=None, width=None, scale=None, box=None,
         size=None, flip=False, angle=0.0, alpha=255, anchor="center"):
-    """스프라이트를 캔버스에 얹는다. 크기는 height/width/scale/box/size 중 하나로 지정.
+    """스프라이트를 캔버스에 얹는다. 크기는 height/width/scale/box/size 중 하나로.
 
     - `box=(w, h)`: 그 사각형 **안에 들어가도록** 비율을 유지한 채 맞춘다.
-      가로로 납작한 그림을 세로 기준으로만 키우면 화면 밖으로 삐져나가 뭉개지므로,
-      클로즈업에는 box를 쓴다.
-    - `size=(w, h)`: 비율을 무시하고 **그 크기로 늘인다.** UI 패널·버튼은 9-슬라이스라
-      늘어나는 게 정상이고, box로 맞추면 정사각형으로 쪼그라들어 버린다."""
+    - `size=(w, h)`: 비율을 무시하고 **그 크기로 늘인다.** UI 패널은 9-슬라이스라
+      늘어나는 게 정상이고, box로 맞추면 정사각형으로 쪼그라든다."""
     sw, sh = sprite.size
     if size is not None:
-        tw, th = max(1, int(size[0])), max(1, int(size[1]))
-        im = scaled(sprite, tw, th, flip)
-        if angle:
-            im = im.rotate(angle, resample=Image.BICUBIC, expand=True)
-        if alpha < 255:
-            a = im.getchannel("A").point(lambda v: v * alpha // 255)
-            im = im.copy()
-            im.putalpha(a)
-        w, h = im.size
-        canvas.alpha_composite(im, (int(cx - w / 2), int(cy - h / 2)))
-        return
-    if box is not None:
-        k = min(box[0] / sw, box[1] / sh)
-    elif height is not None:
-        k = height / sh
-    elif width is not None:
-        k = width / sw
-    elif scale is not None:
-        k = scale
+        im = scaled(sprite, max(1, int(size[0])), max(1, int(size[1])), flip)
     else:
-        k = 1.0
-    tw, th = max(1, int(sw * k)), max(1, int(sh * k))
-    im = scaled(sprite, tw, th, flip)
+        if box is not None:
+            k = min(box[0] / sw, box[1] / sh)
+        elif height is not None:
+            k = height / sh
+        elif width is not None:
+            k = width / sw
+        elif scale is not None:
+            k = scale
+        else:
+            k = 1.0
+        im = scaled(sprite, max(1, sw * k), max(1, sh * k), flip)
     if angle:
         im = im.rotate(angle, resample=Image.BICUBIC, expand=True)
     if alpha < 255:
@@ -204,90 +198,96 @@ def put(canvas, sprite, cx, cy, height=None, width=None, scale=None, box=None,
         im = im.copy()
         im.putalpha(a)
     w, h = im.size
-    if anchor == "center":
-        x, y = int(cx - w / 2), int(cy - h / 2)
-    elif anchor == "bottom":
+    if anchor == "bottom":
         x, y = int(cx - w / 2), int(cy - h)
     elif anchor == "top":
         x, y = int(cx - w / 2), int(cy)
     else:
-        x, y = int(cx), int(cy)
+        x, y = int(cx - w / 2), int(cy - h / 2)
     canvas.alpha_composite(im, (x, y))
 
 
 def vgrad(size, top, bottom):
-    """세로 선형 그라데이션 이미지."""
     w, h = size
     col = np.linspace(0.0, 1.0, h, dtype=np.float32).reshape(h, 1, 1)
     a = np.array(top, dtype=np.float32).reshape(1, 1, 3)
     b = np.array(bottom, dtype=np.float32).reshape(1, 1, 3)
-    arr = (a + (b - a) * col).astype(np.uint8)
-    return Image.fromarray(np.repeat(arr, w, axis=1), "RGB")
+    return Image.fromarray(np.repeat((a + (b - a) * col).astype(np.uint8), w, axis=1), "RGB")
 
 
-def fancy_text(text, fnt, grad=GOLD, stroke=16, stroke_fill=(22, 14, 6),
-               rim=(255, 255, 255), rim_w=None, spacing=6, align="center"):
-    """양산형 광고 자막: **검은 굵은 외곽선 → 흰 테두리 → 금색 그라데이션 속살.**
+def text_img(text, fnt, grad=WHITE, stroke=11, stroke_fill=(16, 12, 26),
+             spacing=8, align="center"):
+    """트레일러 자막: **어두운 외곽선 + 밝은 속살** 두 겹.
 
-    이 3겹이 이 장르의 서명이다. 한 겹이라도 빠지면 그냥 평범한 글씨가 된다."""
-    rim_w = max(2, stroke // 2) if rim_w is None else rim_w
-    pad = stroke * 2 + 26
+    앞서 만들던 광고 톤(외곽선 → 흰 테두리 → 금색)은 3겹이라 시끄럽다.
+    스팀 트레일러는 게임 화면을 보여 주는 게 목적이라 글씨가 조용해야 한다."""
+    pad = stroke * 2 + 20
     d0 = ImageDraw.Draw(Image.new("RGBA", (8, 8)))
     bb = d0.multiline_textbbox((0, 0), text, font=fnt, spacing=spacing,
                                align=align, stroke_width=stroke)
     w = int(math.ceil(bb[2] - bb[0])) + pad * 2
     h = int(math.ceil(bb[3] - bb[1])) + pad * 2
     pos = (pad - bb[0], pad - bb[1])
-
     layer = Image.new("RGBA", (max(1, w), max(1, h)), (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
     d.multiline_text(pos, text, font=fnt, fill=stroke_fill, spacing=spacing,
                      align=align, stroke_width=stroke, stroke_fill=stroke_fill)
-    d.multiline_text(pos, text, font=fnt, fill=rim, spacing=spacing,
-                     align=align, stroke_width=rim_w, stroke_fill=rim)
-
     mask = Image.new("L", layer.size, 0)
     ImageDraw.Draw(mask).multiline_text(pos, text, font=fnt, fill=255,
                                         spacing=spacing, align=align)
     layer.paste(vgrad(layer.size, grad[0], grad[1]), (0, 0), mask)
-
     bb2 = layer.getbbox()
     return layer.crop(bb2) if bb2 else layer
 
 
-def caption(canvas, text, cy, size=92, grad=GOLD, pop=1.0, angle=0.0, alpha=255,
-            cx=None, stroke=None, spacing=8, kr=True, plate=0):
+_scrim = None
+
+
+def scrim(canvas, amount=1.0):
+    """하단 그라데이션 스크림. 자막이 게임 화면 위에서 읽히게 해 준다.
+    상자형 자막판보다 화면을 덜 가려서 트레일러에 맞다."""
+    global _scrim
+    if _scrim is None:
+        band = 380
+        a = (np.linspace(0, 1, band, dtype=np.float32) ** 2.1 * 205).astype(np.uint8)
+        arr = np.zeros((H, W, 4), dtype=np.uint8)
+        arr[H - band:, :, 3] = a.reshape(band, 1)
+        _scrim = Image.fromarray(arr, "RGBA")
+    if amount >= 0.999:
+        canvas.alpha_composite(_scrim)
+    else:
+        s = _scrim.copy()
+        s.putalpha(s.getchannel("A").point(lambda v: int(v * clamp(amount))))
+        canvas.alpha_composite(s)
+
+
+def caption(canvas, text, cy=None, size=72, grad=WHITE, pop=1.0, angle=0.0,
+            alpha=255, cx=None, stroke=None, spacing=10, kr=True):
     fnt = font(FONT_KR if kr else FONT_EN, size)
-    st = stroke if stroke is not None else max(8, size // 6)
-    im = fancy_text(text, fnt, grad=grad, stroke=st, spacing=spacing)
-    cx = W / 2 if cx is None else cx
-    if plate:
-        pw, ph = int((im.width + 66) * pop), int((im.height + 30) * pop)
-        bar = Image.new("RGBA", (max(1, pw), max(1, ph)), (12, 8, 22, plate))
-        canvas.alpha_composite(bar, (int(cx - pw / 2), int(cy - ph / 2)))
-    put(canvas, im, cx, cy, scale=pop, angle=angle, alpha=alpha)
+    im = text_img(text, fnt, grad=grad,
+                  stroke=stroke if stroke is not None else max(7, size // 8),
+                  spacing=spacing)
+    put(canvas, im, W / 2 if cx is None else cx, H - 150 if cy is None else cy,
+        scale=pop, angle=angle, alpha=alpha)
 
 
 def flash(canvas, amount, color=(255, 255, 255)):
-    if amount <= 0:
-        return
-    canvas.alpha_composite(Image.new("RGBA", (W, H), color + (int(255 * clamp(amount)),)))
+    if amount > 0:
+        canvas.alpha_composite(Image.new("RGBA", (W, H), color + (int(255 * clamp(amount)),)))
 
 
 def darken(canvas, amount, color=(0, 0, 0)):
-    if amount <= 0:
-        return
-    canvas.alpha_composite(Image.new("RGBA", (W, H), color + (int(255 * clamp(amount)),)))
+    if amount > 0:
+        canvas.alpha_composite(Image.new("RGBA", (W, H), color + (int(255 * clamp(amount)),)))
 
 
-def rays(canvas, t, cx, cy, n=28, speed=0.6, color=(255, 255, 255), alpha=54):
-    """회전하는 집중선. 이 장르는 뭔가 좋은 일이 생길 때마다 이걸 깐다."""
+def rays(canvas, t, cx, cy, n=26, speed=0.5, color=(255, 255, 255), alpha=44):
     layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
-    R = W * 2.2
+    R = W * 1.6
     for i in range(n):
         a = (i / n) * math.tau + t * speed
-        wdt = math.tau / n * 0.5 * 0.62
+        wdt = math.tau / n * 0.31
         d.polygon([(cx, cy),
                    (cx + math.cos(a - wdt) * R, cy + math.sin(a - wdt) * R),
                    (cx + math.cos(a + wdt) * R, cy + math.sin(a + wdt) * R)],
@@ -295,61 +295,37 @@ def rays(canvas, t, cx, cy, n=28, speed=0.6, color=(255, 255, 255), alpha=54):
     canvas.alpha_composite(layer)
 
 
-def stars(canvas, t, seedbase, cx, cy, rad, n=16, size=26, color=(255, 246, 190)):
+def sparks(canvas, t, seedbase, cx, cy, rad, n=14, size=22, color=(255, 246, 200)):
     r = random.Random(seedbase)
     d = ImageDraw.Draw(canvas)
     for i in range(n):
         ph, a = r.random(), r.random() * math.tau
         rr = rad * (0.35 + 0.65 * r.random())
-        k = (t * 1.9 + ph) % 1.0
+        k = (t * 1.8 + ph) % 1.0
         s = math.sin(k * math.pi) * size
         if s < 1.5:
             continue
         x, y = cx + math.cos(a) * rr, cy + math.sin(a) * rr
         d.polygon([(x, y - s), (x + s * .28, y - s * .28), (x + s, y),
-                   (x + s * .28, y + s * .28), (x, y + s),
-                   (x - s * .28, y + s * .28), (x - s, y),
-                   (x - s * .28, y - s * .28)], fill=color + (235,))
+                   (x + s * .28, y + s * .28), (x, y + s), (x - s * .28, y + s * .28),
+                   (x - s, y), (x - s * .28, y - s * .28)], fill=color + (230,))
 
 
-# --------------------------------------------------------------- 손가락 커서
-
-def finger():
-    """탭하는 손가락 커서. 이 장르에서 빠지면 안 되는 소품이다."""
-    if "finger" in _misc_cache:
-        return _misc_cache["finger"]
-    im = Image.new("RGBA", (300, 420), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    LINE, SKIN = (46, 30, 22, 255), (255, 227, 199, 255)
-    # 외곽선을 먼저 통짜로 깔고 그 안에 살색을 얹는다.
-    # (도형마다 outline을 주면 겹치는 자리에 선이 두 번 그려져 지저분해진다)
-    d.rounded_rectangle([44, 168, 250, 400], radius=76, fill=LINE)
-    d.rounded_rectangle([96, 20, 186, 240], radius=45, fill=LINE)
-    d.rounded_rectangle([54, 178, 240, 390], radius=68, fill=SKIN)
-    d.rounded_rectangle([106, 30, 176, 232], radius=36, fill=SKIN)
-    d.rounded_rectangle([118, 44, 164, 92], radius=22, fill=(255, 245, 228, 255))
-    _misc_cache["finger"] = im
-    return im
-
-
-def tap(canvas, t, x, y, period=0.62, size=300, tilt=-16):
-    """손가락이 주기적으로 화면을 누른다 + 파문."""
-    k = (t % period) / period
-    press = math.sin(clamp(k / 0.34) * math.pi) if k < 0.34 else 0.0
-    d = ImageDraw.Draw(canvas)
-    if k < 0.55:
-        g = clamp(k / 0.55)
-        r = 40 + 150 * g
-        d.ellipse([x - r, y - r, x + r, y + r],
-                  outline=(255, 255, 255, int(210 * (1 - g))), width=int(12 * (1 - g)) + 2)
-    put(canvas, finger(), x + 82, y + 30 + press * 26, height=size * (1 - press * 0.06),
-        angle=tilt, anchor="top")
+def camera(c, zoom, fx=W / 2, fy=H / 2):
+    """장면 안에서의 카메라 줌. 화면 밖으로 밀려난 것은 잘려 나가므로,
+    '줌아웃하면 화면 밖에 있던 좀비 떼가 드러난다' 같은 연출을 좌표대로 그려 두면 된다."""
+    if abs(zoom - 1.0) < 0.003:
+        return c
+    bw, bh = max(W, int(W * zoom)), max(H, int(H * zoom))
+    big = c.resize((bw, bh), Image.BILINEAR)
+    ox = max(0, min(bw - W, int(fx * zoom - W / 2)))
+    oy = max(0, min(bh - H, int(fy * zoom - H / 2)))
+    return big.crop((ox, oy, ox + W, oy + H))
 
 
 # ------------------------------------------------------------------ 배경 도구
 
-def battle_bg(t, scroll=90, tint=None, bright=1.18):
-    """폐허 도시 배경을 세로 화면에 맞춰 잘라 쓴다."""
+def battle_bg(t, scroll=90, tint=None, bright=1.0, mix=0.24):
     key = "bgmaster"
     if key not in _misc_cache:
         src = Image.open(os.path.join(RES, "ground_ruined_city_v2_tile.png")).convert("RGB")
@@ -361,19 +337,15 @@ def battle_bg(t, scroll=90, tint=None, bright=1.18):
         _misc_cache[key] = m
     m = _misc_cache[key]
     ox = int(t * scroll) % (m.width // 2)
-    out = m.crop((ox, 0, ox + W, H)).convert("RGBA")
-    arr = np.asarray(out, dtype=np.float32)
-    arr[..., :3] *= bright
+    arr = np.asarray(m.crop((ox, 0, ox + W, H)), dtype=np.float32) * bright
     if tint:
-        arr[..., :3] = arr[..., :3] * 0.72 + np.array(tint, dtype=np.float32) * 0.28
-    out = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGBA")
-    return out
+        arr = arr * (1 - mix) + np.array(tint, dtype=np.float32) * mix
+    return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
 
 
-def hype_bg(t, top=(92, 24, 168), bottom=(232, 60, 110), ray_alpha=48):
-    """뽑기·CTA용 원색 그라데이션 배경 + 집중선."""
+def stage_bg(t, top=(38, 30, 78), bottom=(16, 74, 126), ray_alpha=34):
     c = vgrad((W, H), top, bottom).convert("RGBA")
-    rays(c, t, W / 2, H * 0.46, n=30, speed=0.55, alpha=ray_alpha)
+    rays(c, t, W / 2, H * 0.46, n=28, speed=0.45, alpha=ray_alpha)
     return c
 
 
@@ -382,522 +354,602 @@ def new_canvas(rgb=(0, 0, 0)):
 
 
 # =============================================================================
-#  가짜 조작 UI (HUD)
+#  컴스톡 조립 — 머리와 무기를 갈아 끼운 "각 컴스톡"
 # =============================================================================
 #
-#  광고에서 진짜로 중요한 건 게임이 아니라 "게임처럼 보이는 것"이다.
-#  조이스틱·스킬버튼·체력바·재화 표시는 실제 게임의 UI 아트로 조립한다.
+#  `Comstock.png`는 무기까지 통째로 그려진 한 장이라 장비를 바꿀 수 없다.
+#  그래서 5번 컷용으로는 머리(=몸통) + 다리 파츠 + 좌우 무기를 코드로 조립한다.
+#  게임의 `ProceduralCharacterRig`가 하는 일과 같은 발상이다.
 
-HUD_SKILLS = ["RightPlasmaCannon.png", "ChainsawSword.png",
-              "RightRocketLauncher.png", "RightCombatShotgun.png"]
-
-# (중심 오프셋 x, y, 반지름) — 오른쪽 아래 엄지 닿는 자리에 모아 둔다
-SKILL_SLOTS = [(0, 0, 112), (-206, -34, 84), (-152, -216, 84), (18, -258, 84)]
+ROBOT_PX = 620
 
 
-def hud_static():
-    """매 프레임 안 바뀌는 부분은 한 번만 그려 캐시한다."""
-    if "hud" in _misc_cache:
-        return _misc_cache["hud"]
-    c = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+def build_robot(head, wl, wr):
+    key = ("robot", head, wl, wr)
+    if key in _misc_cache:
+        return _misc_cache[key]
+    S = ROBOT_PX
+    c = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     d = ImageDraw.Draw(c)
-
-    # 상단 재화 패널 두 개
-    for x0, icon in ((46, "UI/Gold_icon00.png"), (556, "UI/Exp_icon.png")):
-        put(c, img("UI/Black_ui00.png"), x0 + 239, 120, size=(478, 96))
-        put(c, img(icon), x0 + 62, 120, height=66)
-
-    # 조이스틱
-    jx, jy = 232, H - 300
-    d.ellipse([jx - 148, jy - 148, jx + 148, jy + 148], fill=(10, 10, 20, 96),
-              outline=(255, 255, 255, 120), width=7)
-
-    # 스킬 버튼 4개 — 각도 계산으로 두면 화면 밖으로 밀리기 쉬워서 좌표를 직접 박는다
-    for (dx, dy, r), name in zip(SKILL_SLOTS, HUD_SKILLS):
-        bx, by = W - 196 + dx, H - 300 + dy
-        put(c, img("UI/Grade/Purple/Purple_button02.png"), bx, by, size=(r * 2, r * 2))
-        put(c, img(name), bx, by, box=(r * 1.15, r * 1.15))
-
-    _misc_cache["hud"] = c
+    for sx in (-0.076, 0.076):
+        put(c, img("Parts/LegUpper.png"), S * (0.5 + sx), S * 0.80, height=S * 0.115)
+        put(c, img("Parts/LegLower.png"), S * (0.5 + sx), S * 0.888, height=S * 0.095)
+        put(c, img("Parts/Foot.png"), S * (0.5 + sx), S * 0.958, height=S * 0.078)
+    # 팔 연결부 — 무기만 띄워 두면 몸에서 떨어진 것처럼 보인다
+    for x0, x1 in ((S * 0.44, S * 0.30), (S * 0.56, S * 0.70)):
+        d.line([x0, S * 0.575, x1, S * 0.565], fill=(58, 62, 78, 255), width=int(S * 0.030))
+        d.line([x0, S * 0.575, x1, S * 0.565], fill=(150, 158, 178, 255), width=int(S * 0.016))
+    put(c, img(wl), S * 0.235, S * 0.555, width=S * 0.375, flip=True)
+    put(c, img(wr), S * 0.765, S * 0.555, width=S * 0.375)
+    put(c, img(head), S * 0.5, S * 0.545, height=S * 0.44)
+    # **bbox로 자르지 않는다.** 무기마다 실루엣 폭이 달라서, 잘라 놓고 같은 높이로
+    # 그리면 무기가 클수록 로봇이 작아 보인다(장비를 넘길 때마다 크기가 튄다).
+    _misc_cache[key] = c
     return c
 
 
-def hp_bar(c, cx, cy, w, ratio):
-    put(c, img("UI/Mshp_panel01.png"), cx, cy, width=w)
-    fill = img("UI/Green_hp01.png") if ratio > .6 else (
-        img("UI/Orange_hp02.png") if ratio > .3 else img("UI/Red_hp01.png"))
-    fw = max(2, (w - 18) * ratio)
-    put(c, fill, cx - (w - 18) / 2 + fw / 2, cy, width=fw)
+VARIANTS = [
+    ("ComstockMk01.png", "컴스톡 Mk.01"), ("PrivateComstock.png", "이등병 컴스톡"),
+    ("Berserker.png", "버서커"), ("Guardman.png", "가드맨"),
+    ("Meteus.png", "메테우스"), ("HotPot.png", "핫팟"),
+    ("SodaCan.png", "소다캔"), ("FanBot.png", "팬봇"),
+    ("HappyPixel.png", "해피픽셀"), ("MiniPixie.png", "미니픽시"),
+    ("Pixie.png", "픽시"), ("NeonEye_0.png", "네온아이"),
+]
+
+LOADOUTS = [
+    ("LeftHMG.png", "RightHMG.png", "중기관총"),
+    ("LeftPlasmaCannon.png", "RightPlasmaCannon.png", "플라즈마 캐논"),
+    ("LeftCombatShotgun.png", "RightCombatShotgun.png", "전투 산탄총"),
+    ("LeftRocketLauncher.png", "RightRocketLauncher.png", "로켓 런처"),
+    ("LeftSMG.png", "RightSMG.png", "기관단총"),
+    ("LeftDMR.png", "RightDMR.png", "지정사수 소총"),
+]
 
 
-def draw_hud(c, t, gold, gem, hp=0.72, level=None, auto=False, wave=None):
-    c.alpha_composite(hud_static())
+# =============================================================================
+#  PC HUD — 뱀서라이크 관용구 (상단 경험치 바 · 웨이브 타이머 · 재화)
+# =============================================================================
+#
+#  모바일 조작 UI(조이스틱·터치 스킬 버튼·손가락 커서)는 전부 걷어냈다.
+#  키보드로 움직이고 공격은 자동인 PC 게임이라는 걸 HUD가 말해 준다.
+
+def hud_frame():
+    if "hudf" in _misc_cache:
+        return _misc_cache["hudf"]
+    c = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(c)
+    d.rectangle([0, 0, W, 18], fill=(12, 10, 24, 225))          # 경험치 바 홈
+    d.rounded_rectangle([38, 44, 470, 100], radius=12,
+                        fill=(12, 10, 24, 175), outline=(226, 220, 255, 90), width=3)
+    _misc_cache["hudf"] = c
+    return c
 
-    fnt = font(FONT_EN, 38)
-    for x0, val in ((46, f"{int(gold):,}"), (556, f"{int(gem):,}")):
-        im = fancy_text(val, fnt, grad=PLAIN, stroke=6)
-        # 자릿수가 늘어나도 패널을 넘지 않게 폭을 잘라 준다
-        w = min(im.width, 352)
-        put(c, im, x0 + 112 + w / 2, 120, width=w)
 
-    # 조이스틱 손잡이가 살짝 돈다
-    jx, jy = 232, H - 300
-    ox, oy = math.cos(t * 3.1) * 56, math.sin(t * 2.3) * 56
-    d.ellipse([jx + ox - 66, jy + oy - 66, jx + ox + 66, jy + oy + 66],
-              fill=(255, 255, 255, 232), outline=(70, 80, 110, 235), width=6)
+def draw_hud(c, t, hp=0.78, level=7, wave=7, secs=47, gold=1240, alpha=1.0):
+    if alpha <= 0.01:
+        return
+    layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    layer.alpha_composite(hud_frame())
+    d = ImageDraw.Draw(layer)
 
-    hp_bar(c, W / 2, H - 496, 620, hp)
+    # 화면 맨 위를 가로지르는 경험치 바 — 뱀서라이크의 서명
+    xp = (t * 0.34 + 0.18) % 1.0
+    d.rectangle([0, 0, W * xp, 18], fill=(64, 196, 255, 255))
+    d.rectangle([0, 15, W * xp, 18], fill=(180, 240, 255, 255))
 
-    if level is not None:
-        im = fancy_text(f"Lv.{int(level)}", font(FONT_EN, 58), grad=GOLD, stroke=11)
-        put(c, im, W / 2, 216)
-    if wave:
-        im = fancy_text(wave, font(FONT_KR, 38), grad=PLAIN, stroke=8)
-        put(c, im, W / 2, H - 578)
-    if auto:
-        blink = 0.55 + 0.45 * pulse(t, 0.4, .5)
-        put(c, img("UI/Grade/Gold/Gold_button02.png"), W - 132, 236, size=(196, 112))
-        im = fancy_text("AUTO", font(FONT_EN, 40), grad=GOLD, stroke=8)
-        put(c, im, W - 132, 236, alpha=int(255 * blink))
+    # 좌상단 체력
+    put(layer, img("UI/Heart_icon.png"), 76, 72, height=46)
+    d.rounded_rectangle([112, 56, 452, 88], radius=8, fill=(40, 18, 26, 235))
+    col = (108, 214, 44) if hp > .6 else ((255, 156, 32) if hp > .3 else (226, 40, 40))
+    d.rounded_rectangle([114, 58, 114 + (336) * hp, 86], radius=7, fill=col + (255,))
+    put(layer, text_img(f"{int(160*hp)} / 160", font(FONT_EN, 26), stroke=6), 282, 72)
+
+    # 중앙 상단 웨이브 / 남은 시간
+    put(layer, text_img(f"WAVE {wave} / 20", font(FONT_EN, 30), stroke=7), W / 2, 62)
+    put(layer, text_img(f"0:{int(secs):02d}", font(FONT_EN, 62), grad=AMBER, stroke=10),
+        W / 2, 126)
+
+    # 우상단 재화 / 레벨
+    put(layer, img("UI/Gold_icon00.png"), W - 300, 70, height=48)
+    put(layer, text_img(f"{int(gold):,}", font(FONT_EN, 34), grad=AMBER, stroke=7),
+        W - 232, 70, anchor="center")
+    put(layer, img("UI/Exp_icon.png"), W - 108, 70, height=48)
+    put(layer, text_img(f"Lv.{int(level)}", font(FONT_EN, 32), grad=CYAN, stroke=7),
+        W - 56, 70)
+
+    # 좌하단 장착 무기 두 칸
+    for i, wname in enumerate(("RightHMG.png", "ChainsawSword.png")):
+        bx = 88 + i * 118
+        d.rounded_rectangle([bx - 50, H - 122, bx + 50, H - 22], radius=14,
+                            fill=(28, 20, 52, 215), outline=(206, 190, 255, 150), width=3)
+        put(layer, img(wname), bx, H - 72, box=(78, 78))
+
+    if alpha < 0.999:
+        layer.putalpha(layer.getchannel("A").point(lambda v: int(v * alpha)))
+    c.alpha_composite(layer)
 
 
 # --------------------------------------------------------------- 데미지 숫자
 
-def damage_numbers(c, t, seedbase, n=10, area=(140, 760, 940, 1330), period=0.9,
-                   lo=8000, hi=999999, crit_every=4):
-    """화면을 뒤덮는 데미지 숫자. 클수록, 많을수록 좋다는 게 이 장르의 문법이다."""
+def damage_numbers(c, t, seedbase, n=10, area=(220, 300, 1700, 900), period=0.8,
+                   lo=400, hi=6400, crit_every=4):
     r = random.Random(seedbase)
     for i in range(n):
         ph = r.random()
-        x = r.randint(area[0], area[2])
-        y0 = r.randint(area[1], area[3])
+        x, y0 = r.randint(area[0], area[2]), r.randint(area[1], area[3])
         val = r.randint(lo, hi)
         crit = (i % crit_every == 0)
         k = ((t / period) + ph) % 1.0
-        if k > 0.72:
+        if k > 0.7:
             continue
-        g = k / 0.72
-        pop = ease_out_back(clamp(g / 0.22), 3.4) * (1.0 - 0.25 * g)
-        alpha = int(255 * (1.0 - max(0.0, (g - 0.6) / 0.4)))
-        size = 74 if crit else 52
-        txt = f"{val:,}" + ("!" if crit else "")
-        im = fancy_text(txt, font(FONT_EN, size), grad=FIRE if crit else GOLD,
-                        stroke=max(7, size // 7))
-        put(c, im, x, y0 - g * 170, scale=pop, alpha=alpha,
-            angle=-8 if crit else 0)
+        g = k / 0.7
+        pop = ease_out_back(clamp(g / 0.2), 3.0) * (1.0 - 0.22 * g)
+        a = int(240 * (1.0 - max(0.0, (g - 0.55) / 0.45)))
+        size = 52 if crit else 38
+        put(c, text_img(f"{val:,}" + ("!" if crit else ""), font(FONT_EN, size),
+                        grad=FIRE if crit else AMBER, stroke=max(6, size // 7)),
+            x, y0 - g * 120, scale=pop, alpha=a)
+
+
+def xp_gems(c, t, seedbase, px, py, n=18):
+    """처치한 자리에서 경험치 보석이 플레이어에게 빨려 들어간다.
+    이 장르에서 화면이 가장 기분 좋아지는 순간이라 빠뜨리면 안 된다."""
+    r = random.Random(seedbase)
+    for i in range(n):
+        ph = r.random()
+        a = r.random() * math.tau
+        rr = 260 + r.random() * 520
+        k = ((t * 0.9 + ph) % 1.0)
+        x = lerp(px + math.cos(a) * rr, px, ease_in(k))
+        y = lerp(py + math.sin(a) * rr * 0.62, py, ease_in(k))
+        put(c, img("Exp.png"), x, y, height=34 + 10 * math.sin(t * 9 + i),
+            alpha=int(255 * (1 - k * 0.35)))
 
 
 # =============================================================================
-#  장면들 — 각 함수는 (t, dur)를 받아 캔버스(RGBA 1080x1920)를 돌려준다
+#  좀비 떼 — 가로 화면에서는 좌우(그리고 위아래)에서 밀려든다
 # =============================================================================
-
-_Z = {}
-
 
 def zwalk():
-    if "z" not in _Z:
-        _Z["z"] = seq("ZombieMove", "walk_left_f{}.png", 8)
-    return _Z["z"]
+    if "zw" not in _misc_cache:
+        _misc_cache["zw"] = seq("ZombieMove", "walk_left_f{}.png", 8)
+    return _misc_cache["zw"]
 
 
-def horde(c, t, rows=None, speed=1.0, seedbase=3):
-    """세로 화면이라 좀비는 '위에서 아래로' 밀려 내려온다."""
+def swarm(c, t, cx, cy, count=42, seedbase=7, spread=1.0, speed=1.0, hgt=(90, 190),
+          ring=(560, 1500)):
+    """중심을 향해 모여드는 무리. 뱀서라이크는 '사방에서 조여 온다'가 핵심이라
+    줄 세워 걷게 하지 않고 원형으로 배치해 안쪽으로 당긴다."""
     fr = zwalk()
     r = random.Random(seedbase)
-    rows = rows or [(700, 180, 150), (880, 230, 128), (1090, 290, 108), (1330, 360, 92)]
-    for ri, (y, hgt, spd) in enumerate(rows):
-        n = 5
+    items = []
+    for i in range(count):
+        a = r.random() * math.tau
+        ph = r.random()
+        base = lerp(ring[1], ring[0], ((t * 0.16 * speed + ph) % 1.0))
+        rr = base * spread
+        x = cx + math.cos(a) * rr * 1.35
+        y = cy + math.sin(a) * rr * 0.66
+        z = (y + 1000) / 2000.0
+        items.append((y, x, lerp(hgt[0], hgt[1], clamp(z)), i, a))
+    for y, x, hh, i, a in sorted(items):          # 아래쪽이 앞에 오도록
+        f = fr[int(t * 11 * speed + i * 3) % 8]
+        put(c, f, x, y + math.sin(t * 7 + i) * 4, height=hh,
+            flip=math.cos(a) < 0, anchor="bottom")
+
+
+def rank_horde(c, t, rows, speed=1.0, seedbase=3):
+    """가로로 늘어선 떼. 2번 컷의 '대군단'처럼 벽으로 보여야 할 때 쓴다."""
+    fr = zwalk()
+    r = random.Random(seedbase)
+    for ri, (y, hgt, spd, n) in enumerate(rows):
         for i in range(n):
             ph = r.random()
-            x = 90 + ((i / n) + ph * 0.2) * (W - 180) + math.sin(t * 1.6 + i * 2.1) * 40
-            yy = y + ((t * spd * speed + ph * 400) % 260) - 130
-            f = fr[int(t * 12 * speed + i * 3 + ri) % 8]
-            put(c, f, x, yy, height=hgt, flip=(i % 2 == 0), anchor="bottom")
+            x = (40 + ((i + 0.5) / n) * (W - 80)
+                 + math.sin(t * 1.5 + i * 2.1) * 34
+                 + (ph - 0.5) * (W / n) * 0.9)          # 칸 안에서 좌우로 흩뜨린다
+            yy = y + ((t * spd * speed + ph * 300) % 200) - 100 + (ph - 0.5) * 46
+            put(c, fr[int(t * 11 * speed + i * 3 + ri) % 8], x, yy,
+                height=hgt, flip=(i % 2 == 0), anchor="bottom")
 
 
-# --- 1. 훅 (0.0 ~ 1.5) -------------------------------------------------------
+# =============================================================================
+#  컷 1. 컴스톡이 등장 (0.0 ~ 2.4)
+# =============================================================================
 
-def scene_hook(t, dur):
-    c = battle_bg(t, scroll=70, tint=(120, 40, 160), bright=1.1)
-    horde(c, t, speed=1.3)
-    put(c, img("Comstock.png"), W / 2, H - 640 + math.sin(t * 7) * 10, height=520,
-        anchor="bottom")
-    mz = seq("MuzzleFlash", "frame_{:02d}.png", 3, start=1)
-    if int(t * 20) % 2 == 0:
-        put(c, mz[int(t * 24) % 3], W / 2 + 200, H - 966, height=168)
-        put(c, mz[int(t * 19) % 3], W / 2 - 192, H - 950, height=138, flip=True)
-    damage_numbers(c, t, 11, n=11, period=0.75)
-
-    draw_hud(c, t, gold=12_450 + t * 8600, gem=930, hp=0.72, level=1 + int(t * 3),
-             wave="WAVE 1 / 20")
-    tap(c, t, W - 176, H - 292, period=0.5)
-
-    if t > 0.10:
-        caption(c, "이게  진짜  무료라고?", 356,
-                size=96, grad=GOLD, pop=ease_out_back(clamp((t - .10) / .22), 3.4),
-                angle=math.sin(t * 9) * 1.6)
-    if t > 0.72:
-        caption(c, "설치 1분 만에  만렙", 496, size=68, grad=CYAN,
-                pop=ease_out_back(clamp((t - .72) / .2), 3.2), plate=150)
-    return c
+LAND = 0.52
 
 
-# --- 2. 방치형 (1.5 ~ 3.4) ---------------------------------------------------
-
-def scene_idle(t, dur):
-    c = battle_bg(t + 3, scroll=70, tint=(30, 130, 90), bright=1.16)
-    horde(c, t + 2, speed=2.4)
-    put(c, img("Comstock.png"), W / 2, H - 640, height=520, anchor="bottom")
-    damage_numbers(c, t, 23, n=14, period=0.5, lo=90_000, hi=99_999_999, crit_every=3)
-
-    lv = 1 + int(ease_out(clamp(t / 1.45)) * 998)
-    draw_hud(c, t, gold=120_000 + t * 480_000, gem=930 + t * 900, hp=1.0,
-             level=lv, auto=True, wave="자동 전투 중")
-
-    # 레벨업 이펙트가 쉴 새 없이 터진다
-    lu = seq("LevelUpEffect", "level-up_{:03d}.png", 24, start=1)
-    for i, (x, y, off) in enumerate(((300, 980, 0.0), (790, 1180, 0.33), (540, 800, 0.66))):
-        k = ((t * 1.9 + off) % 1.0)
-        put(c, lu[min(23, int(k * 24))], x, y, height=440, alpha=225)
-
-    # 골드 비
-    r = random.Random(77)
-    for i in range(26):
-        ph = r.random()
-        x = r.randint(60, W - 60)
-        k = ((t * 0.85 + ph) % 1.0)
-        put(c, img("Gold.png"), x, -90 + k * (H + 180), height=72,
-            angle=(t * 260 + i * 40) % 360)
-
-    if t < 1.05:
-        caption(c, "폰 꺼놔도\n알아서 렙업!", 372, size=96, grad=GOLD,
-                pop=ease_out_back(clamp(t / .2), 3.4), spacing=14,
-                angle=math.sin(t * 7) * 1.4)
-    else:
-        caption(c, "접속만 해도  Lv.999", 372, size=82, grad=FIRE,
-                pop=ease_out_back(clamp((t - 1.05) / .2), 3.4),
-                angle=math.sin(t * 22) * 2.2)
-    return c
-
-
-# --- 3. SSR 뽑기 (3.4 ~ 5.6) -------------------------------------------------
-
-HEADS = ["Berserker.png", "Guardman.png", "Meteus.png", "HotPot.png",
-         "SodaCan.png", "FanBot.png", "HappyPixel.png", "MiniPixie.png",
-         "Pixie.png", "NeonEye_0.png", "PrivateComstock.png", "ComstockMk01.png"]
-
-
-def scene_gacha(t, dur):
-    # 어두워졌다가 → 무지개 광선 → 폭발 → 등장. 이 장르의 뽑기 연출 그대로다.
-    if t < 0.34:
-        c = new_canvas((10, 6, 26))
-        rays(c, t, W / 2, H * 0.46, n=24, speed=2.6,
-             color=(180, 130, 255), alpha=int(70 * ease_out(t / 0.34)))
-        caption(c, "1 0 0 연 차   무 료", H * 0.46, size=76, grad=CYAN,
-                pop=ease_out_back(clamp(t / .2)), alpha=235)
-        return c
-
-    lt = t - 0.34
-    c = hype_bg(lt * 2.4, top=(46, 12, 96), bottom=(216, 52, 176), ray_alpha=64)
-    stars(c, lt, 5, W / 2, H * 0.46, 620, n=26, size=42)
-
-    # 머리들이 회전하며 돌다가 하나가 중앙에 착지
-    ring = clamp(1.0 - lt / 0.62)
-    for i, h in enumerate(HEADS):
-        a = (i / len(HEADS)) * math.tau + lt * 3.4
-        rr = 430 * ring
-        if ring < 0.02:
-            break
-        put(c, img(f"Heads/{h}"), W / 2 + math.cos(a) * rr, H * 0.46 + math.sin(a) * rr,
-            height=150 * ring, alpha=int(255 * ring))
-
-    k = clamp((lt - 0.5) / 0.34)
-    if k > 0:
-        kk = ease_out_back(k)
-        put(c, img("UI/Grade/Gold/Gold_Panel00.png"), W / 2, H * 0.46,
-            size=(720 * kk, 840 * kk))
-        put(c, img("Heads/Berserker.png"), W / 2, H * 0.46,
-            height=430 * ease_out_back(k), angle=math.sin(lt * 6) * 3)
-        expl = seq("Explosion", "frame_{:02d}.png", 10, start=1)
-        if lt < 0.95:
-            put(c, expl[min(9, int((lt - 0.5) / 0.045))], W / 2, H * 0.46, height=1000)
-
-    if lt > 0.62:
-        p = ease_out_back(clamp((lt - 0.62) / 0.2), 3.6)
-        caption(c, "★ ★ ★ ★ ★", H * 0.46 - 430, size=86, grad=GOLD, pop=p,
-                angle=math.sin(lt * 16) * 2)
-        caption(c, "전 설 등 급   획 득 !", H * 0.46 + 430, size=88, grad=FIRE,
-                pop=p, angle=-2)
-    if lt > 1.25:
-        caption(c, "지금 접속 시 즉시 지급", H - 430, size=54, grad=PLAIN,
-                pop=ease_out_back(clamp((lt - 1.25) / .2)), plate=170)
-    if 0.34 < t < 0.52:
-        flash(c, (0.52 - t) / 0.18 * 0.9)
-    return c
-
-
-# --- 4. 무기 자랑 (5.6 ~ 7.3) ------------------------------------------------
-
-WEAPONS = ["RightHMG.png", "RightPlasmaCannon.png", "RightCombatShotgun.png",
-           "RightRocketLauncher.png", "ChainsawSword.png", "RightSawedOff.png",
-           "RightDMR.png", "Machete.png", "RightLaserPistol.png",
-           "RightGiganchong.png", "SurvivalKnife.png", "RightAMR.png"]
-
-GRADE_COLORS = [((255, 226, 128), (208, 128, 0)),      # 레전더리
-                ((214, 158, 255), (112, 24, 190)),     # 유니크
-                ((150, 214, 255), (18, 96, 200)),      # 에픽
-                ((255, 168, 168), (186, 26, 26))]      # 레어
-
-
-def grade_card(size, gi, stars_n):
-    """등급 카드를 직접 그린다. 프로젝트의 9-슬라이스 UI를 정사각 카드로 쓰면
-    모서리 장식이 뭉개져서, 뽑기 카드용으로는 이쪽이 깔끔하다."""
-    key = ("card", size, gi, stars_n)
-    if key in _misc_cache:
-        return _misc_cache[key]
-    w, h = size
-    top, bot = GRADE_COLORS[gi]
-    card = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    d = ImageDraw.Draw(card)
-    d.rounded_rectangle([0, 0, w - 1, h - 1], radius=30, fill=(16, 12, 30, 255))
-    inner = Image.new("RGBA", (w - 20, h - 20), (0, 0, 0, 0))
-    m = Image.new("L", inner.size, 0)
-    ImageDraw.Draw(m).rounded_rectangle([0, 0, inner.width - 1, inner.height - 1],
-                                        radius=22, fill=255)
-    inner.paste(vgrad(inner.size, top, bot), (0, 0), m)
-    card.alpha_composite(inner, (10, 10))
-    d.rounded_rectangle([0, 0, w - 1, h - 1], radius=30,
-                        outline=(255, 255, 255, 235), width=7)
-    # 등급 별
-    sx, sy, s = w / 2 - (stars_n - 1) * 17, h - 30, 13
-    for i in range(stars_n):
-        x = sx + i * 34
-        d.polygon([(x, sy - s), (x + s * .3, sy - s * .3), (x + s, sy),
-                   (x + s * .3, sy + s * .3), (x, sy + s), (x - s * .3, sy + s * .3),
-                   (x - s, sy), (x - s * .3, sy - s * .3)], fill=(255, 248, 190, 255))
-    _misc_cache[key] = card
-    return card
-
-
-def scene_weapons(t, dur):
-    c = hype_bg(t, top=(14, 34, 96), bottom=(0, 152, 210), ray_alpha=44)
-    stars(c, t, 9, W / 2, H * 0.5, 700, n=18, size=30)
-
-    cols, rows = 3, 4
-    for i, name in enumerate(WEAPONS):
-        st = 0.05 + i * 0.055
-        if t < st:
-            continue
-        p = ease_out_back(clamp((t - st) / 0.24), 3.2)
-        gx = (i % cols) - (cols - 1) / 2
-        gy = (i // cols) - (rows - 1) / 2
-        x = W / 2 + gx * 322
-        y = H * 0.52 + gy * 286
-        drop = (1 - ease_out(clamp((t - st) / 0.28))) * -420
-        gi = i % 4
-        put(c, grade_card((272, 272), gi, 5 - gi), x, y + drop,
-            size=(272 * p, 272 * p))
-        put(c, img(name), x, y + drop - 14, box=(186 * p, 186 * p),
-            angle=math.sin(t * 3 + i) * 5)
-
-    if t > 0.25:
-        caption(c, "무기 65종\n전부 무료 지급", 268, size=88, grad=GOLD,
-                pop=ease_out_back(clamp((t - .25) / .2), 3.4), spacing=12, plate=140)
-    if t > 1.05:
-        caption(c, "( 진 짜 로 )", H - 320, size=64, grad=FIRE,
-                pop=ease_out_back(clamp((t - 1.05) / .2)),
-                angle=math.sin(t * 18) * 2.4)
-    return c
-
-
-# --- 5. 가짜 선택지 (7.3 ~ 9.5) ----------------------------------------------
-
-def scene_quiz(t, dur):
-    c = hype_bg(t * 0.5, top=(24, 20, 46), bottom=(96, 24, 68), ray_alpha=30)
+def scene_arrive(t, dur):
+    c = battle_bg(0.0, scroll=0, tint=(26, 22, 62), bright=0.66, mix=0.46)
     d = ImageDraw.Draw(c)
+    gx, gy = W / 2, H * 0.80
 
-    # 좌우 두 갈래
-    for side, (label, sprite, col) in enumerate((
-            ("1", "Machete.png", (60, 120, 255)),
-            ("2", "RightPlasmaCannon.png", (255, 76, 76)))):
-        x = W * (0.27 if side == 0 else 0.73)
-        y = H * 0.52
-        d.rounded_rectangle([x - 234, y - 300, x + 234, y + 300], radius=44,
-                            fill=col + (86,), outline=(255, 255, 255, 210), width=8)
-        put(c, img(sprite), x, y - 40, box=(380, 380), angle=math.sin(t * 4 + side) * 6)
-        put(c, fancy_text(label, font(FONT_EN, 92), grad=PLAIN, stroke=14), x, y + 216)
-    d.line([W / 2, H * 0.52 - 300, W / 2, H * 0.52 + 300], fill=(255, 255, 255, 190), width=8)
-
-    caption(c, "당신의 선택은?", 300, size=92, grad=GOLD,
-            pop=ease_out_back(clamp(t / .2), 3.4))
-
-    # 카운트다운
-    left = max(0, 3 - int(t / 0.42))
-    if t < 1.26:
-        caption(c, str(max(1, left)), H - 400, size=150, grad=FIRE,
-                pop=ease_out_back(clamp(((t % 0.42) / 0.18)), 3.6),
-                angle=math.sin(t * 30) * 3)
-        tap(c, t, W * 0.27, H * 0.52, period=0.42, size=300)
-    elif t < 1.80:
-        # 틀렸습니다 (양산형 광고의 그 연출)
-        k = clamp((t - 1.26) / 0.18)
-        darken(c, 0.5 * k, (90, 0, 0))
-        x, y = W * 0.27, H * 0.52
-        r = 250 * ease_out_back(k)
-        d.line([x - r, y - r, x + r, y + r], fill=(255, 42, 42, 245), width=int(34 * k) + 2)
-        d.line([x - r, y + r, x + r, y - r], fill=(255, 42, 42, 245), width=int(34 * k) + 2)
-        caption(c, "실 패 !", H - 400, size=124, grad=FIRE,
-                pop=ease_out_back(k, 3.6), angle=math.sin(t * 26) * 3)
+    if t < LAND:
+        k = t / LAND
+        rw = 90 + 220 * k
+        d.ellipse([gx - rw, gy - rw * 0.2, gx + rw, gy + rw * 0.2],
+                  fill=(0, 0, 0, int(120 + 90 * k)))
+        # 낙하 궤적은 화면 안에서 보여야 한다(ease_in=k**3은 착지 직전에야 들어온다)
+        put(c, img("Comstock.png"), gx, -180 + (gy + 180) * (k ** 1.2),
+            height=430, anchor="bottom", alpha=235)
+        darken(c, 0.28)
     else:
-        k = clamp((t - 1.80) / 0.2)
-        darken(c, 0.42 * k, (0, 60, 20))
-        for x in (W * 0.27, W * 0.73):
-            r = 250 * ease_out_back(k)
-            d.arc([x - r, y_ := H * 0.52 - r, x + r, y_ + 2 * r], 0, 360,
-                  fill=(96, 255, 120, 240), width=int(30 * k) + 2)
-        caption(c, "정답 :  둘 다 장착", H - 400, size=88, grad=LIME,
-                pop=ease_out_back(k, 3.4))
-    return c
+        lt = t - LAND
+        sq = 1.0 + 0.22 * math.exp(-lt * 13) * math.cos(lt * 26)
+        dust = seq("RollDust", "굵은{:03d}.png", 3, start=1)
+        if lt < 0.55:
+            g = lt / 0.55
+            for s in (-1, 1):
+                put(c, dust[min(2, int(g * 3))], gx + s * (70 + 340 * g), gy - 24,
+                    height=170 + 130 * g, flip=(s < 0), alpha=int(230 * (1 - g)))
+            rr = 70 + 700 * ease_out(g)
+            d.ellipse([gx - rr, gy - rr * 0.24, gx + rr, gy + rr * 0.24],
+                      outline=(255, 250, 230, int(210 * (1 - g))),
+                      width=int(18 * (1 - g)) + 2)
+        reveal = clamp(lt / 0.7)
+        rays(c, lt, gx, gy - 320, n=24, speed=0.42,
+             color=(255, 238, 196), alpha=int(46 * reveal))
+        put(c, img("Comstock.png"), gx, gy + 6,
+            size=(430 * 1.725 / sq, 430 * sq), anchor="bottom")
+        sparks(c, lt, 4, gx, gy - 220, 300, n=14, size=26)
+        darken(c, 0.28 * (1 - reveal))
+        if lt < 0.16:
+            flash(c, (0.16 - lt) / 0.16 * 0.85)
 
+    # 낙하 중에는 거의 당기지 않는다(당기면 위에서 내려오는 몸이 잘린다).
+    # 착지 순간 확 당겼다가 끝까지 천천히 풀어 주는 게 곧 충격이다.
+    if t < LAND:
+        return camera(c, 1.04, gx, H * 0.5)
+    c = camera(c, lerp(1.22, 1.01, ease_in_out((t - LAND) / (dur - LAND))), gx, gy - 210)
 
-# --- 6. 보스 (9.5 ~ 11.4) ----------------------------------------------------
-
-def scene_boss(t, dur):
-    c = battle_bg(t + 8, scroll=40, tint=(150, 20, 20), bright=0.92)
-    darken(c, 0.22)
-    rays(c, t, W / 2, H * 0.42, n=22, speed=1.4, color=(255, 90, 60), alpha=42)
-
-    roar = seq("BossRoar", "frame_{:03d}.png", 36, start=1)
-    boom = seq("BossDeathExplosion", "frame_{:02d}.png", 60, start=1)
-
-    if t < 1.20:
-        fi = min(35, int(t * 26))
-        put(c, roar[fi], W / 2, H * 0.70, box=(W * 0.96, 900 + 160 * ease_out(clamp(t / 1.1))),
-            anchor="bottom")
-        damage_numbers(c, t, 31, n=12, period=0.42, lo=1_000_000, hi=999_999_999,
-                       crit_every=2, area=(150, 820, 930, 1240))
-
-    put(c, img("Comstock.png"), W / 2, H - 560, height=380, anchor="bottom")
-
-    # 폭발은 로봇보다 **뒤가 아니라 앞**이다. 뒤에 그리면 폭발이 안 보인다.
-    if t >= 1.20:
-        fi = min(59, int((t - 1.20) * 62))
-        put(c, boom[fi], W / 2, H * 0.60, box=(W * 1.35, 1350))
-    draw_hud(c, t, gold=9_820_000, gem=44_900, hp=0.95, level=999, auto=True,
-             wave="BOSS · WAVE 20")
-
-    caption(c, "DPS  999,999,999", 336, size=72, grad=FIRE, kr=False,
-            pop=ease_out_back(clamp(t / .18), 3.4), angle=math.sin(t * 24) * 1.8)
-    if t > 1.20:
-        caption(c, "보스도  3초컷", 486, size=92, grad=GOLD,
-                pop=ease_out_back(clamp((t - 1.20) / .2), 3.6))
-        flash(c, max(0.0, 0.85 - (t - 1.20) / 0.2))
-    return c
-
-
-# --- 7. 가짜 사회적 증거 (11.4 ~ 13.1) ---------------------------------------
-
-RANKS = [("1", "나", "999", True), ("2", "칼퇴요정", "981", False),
-         ("3", "좀비고기맛", "944", False), ("4", "볼트조립왕", "902", False),
-         ("5", "출근하기싫다", "877", False)]
-
-
-def scene_proof(t, dur):
-    c = hype_bg(t * 0.4, top=(12, 26, 72), bottom=(0, 132, 186), ray_alpha=36)
-    caption(c, "전 서버 1위 달성!", 268, size=88, grad=GOLD,
-            pop=ease_out_back(clamp(t / .2), 3.4))
-
-    for i, (no, name, lv, me) in enumerate(RANKS):
-        st = 0.16 + i * 0.09
-        if t < st:
-            continue
-        y = 520 + i * 168
-        slide = (1 - ease_out(clamp((t - st) / 0.26))) * 660
-        panel = "UI/Grade/Gold/Gold_ui01.png" if me else "UI/Black_ui00.png"
-        # UI 패널은 9-슬라이스라 늘여야 한다(box로 맞추면 정사각형으로 쪼그라든다)
-        put(c, img(panel), W / 2 + slide, y, size=(880, 138))
-        g = GOLD if me else PLAIN
-        put(c, fancy_text(no, font(FONT_EN, 50), grad=g, stroke=9), 190 + slide, y)
-        put(c, fancy_text(name, font(FONT_KR, 48), grad=g, stroke=9), 420 + slide, y)
-        put(c, fancy_text(f"Lv.{lv}", font(FONT_EN, 42), grad=g, stroke=9),
-            W - 200 + slide, y)
-
-    if t > 0.86:
-        p = ease_out_back(clamp((t - 0.86) / 0.2), 3.2)
-        caption(c, "★★★★★  4.9", H - 566, size=72, grad=GOLD, pop=p)
-        caption(c, "다운로드 100만 돌파", H - 448, size=62, grad=CYAN, pop=p)
-    if t > 1.20:
-        caption(c, "“인생겜 인정합니다 ㅠㅠ”  - 칼퇴요정", H - 320, size=42,
-                grad=PLAIN, pop=ease_out_back(clamp((t - 1.20) / .2)), plate=185)
-    return c
-
-
-# --- 8. CTA (13.1 ~ 15.0) ----------------------------------------------------
-
-def scene_cta(t, dur):
-    c = hype_bg(t * 0.6, top=(96, 16, 140), bottom=(240, 96, 24), ray_alpha=58)
-    stars(c, t, 13, W / 2, H * 0.42, 640, n=22, size=36)
-
-    # 로고 착지
-    k = clamp(t / 0.3)
-    logo = fancy_text("COMSTOCK", font(FONT_EN, 116), grad=GOLD, stroke=18)
-    put(c, logo, W / 2, 420 + (1 - ease_out(k)) * -420)
-    if t > 0.3:
-        caption(c, "컴 스 톡", 570, size=88, grad=PLAIN,
-                pop=ease_out_back(clamp((t - .3) / .2), 3.2))
-
-    put(c, img("Comstock.png"), W / 2, H * 0.60 + math.sin(t * 6) * 14, height=440)
-
-    # 눌러 달라고 뛰는 버튼
-    if t > 0.5:
-        p = ease_out_back(clamp((t - .5) / .22), 3.4)
-        bob = 1.0 + 0.05 * math.sin(t * 11)
-        put(c, img("UI/Grade/Gold/Gold_button03.png"), W / 2, H - 470,
-            size=(820 * p * bob, 236 * p * bob))
-        caption(c, "지 금  플 레 이", H - 470, size=80, grad=FIRE, pop=p * bob)
-        tap(c, t - 0.5, W / 2 + 210, H - 452, period=0.62, size=330)
-
-    # "무료" 리본
-    if t > 0.72:
-        p = ease_out_back(clamp((t - .72) / .2), 3.6)
-        caption(c, "무 료", 320, size=72, grad=FIRE, pop=p, cx=W - 210,
-                angle=-16, plate=190)
-
-    # 선착순 카운트다운 (실제로는 아무 일도 일어나지 않는다)
-    left = max(0, int(9 - (t - 0.4) * 4))
-    if t > 0.4:
-        caption(c, f"선착순 마감까지  00:{left:02d}", H - 300, size=46, grad=PLAIN,
-                pop=1.0, plate=170)
-
-    # 초소형 면책 — 이 장르의 마지막 필수 요소
-    small = fancy_text(
-        "※ 실제 게임 화면과 다를 수 있습니다  ※ 위 수치·랭킹·리뷰는 전부 연출입니다"
-        "  ※ 100연차·선착순 이벤트는 존재하지 않습니다",
-        font(FONT_KR_R, 24), grad=PLAIN, stroke=4, rim_w=2)
-    put(c, small, W / 2, H - 108, width=min(small.width, W - 60))
+    # **자막은 카메라를 적용한 뒤에 그린다.** 카메라 안에서 그리면 줌을 따라
+    # 같이 커졌다 작아지고, 하단 자막은 화면 밖으로 밀려 잘린다.
+    lt = t - LAND
+    if lt > 0.42:
+        scrim(c, clamp((lt - 0.42) / 0.3))
+        p = ease_out_back(clamp((lt - 0.42) / 0.28), 2.0)
+        put(c, text_img("COMSTOCK", font(FONT_EN, 86), stroke=13),
+            W / 2, H - 176, scale=p)
+        if lt > 0.72:
+            caption(c, "캐주얼 뱀서라이크 · 로봇 조립", H - 92, size=40,
+                    grad=CYAN, pop=ease_out_back(clamp((lt - 0.72) / 0.24), 2.0))
     return c
 
 
 # =============================================================================
-#  타임라인
+#  컷 2. 좀비가 뒤돌아보고, 대군단이 온다 (2.4 ~ 5.0)
+# =============================================================================
+
+TURN = 0.62
+
+
+def scene_spotted(t, dur):
+    c = battle_bg(t * 8, scroll=1, tint=(64, 26, 34), bright=0.90, mix=0.30)
+    d = ImageDraw.Draw(c)
+    gy = H * 0.80
+
+    # 뒤에서 밀려오는 대군단 — 화면 밖 좌표로 깔아 두고 카메라로 드러낸다
+    if t > TURN:
+        g = clamp((t - TURN) / 1.3)
+        rank_horde(c, t, [(-180 + 240 * g, 120, 100, 11), (-30 + 230 * g, 148, 92, 10),
+                          (170 + 210 * g, 182, 84, 9), (400 + 180 * g, 222, 76, 8),
+                          (660 + 140 * g, 268, 68, 7)], speed=1.0)
+
+    # 주인공 좀비 — flip 이 뒤집히는 순간이 '뒤돌아봤다'로 읽힌다
+    zx, zy = W * 0.5 + 30, gy - 20
+    turned = t >= TURN
+    wob = 0.0 if not turned else math.exp(-(t - TURN) * 9) * math.sin((t - TURN) * 40) * 8
+    zf = zwalk()[int(t * 9) % 8] if not turned else img("Zombie.png")
+    put(c, zf, zx, zy, height=430, flip=not turned, anchor="bottom", angle=wob)
+
+    if turned and t < TURN + 0.5:
+        g = clamp((t - TURN) / 0.16)
+        bx, by = zx + 190, zy - 420
+        rr = 80 * ease_out_back(g, 3.4)
+        d.ellipse([bx - rr, by - rr, bx + rr, by + rr], fill=(255, 255, 255, 245),
+                  outline=(24, 18, 30, 255), width=9)
+        d.polygon([(bx - 34, by + rr - 14), (bx - 4, by + rr + 54), (bx + 30, by + rr - 20)],
+                  fill=(255, 255, 255, 245))
+        put(c, text_img("!", font(FONT_EN, 80), grad=FIRE, stroke=9), bx, by,
+            scale=ease_out_back(g, 3.4))
+        for i in range(10):
+            a = (i / 10) * math.tau + 0.3
+            r0, r1 = 250 + 50 * g, 350 + 120 * g
+            d.line([zx + math.cos(a) * r0, zy - 210 + math.sin(a) * r0,
+                    zx + math.cos(a) * r1, zy - 210 + math.sin(a) * r1],
+                   fill=(255, 240, 190, int(210 * (1 - g))), width=10)
+
+    # 카메라가 좀비 얼굴에 바짝 붙어 있어서, 컴스톡을 화면 중앙에 두면 좀비를 가린다.
+    # 좌하단 전경으로 비켜 세워 "좀비가 보고 있는 대상"으로만 읽히게 한다.
+    put(c, img("Comstock.png"), W * 0.24, H + 120, height=380, anchor="bottom")
+
+    if t < TURN:
+        z = lerp(1.50, 1.68, ease_in_out(t / TURN))
+    else:
+        z = lerp(1.88, 1.0, ease_in_out(clamp((t - TURN) / 1.5)))
+    c = camera(c, z, zx, zy - 220)
+
+    # 자막은 카메라 뒤에 — 화면 좌표에 고정된다
+    if t > 1.45:
+        scrim(c, clamp((t - 1.45) / 0.25))
+        caption(c, "화면을 가득 채우는  좀비 떼", H - 132, size=62,
+                pop=ease_out_back(clamp((t - 1.45) / 0.22), 2.0))
+        if t > 1.9:
+            caption(c, "웨이브 20 · 회당 60초", H - 62, size=36, grad=CYAN,
+                    pop=ease_out_back(clamp((t - 1.9) / 0.22), 2.0))
+    return c
+
+
+# =============================================================================
+#  컷 3. 컴스톡이 잡으면서 진행 (5.0 ~ 7.6)
+# =============================================================================
+
+BOOMS = [(0.16, 470, 560), (0.44, 1380, 700), (0.78, 330, 800), (1.10, 1560, 470),
+         (1.42, 760, 640), (1.74, 1210, 830), (2.04, 420, 520), (2.32, 1450, 760)]
+
+
+def scene_push(t, dur):
+    c = battle_bg(t, scroll=380, tint=(44, 32, 78), bright=0.86, mix=0.28)
+    px, py = W / 2 + math.sin(t * 2.2) * 30, H * 0.72
+
+    swarm(c, t, px, py - 60, count=46, seedbase=11, speed=1.5, hgt=(84, 176))
+
+    expl = seq("Explosion", "frame_{:02d}.png", 10, start=1)
+    for st, ex, ey in BOOMS:
+        if st <= t < st + 0.4:
+            put(c, expl[min(9, int((t - st) / 0.04))], ex, ey, height=300)
+
+    put(c, img("Comstock.png"), px, py + abs(math.sin(t * 9)) * -10,
+        height=380, anchor="bottom")
+
+    mz = seq("MuzzleFlash", "frame_{:02d}.png", 3, start=1)
+    if int(t * 22) % 2 == 0:
+        put(c, mz[int(t * 26) % 3], px + 156, py - 214, height=130)
+        put(c, mz[int(t * 21) % 3], px - 150, py - 206, height=108, flip=True)
+
+    # 자동 공격 — 사방으로 뿌린다
+    for i in range(26):
+        a = (i / 26) * math.tau + t * 1.1
+        bt = (t * 2.4 + i * 0.09) % 1.0
+        rr = 120 + bt * 980
+        put(c, img("BasicBullet.png"), px + math.cos(a) * rr,
+            py - 190 + math.sin(a) * rr * 0.6, height=22,
+            angle=-math.degrees(a), alpha=int(255 * (1 - bt * 0.5)))
+
+    damage_numbers(c, t, 41, n=13, period=0.5, lo=600, hi=18_000)
+    xp_gems(c, t, 61, px, py - 150, n=16)
+
+    scrim(c, 1.0)
+    if t > 0.25:
+        caption(c, "가만히 서 있어도  알아서 쏜다", H - 132, size=62,
+                pop=ease_out_back(clamp((t - 0.25) / 0.22), 2.0))
+    if t > 1.35:
+        caption(c, "자동 조준 · 자동 공격 · 재장전 없음", H - 62, size=36, grad=CYAN,
+                pop=ease_out_back(clamp((t - 1.35) / 0.22), 2.0))
+    return c
+
+
+# =============================================================================
+#  컷 4. 게임으로 전환 → 게임플레이 (7.6 ~ 10.4)
+# =============================================================================
+
+def scene_gameplay(t, dur):
+    c = battle_bg(t + 3, scroll=70, tint=(26, 52, 108), bright=0.94, mix=0.24)
+    px, py = W / 2 + math.sin(t * 1.8) * 90, H * 0.70
+
+    swarm(c, t + 4, px, py - 60, count=52, seedbase=17, speed=1.2, hgt=(78, 168))
+
+    put(c, img("Comstock.png"), px, py, height=340, anchor="bottom")
+    mz = seq("MuzzleFlash", "frame_{:02d}.png", 3, start=1)
+    if int(t * 20) % 2 == 0:
+        put(c, mz[int(t * 24) % 3], px + 140, py - 192, height=118)
+        put(c, mz[int(t * 18) % 3], px - 136, py - 186, height=98, flip=True)
+
+    for i in range(20):
+        a = (i / 20) * math.tau - t * 0.9
+        bt = (t * 2.1 + i * 0.11) % 1.0
+        rr = 110 + bt * 900
+        put(c, img("BasicBullet.png"), px + math.cos(a) * rr,
+            py - 170 + math.sin(a) * rr * 0.6, height=20, angle=-math.degrees(a))
+
+    expl = seq("Explosion", "frame_{:02d}.png", 10, start=1)
+    for st, ex, ey in ((0.5, 520, 620), (1.1, 1420, 760), (2.0, 700, 500)):
+        if st <= t < st + 0.4:
+            put(c, expl[min(9, int((t - st) / 0.04))], ex, ey, height=260)
+
+    damage_numbers(c, t, 53, n=10, period=0.55, lo=400, hi=9_000)
+    xp_gems(c, t, 71, px, py - 140, n=18)
+
+    # ── 게임으로 '전환' — HUD가 페이드로 얹히며 게임 화면이 된다
+    draw_hud(c, t, hp=0.78, level=6 + int(t), wave=7, secs=47 - int(t * 4),
+             gold=1240 + int(t * 260), alpha=clamp(t / 0.4))
+
+    # 레벨업 → AI 코어 3택
+    if 1.45 < t < 2.35:
+        g = clamp((t - 1.45) / 0.18)
+        darken(c, 0.55 * g)
+        lu = seq("LevelUpEffect", "level-up_{:03d}.png", 24, start=1)
+        put(c, lu[min(23, int((t - 1.45) * 26))], px, py - 130, height=520, alpha=210)
+        put(c, text_img("LEVEL UP", font(FONT_EN, 74), grad=AMBER, stroke=12),
+            W / 2, 250, scale=ease_out_back(g, 2.4))
+        for i, (label, panel) in enumerate((
+                ("공격력\n+12%", "UI/Grade/Gold/Gold_Panel00.png"),
+                ("공격속도\n+9%", "UI/Grade/Purple/Purple_Panel00.png"),
+                ("이동속도\n+7%", "UI/Grade/Blue/Blue_Panel00.png"))):
+            st2 = 1.52 + i * 0.08
+            if t < st2:
+                continue
+            p = ease_out_back(clamp((t - st2) / 0.2), 2.4)
+            x = W / 2 + (i - 1) * 420
+            put(c, img(panel), x, H * 0.56, size=(360 * p, 470 * p))
+            put(c, text_img(label, font(FONT_KR, 50), stroke=10, spacing=14),
+                x, H * 0.56, scale=p)
+        scrim(c, 1.0)
+        caption(c, "레벨업마다  3장 중 1장", H - 92, size=48, grad=CYAN,
+                pop=ease_out_back(clamp((t - 1.72) / 0.2), 2.0))
+    elif t > 0.45:
+        scrim(c, clamp((t - 0.45) / 0.25))
+        caption(c, "쓰러뜨릴수록  강해진다", H - 132, size=62,
+                pop=ease_out_back(clamp((t - 0.45) / 0.22), 2.0))
+        if t > 0.85:
+            caption(c, "경험치 · 골드 · 부품 상자", H - 62, size=36, grad=CYAN,
+                    pop=ease_out_back(clamp((t - 0.85) / 0.22), 2.0))
+    return c
+
+
+# =============================================================================
+#  컷 5. 장비 전환 + 각 컴스톡들 → 합격 (10.4 ~ 13.4)
+# =============================================================================
+
+GEAR_END = 1.30
+HEAD_END = 2.42
+
+
+def roster_strip(c, t, current):
+    """하단에 12칸 로스터를 깔고 현재 칸을 밝힌다. 캐릭터 선택 화면의 관용구라
+    '고를 수 있다'가 한눈에 읽힌다."""
+    d = ImageDraw.Draw(c)
+    n = len(VARIANTS)
+    bw, gap = 106, 14
+    total = n * bw + (n - 1) * gap
+    x0 = W / 2 - total / 2
+    for i, (head, _) in enumerate(VARIANTS):
+        x = x0 + i * (bw + gap) + bw / 2
+        on = (i == current)
+        d.rounded_rectangle([x - bw / 2, H - 176, x + bw / 2, H - 70], radius=14,
+                            fill=(48, 38, 82, 232) if not on else (104, 76, 176, 246),
+                            outline=(255, 208, 96, 255) if on else (150, 140, 190, 130),
+                            width=5 if on else 3)
+        put(c, img(f"Heads/{head}"), x, H - 123, box=(74, 74),
+            alpha=255 if on else 196)
+
+
+def stamp(c, t, text="합격"):
+    """도장이 쿵 찍힌다. 위에서 크게 내려와 순식간에 제 크기가 된다."""
+    k = clamp(t / 0.17)
+    s = lerp(3.2, 1.0, ease_in(k))
+    ang = lerp(-32, -13, ease_out(clamp(t / 0.3)))
+    R = 208
+    layer = Image.new("RGBA", (R * 2 + 40, R * 2 + 40), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    cx = cy = R + 20
+    col = (214, 34, 44, 238)
+    d.ellipse([cx - R, cy - R, cx + R, cy + R], outline=col, width=22)
+    d.ellipse([cx - R + 40, cy - R + 40, cx + R - 40, cy + R - 40], outline=col, width=9)
+    f = font(FONT_KR, 118)
+    bb = d.textbbox((0, 0), text, font=f)
+    d.text((cx - (bb[2] - bb[0]) / 2 - bb[0], cy - (bb[3] - bb[1]) / 2 - bb[1]),
+           text, font=f, fill=col)
+    put(c, layer, W * 0.735, H * 0.40, scale=s, angle=ang,
+        alpha=int(255 * clamp(t / 0.06)))
+    if t < 0.2:
+        flash(c, (0.2 - t) / 0.2 * 0.5)
+
+
+def scene_loadout(t, dur):
+    c = stage_bg(t * 0.5, top=(30, 26, 72), bottom=(12, 86, 138), ray_alpha=32)
+    sparks(c, t, 21, W / 2, H * 0.44, 620, n=16, size=24)
+
+    if t < GEAR_END:
+        step = int(t / 0.21) % len(LOADOUTS)
+        wl, wr, wname = LOADOUTS[step]
+        swap = (t / 0.21) % 1.0
+        r = build_robot("Heads/ComstockMk01.png", wl, wr)
+        put(c, r, W / 2, H * 0.45, height=900 * (1.0 + 0.03 * math.sin(swap * math.pi)))
+        if swap < 0.22:
+            flash(c, (0.22 - swap) / 0.22 * 0.4)
+        put(c, text_img("장비 전환", font(FONT_KR, 66), stroke=11), W / 2, 130,
+            scale=ease_out_back(clamp(t / 0.2), 2.0))
+        scrim(c, 1.0)
+        caption(c, wname, H - 132, size=58, grad=AMBER)
+        caption(c, "무기 65종 · 파츠 134개 · 등급 5단계", H - 62, size=36, grad=CYAN)
+
+    elif t < HEAD_END:
+        lt = t - GEAR_END
+        step = min(len(VARIANTS) - 1, int(lt / 0.093))
+        head, hname = VARIANTS[step]
+        wl, wr, _ = LOADOUTS[step % len(LOADOUTS)]
+        swap = (lt / 0.093) % 1.0
+        dx = (1 - ease_out(clamp(swap / 0.45))) * 150
+        put(c, build_robot(f"Heads/{head}", wl, wr), W / 2 + dx, H * 0.41,
+            height=820, alpha=int(255 * clamp(swap / 0.2 + .35)))
+        put(c, text_img("각 컴스톡", font(FONT_KR, 66), stroke=11), W / 2, 130)
+        roster_strip(c, lt, step)
+        scrim(c, 0.75)
+        caption(c, hname, H - 42, size=46, grad=AMBER)
+
+    else:
+        lt = t - HEAD_END
+        put(c, build_robot("Heads/Berserker.png", "LeftPlasmaCannon.png",
+                           "RightPlasmaCannon.png"), W / 2, H * 0.41, height=820)
+        put(c, text_img("각 컴스톡", font(FONT_KR, 66), stroke=11), W / 2, 130)
+        roster_strip(c, lt, 2)
+        stamp(c, lt)
+        scrim(c, 0.75)
+        caption(c, "골라서 조립한다 · 로봇 12종", H - 42, size=46,
+                pop=ease_out_back(clamp((lt - 0.18) / 0.2), 2.0))
+    return c
+
+
+# =============================================================================
+#  컷 6. 게임 로고 (13.4 ~ 15.0)
+# =============================================================================
+
+def scene_logo(t, dur):
+    c = stage_bg(t * 0.45, top=(42, 22, 86), bottom=(178, 88, 30), ray_alpha=44)
+    sparks(c, t, 31, W / 2, H * 0.42, 560, n=18, size=28)
+
+    k = clamp(t / 0.28)
+    logo = text_img("COMSTOCK", font(FONT_EN, 124),
+                    grad=GOLD, stroke=17, stroke_fill=(26, 16, 10))
+    if t <= 0.28:
+        put(c, logo, W / 2, H * 0.36 + (1 - ease_out(k)) * -420)
+    else:
+        sq = 1.0 + 0.08 * math.exp(-(t - 0.28) * 9) * math.cos((t - 0.28) * 24)
+        put(c, logo, W / 2, H * 0.36, size=(logo.width * sq, logo.height / sq))
+    if 0.26 < t < 0.5:
+        flash(c, (0.5 - t) / 0.24 * 0.75)
+
+    if t > 0.32:
+        put(c, text_img("컴 스 톡", font(FONT_KR, 64), stroke=11), W / 2, H * 0.50,
+            scale=ease_out_back(clamp((t - 0.32) / 0.2), 2.2))
+    if t > 0.5:
+        put(c, text_img("웨이브 서바이벌 · 로봇 조립 · 캐주얼 뱀서라이크",
+                        font(FONT_KR, 38), grad=CYAN, stroke=8),
+            W / 2, H * 0.585, scale=ease_out_back(clamp((t - 0.5) / 0.2), 2.0))
+
+    put(c, img("Comstock.png"), W / 2, H - 60, height=300, anchor="bottom")
+
+    if t > 0.78:
+        p = ease_out_back(clamp((t - .78) / .22), 2.4)
+        d = ImageDraw.Draw(c)
+        bw, bh = 620 * p, 108 * p
+        d.rounded_rectangle([W / 2 - bw / 2, H * 0.755 - bh / 2,
+                             W / 2 + bw / 2, H * 0.755 + bh / 2], radius=16,
+                            fill=(24, 18, 40, 230), outline=(255, 208, 96, 240), width=5)
+        put(c, text_img("STEAM  위시리스트에 추가", font(FONT_KR, 42),
+                        grad=AMBER, stroke=9), W / 2, H * 0.755, scale=p)
+    return c
+
+
+# =============================================================================
+#  타임라인 — 사용자 콘티 6컷
 # =============================================================================
 
 TIMELINE = [
-    (0.0,  1.5, scene_hook,    "훅"),
-    (1.5,  1.9, scene_idle,    "방치형"),
-    (3.4,  2.2, scene_gacha,   "SSR 뽑기"),
-    (5.6,  1.7, scene_weapons, "무기 자랑"),
-    (7.3,  2.2, scene_quiz,    "가짜 선택지"),
-    (9.5,  1.9, scene_boss,    "보스"),
-    (11.4, 1.7, scene_proof,   "가짜 랭킹"),
-    (13.1, 1.9, scene_cta,     "CTA"),
+    (0.0,  2.4, scene_arrive,   "1. 컴스톡 등장"),
+    (2.4,  2.6, scene_spotted,  "2. 좀비가 뒤돌아본다 → 대군단"),
+    (5.0,  2.6, scene_push,     "3. 잡으면서 진행"),
+    (7.6,  2.8, scene_gameplay, "4. 게임으로 전환 → 게임플레이"),
+    (10.4, 3.0, scene_loadout,  "5. 장비전환 · 각 컴스톡 · 합격"),
+    (13.4, 1.6, scene_logo,     "6. 게임 로고"),
 ]
 
 CUTS = [s for s, _, _, _ in TIMELINE[1:]]
-# 임팩트가 있어야 하는 순간들 — 줌 펀치와 화면 흔들림이 여기서 터진다
-HITS = [0.10, 0.72, 1.50, 2.55, 3.40, 3.96, 4.30, 5.60, 7.30, 8.56, 9.50,
-        10.78, 11.40, 13.10, 13.60]
+# 임팩트 — 광고 톤보다 훨씬 아껴서 쓴다(트레일러는 화면이 흔들릴수록 싸 보인다)
+HITS = [0.52, 3.02, 5.00, 9.05, 12.82, 13.40]
 
 
 def render_content(t):
@@ -909,33 +961,32 @@ def render_content(t):
 
 
 # =============================================================================
-#  후처리 — 채도 · 블룸 · 줌 펀치 · 흔들림 · 플래시
+#  후처리
 # =============================================================================
 
 def punch(t):
-    """임팩트 순간마다 화면이 확 당겨졌다 풀린다."""
     z = 0.0
     for h in HITS:
         d = t - h
         if 0 <= d < 0.22:
-            z = max(z, 0.055 * (1 - d / 0.22) ** 2)
+            z = max(z, 0.035 * (1 - d / 0.22) ** 2)
     return z
 
 
 def shake(t):
     for h in HITS:
         d = t - h
-        if 0 <= d < 0.18:
-            a = (1 - d / 0.18)
-            return (math.sin(d * 150) * 26 * a, math.cos(d * 173) * 20 * a)
+        if 0 <= d < 0.16:
+            a = 1 - d / 0.16
+            return (math.sin(d * 150) * 16 * a, math.cos(d * 173) * 12 * a)
     return (0.0, 0.0)
 
 
 def cut_flash(t):
     for cut in CUTS:
         d = t - cut
-        if 0 <= d < 0.12:
-            return 0.55 * (1 - d / 0.12)
+        if 0 <= d < 0.10:
+            return 0.38 * (1 - d / 0.10)
     return 0.0
 
 
@@ -946,49 +997,37 @@ def vignette():
     global _vig
     if _vig is None:
         yy, xx = np.mgrid[0:H, 0:W]
-        nx = (xx - W / 2) / (W / 2)
-        ny = (yy - H / 2) / (H / 2)
-        r = np.sqrt(nx * nx + ny * ny * 0.72)
-        _vig = (1.0 - 0.30 * np.clip((r - 0.62) / 0.9, 0, 1) ** 1.6).astype(np.float32)
+        nx, ny = (xx - W / 2) / (W / 2), (yy - H / 2) / (H / 2)
+        r = np.sqrt(nx * nx * 0.78 + ny * ny)
+        _vig = (1.0 - 0.28 * np.clip((r - 0.58) / 0.9, 0, 1) ** 1.6).astype(np.float32)
     return _vig
 
 
 def post(rgba, t):
-    """모바일 광고 톤: 채도를 올리고, 밝은 데를 번지게 하고, 화면을 흔든다."""
-    # 줌 펀치 + 흔들림은 이미지 자체를 확대/이동해서 만든다
     z = 1.0 + punch(t)
     dx, dy = shake(t)
     if z > 1.001 or dx or dy:
-        bw, bh = int(W * z * 1.03), int(H * z * 1.03)
+        bw, bh = int(W * z * 1.025), int(H * z * 1.025)
         big = rgba.resize((bw, bh), Image.BILINEAR)
-        ox = int((bw - W) / 2 + dx)
-        oy = int((bh - H) / 2 + dy)
-        ox = max(0, min(bw - W, ox))
-        oy = max(0, min(bh - H, oy))
+        ox = max(0, min(bw - W, int((bw - W) / 2 + dx)))
+        oy = max(0, min(bh - H, int((bh - H) / 2 + dy)))
         rgba = big.crop((ox, oy, ox + W, oy + H))
 
-    rgb = rgba.convert("RGB")
-    arr = np.asarray(rgb, dtype=np.float32)
-
-    # 채도 부스트 + 살짝의 대비
+    arr = np.asarray(rgba.convert("RGB"), dtype=np.float32)
     luma = (arr[..., 0] * .299 + arr[..., 1] * .587 + arr[..., 2] * .114)[..., None]
-    arr = luma + (arr - luma) * 1.34
-    arr = (arr - 128.0) * 1.07 + 132.0
-    arr = np.clip(arr, 0, 255)
+    arr = np.clip(luma + (arr - luma) * 1.18, 0, 255)      # 광고 톤보다 절제한 채도
+    arr = np.clip((arr - 128.0) * 1.05 + 131.0, 0, 255)
 
-    # 블룸: 밝은 부분만 뽑아 흐리게 번지게 한 뒤 스크린 합성
-    bright = np.clip((arr - 176.0) * 2.2, 0, 255).astype(np.uint8)
+    bright = np.clip((arr - 186.0) * 2.0, 0, 255).astype(np.uint8)
     bl = Image.fromarray(bright, "RGB").resize((W // 4, H // 4), Image.BILINEAR)
-    bl = bl.filter(ImageFilter.GaussianBlur(11)).resize((W, H), Image.BILINEAR)
-    b = np.asarray(bl, dtype=np.float32) * 0.62
+    bl = bl.filter(ImageFilter.GaussianBlur(10)).resize((W, H), Image.BILINEAR)
+    b = np.asarray(bl, dtype=np.float32) * 0.44
     arr = 255.0 - (255.0 - arr) * (255.0 - b) / 255.0
-
     arr *= vignette()[..., None]
 
     f = cut_flash(t)
     if f > 0:
         arr = arr + (255.0 - arr) * f
-
     return np.clip(arr, 0, 255).astype(np.uint8)
 
 
@@ -997,48 +1036,43 @@ def compose_frame(t):
 
 
 # =============================================================================
-#  오디오 — 게임 BGM + 효과음 폭탄
+#  오디오
 # =============================================================================
 
 SFX_CUES = [
-    (0.05, "SFX/Weapon_RapidFire.wav", 0.9),
-    (0.40, "SFX/Enemy_Hit_A.wav", 0.8),
-    (0.72, "SFX/Weapon_Shotgun.wav", 0.9),
-    (1.05, "SFX/Enemy_Death.wav", 0.8),
-    (1.50, "SFX/LevelUp.wav", 1.0),
-    (1.95, "SFX/LevelUp.wav", 0.8),
-    (2.40, "SFX/LevelUp.wav", 0.8),
-    (2.85, "SFX/LevelUp.wav", 0.9),
-    (3.40, "SFX/UI_Click.wav", 0.9),
-    (3.96, "SFX/Weapon_Explosive.wav", 1.0),
-    (4.35, "SFX/LevelUp.wav", 1.0),
-    (5.60, "SFX/UI_Click.wav", 0.8),
-    (5.95, "SFX/UI_Click.wav", 0.7),
-    (6.30, "SFX/UI_Click.wav", 0.7),
-    (7.30, "SFX/UI_Click.wav", 0.9),
-    (8.56, "SFX/Enemy_Hit_C.ogg", 1.0),
-    (9.10, "SFX/LevelUp.wav", 0.9),
-    (9.50, "SFX/Boss_Hit_A.wav", 1.0),
-    (9.95, "SFX/Weapon_PlasmaCannon.wav", 0.9),
-    (10.40, "SFX/Boss_Hit_B.wav", 0.9),
-    (10.78, "SFX/Boss_Death.wav", 1.0),
-    (11.40, "SFX/UI_Click.wav", 0.8),
-    (11.80, "SFX/UI_Click.wav", 0.7),
-    (12.26, "SFX/LevelUp.wav", 0.9),
-    (13.10, "SFX/Weapon_Explosive.wav", 0.9),
-    (13.62, "SFX/UI_Click.wav", 1.0),
-    (14.30, "SFX/UI_Click.wav", 0.9),
+    (0.52, "SFX/Weapon_Explosive.wav", 0.95),
+    (2.98, "SFX/Enemy_Hit_A.wav", 0.85),
+    (3.30, "SFX/Enemy_Death.wav", 0.65),
+    (5.02, "SFX/Weapon_RapidFire.wav", 0.9),
+    (5.24, "SFX/Enemy_Hit_B.wav", 0.75),
+    (5.52, "SFX/Weapon_Explosive.wav", 0.8),
+    (5.94, "SFX/Enemy_Hit_C.ogg", 0.75),
+    (6.28, "SFX/Weapon_Shotgun.wav", 0.8),
+    (6.60, "SFX/Enemy_Death.wav", 0.75),
+    (7.02, "SFX/Weapon_PlasmaCannon.wav", 0.8),
+    (7.62, "SFX/UI_Click.wav", 0.8),
+    (8.20, "SFX/Weapon_RapidFire.wav", 0.75),
+    (8.72, "SFX/Weapon_Explosive.wav", 0.75),
+    (9.05, "SFX/LevelUp.wav", 1.0),
+    (9.70, "SFX/UI_Click.wav", 0.6),
+    (10.42, "SFX/UI_Click.wav", 0.8),
+    (10.63, "SFX/UI_Click.wav", 0.7),
+    (10.84, "SFX/UI_Click.wav", 0.7),
+    (11.05, "SFX/UI_Click.wav", 0.7),
+    (11.70, "SFX/UI_Click.wav", 0.65),
+    (12.10, "SFX/UI_Click.wav", 0.65),
+    (12.82, "SFX/Boss_Hit_A.wav", 0.95),
+    (13.42, "SFX/Weapon_Explosive.wav", 0.9),
+    (14.20, "SFX/LevelUp.wav", 0.7),
 ]
 
 
 def build_audio(ff, out_path):
     inputs, parts, idx = [], [], 0
-
     inputs += ["-i", os.path.join(RES, "Musics", "Game_BGM01.mp3")]
-    parts.append(f"[{idx}:a]atrim=12:{12 + DURATION},asetpts=N/SR/TB,volume=0.62,"
-                 f"afade=t=in:st=0:d=0.15,afade=t=out:st={DURATION-0.7}:d=0.7[bgm]")
+    parts.append(f"[{idx}:a]atrim=12:{12 + DURATION},asetpts=N/SR/TB,volume=0.66,"
+                 f"afade=t=in:st=0:d=0.5,afade=t=out:st={DURATION-0.8}:d=0.8[bgm]")
     idx += 1
-
     mix = ["[bgm]"]
     for i, (at, rel, vol) in enumerate(SFX_CUES):
         p = os.path.join(RES, rel)
@@ -1048,20 +1082,16 @@ def build_audio(ff, out_path):
         parts.append(f"[{idx}:a]volume={vol},adelay={int(at*1000)}|{int(at*1000)}[s{i}]")
         mix.append(f"[s{i}]")
         idx += 1
-
-    parts.append("".join(mix) +
-                 f"amix=inputs={len(mix)}:duration=first:dropout_transition=0:"
-                 "normalize=0[mixed]")
-    # 모바일 광고는 크고 납작하게 들린다. 저역을 살짝 올리고 세게 눌러 붙인 뒤
-    # loudnorm으로 방송보다 높은 수준까지 끌어올린다.
-    parts.append("[mixed]bass=g=3:f=110,acompressor=threshold=0.08:ratio=8:"
-                 "attack=5:release=110,loudnorm=I=-13:TP=-1.0:LRA=9,"
+    parts.append("".join(mix) + f"amix=inputs={len(mix)}:duration=first:"
+                                "dropout_transition=0:normalize=0[mixed]")
+    # 트레일러는 광고처럼 납작하게 밀지 않는다. 살짝만 눌러 -16 LUFS로.
+    parts.append("[mixed]bass=g=2:f=110,acompressor=threshold=0.12:ratio=5:"
+                 "attack=8:release=140,loudnorm=I=-16:TP=-1.5:LRA=11,"
                  f"atrim=0:{DURATION},asetpts=N/SR/TB,"
                  "aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[out]")
-
     subprocess.run([ff, "-y", "-hide_banner", "-loglevel", "error"] + inputs +
                    ["-filter_complex", ";".join(parts), "-map", "[out]",
-                    "-c:a", "aac", "-b:a", "160k", out_path], check=True)
+                    "-c:a", "aac", "-b:a", "192k", out_path], check=True)
 
 
 # =============================================================================
@@ -1089,13 +1119,12 @@ def render_video(path):
     ff = ffmpeg_exe()
     silent = os.path.join(OUT_DIR, "_video_only.mp4")
     audio = os.path.join(OUT_DIR, "_audio.m4a")
-
     proc = subprocess.Popen(
         [ff, "-y", "-hide_banner", "-loglevel", "error",
          "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
          "-r", str(FPS), "-i", "-",
-         "-c:v", "libx264", "-preset", "slow", "-crf", "21",
-         "-maxrate", "8M", "-bufsize", "16M",
+         "-c:v", "libx264", "-preset", "slow", "-crf", "20",
+         "-maxrate", "9M", "-bufsize", "18M",
          "-pix_fmt", "yuv420p", "-movflags", "+faststart", silent],
         stdin=subprocess.PIPE)
     for fi in range(TOTAL_FRAMES):
@@ -1105,7 +1134,6 @@ def render_video(path):
     proc.stdin.close()
     if proc.wait() != 0:
         raise SystemExit("ffmpeg(video) 실패")
-
     print("오디오 믹싱…", flush=True)
     build_audio(ff, audio)
     print("먹싱…", flush=True)
@@ -1124,13 +1152,12 @@ def main():
     ap.add_argument("--preview", type=float, default=None)
     ap.add_argument("-o", "--out", default=os.path.join(OUT_DIR, "comstock_pv.mp4"))
     args = ap.parse_args()
-
     if args.preview is not None:
         render_stills([args.preview])
     elif args.stills:
-        render_stills([0.55, 1.20, 2.10, 3.00, 3.60, 4.40, 5.20,
-                       6.10, 6.90, 7.70, 8.70, 9.30, 9.90, 10.90,
-                       11.90, 12.60, 13.50, 14.40])
+        render_stills([0.30, 0.75, 1.60, 2.30, 2.85, 3.20, 3.90, 4.70,
+                       5.40, 6.30, 7.30, 7.95, 8.60, 9.40, 10.10,
+                       10.80, 11.50, 12.20, 12.70, 13.20, 13.90, 14.60])
     else:
         render_video(args.out)
 
