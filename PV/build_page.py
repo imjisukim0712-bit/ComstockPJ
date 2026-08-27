@@ -4,7 +4,7 @@
 PV 공유용 HTML 페이지 빌더
 ==========================
 
-`make_pv.py`가 만든 MP4를 웹용으로 줄여 base64로 박아 넣고, 컷별 콘티와
+`make_pv.py`가 만든 세로 MP4를 웹용으로 줄여 base64로 박아 넣고, 컷별 콘티와
 제작 노트를 붙인 한 장짜리 페이지를 만든다. 외부 요청 없이 혼자 재생되므로
 파일 하나만 넘기면 어디서든 열린다.
 
@@ -21,33 +21,28 @@ import sys
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
 OUT_DIR = os.path.join(HERE, "out")
 SRC_MP4 = os.path.join(OUT_DIR, "comstock_pv.mp4")
 WEB_MP4 = os.path.join(OUT_DIR, "comstock_pv_web.mp4")
 
-# (시작초, 썸네일 시각, 컷 제목, 화면에 나오는 문구, 쓰인 게임 에셋)
+# (시작초, 썸네일 시각, 컷 제목, 화면 문구, 이 컷이 흉내 내는 광고 클리셰)
 CUTS = [
-    (0.0,  1.4,  "사인온",        "잠시 후 방송을 시작합니다",
-     "코드로 그린 테스트 패턴"),
-    (1.8,  3.1,  "문제 제기",     "혹시… 좀비 때문에 고민이십니까? (네.)",
-     "ZombieMove 8프레임 · ZombieAttack 12프레임"),
-    (4.6,  5.2,  "절망 3연타",    "출근길에도 좀비! 퇴근길에도 좀비! 주말에도 좀비!!",
-     "SprinterMove · ChargerMove · LeaderMove"),
-    (6.8,  7.7,  "전환",          "그 . 래 . 서 !",
-     "코드로 그린 집중선"),
-    (8.0,  9.8,  "제품 등장",     "신형 전투 로봇 컴스톡 — 자동 조준! 탄약 무제한! 무게 제한 있음",
-     "Comstock.png"),
-    (11.2, 13.2, "무기 카탈로그", "전투 무기 65종 · 로봇 파츠 134개 — 전부 임시 수치입니다",
-     "무기 스프라이트 12종"),
-    (15.0, 16.4, "머리 12종",     "머리도 골라 쓰십시오 — …이것도 로봇입니다",
-     "Heads/ 12종"),
-    (17.8, 19.4, "전투 몽타주",   "웨이브 20회! 1회당 단돈 60초!",
-     "Comstock · MuzzleFlash · Explosion · BasicBullet"),
-    (21.4, 22.3, "보스",          "20웨이브, 보스 등장! 이길 수 있겠습니까? 저희도 모릅니다",
-     "BossRoar 36프레임"),
-    (24.6, 26.2, "로고 / CTA",    "지금 바로 플레이! + 초고속 면책 조항 + TV 꺼짐",
-     "Orbitron-Black · Comstock.png"),
+    (0.0,  0.9,  "훅", "이게 진짜 무료라고? / 설치 1분 만에 만렙",
+     "첫 1초에 가짜 조작 UI와 손가락 커서를 보여 준다"),
+    (1.5,  2.6,  "방치형", "폰 꺼놔도 알아서 렙업! → 접속만 해도 Lv.999",
+     "AUTO 토글, 레벨 1→999 롤링, 골드 비"),
+    (3.4,  4.6,  "SSR 뽑기", "100연차 무료 → ★★★★★ 전설등급 획득!",
+     "암전 → 무지개 광선 → 폭발 → 등장의 뽑기 3단 연출"),
+    (5.6,  6.4,  "무기 자랑", "무기 65종 전부 무료 지급 (진짜로)",
+     "등급 카드가 위에서 우수수 떨어진다"),
+    (7.3,  8.2,  "가짜 선택지", "당신의 선택은? → 실패! → 정답: 둘 다 장착",
+     "3초 카운트다운과 오답 연출. 이 장르의 대표 밈"),
+    (9.5,  10.4, "보스", "DPS 999,999,999 / 보스도 3초컷",
+     "보스 포효 → 데미지 숫자 폭주 → 폭사"),
+    (11.4, 12.2, "가짜 랭킹", "전 서버 1위 달성! ★★★★★ 4.9 / 다운로드 100만 돌파",
+     "가짜 랭킹표와 가짜 리뷰로 만드는 사회적 증거"),
+    (13.1, 14.2, "CTA", "지금 플레이! / 선착순 마감까지 00:0X",
+     "뛰는 버튼, 무료 리본, 초소형 면책 조항"),
 ]
 
 
@@ -60,205 +55,150 @@ def ffmpeg_exe():
 
 
 def ensure_web_version(ff):
-    """페이지에 심을 경량본(960x540)을 만든다. 16MB 아티팩트 한도 안에 들어가야 한다."""
+    """페이지에 심을 경량본을 만든다. 16MB 아티팩트 한도 안에 들어가야 한다."""
     if os.path.exists(WEB_MP4) and os.path.getmtime(WEB_MP4) > os.path.getmtime(SRC_MP4):
         return
     subprocess.run([ff, "-y", "-hide_banner", "-loglevel", "error", "-i", SRC_MP4,
-                    "-vf", "scale=960:540:flags=lanczos",
-                    "-c:v", "libx264", "-preset", "slower", "-crf", "31",
-                    "-maxrate", "2400k", "-bufsize", "4800k", "-pix_fmt", "yuv420p",
+                    "-vf", "scale=720:1280:flags=lanczos",
+                    "-c:v", "libx264", "-preset", "slower", "-crf", "30",
+                    "-maxrate", "2600k", "-bufsize", "5200k", "-pix_fmt", "yuv420p",
                     "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart",
                     WEB_MP4], check=True)
 
 
 def grab(ff, t):
-    """지정 시각의 프레임을 320x180 흑백 JPEG data URI로 뽑는다."""
     raw = os.path.join(OUT_DIR, "_grab.png")
     subprocess.run([ff, "-y", "-hide_banner", "-loglevel", "error", "-ss", str(t),
                     "-i", SRC_MP4, "-frames:v", "1", raw], check=True)
-    im = Image.open(raw).convert("L").resize((320, 180), Image.LANCZOS)
+    im = Image.open(raw).convert("RGB").resize((198, 352), Image.LANCZOS)
     buf = io.BytesIO()
-    im.save(buf, "JPEG", quality=72, optimize=True)
+    im.save(buf, "JPEG", quality=74, optimize=True)
     os.remove(raw)
     return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
 def tc(sec):
-    return f"{int(sec // 60):02d}:{sec % 60:04.1f}"
+    return f"{sec:05.2f}"
 
 
-HEAD = """<title>컴스톡 방송국</title>
+HEAD = """<title>컴스톡 15초 광고</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Black+Han+Sans&family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <style>
-/* 이 페이지는 '켜져 있는 브라운관' 한 세계에 고정한다(단일 테마).
-   그래서 배경·글자색을 전부 명시적으로 칠하고 테마 분기를 두지 않는다. */
+/* 영상이 원색으로 시끄러운 만큼 페이지는 조용히 간다. 자홍색 하나만 강조로 쓰고
+   나머지는 보라 기가 도는 중성색으로 맞춘다(순회색은 고른 티가 안 난다). */
 :root{
-  --ink:#0A0A0B;        /* 브라운관 유리가 꺼져 있을 때의 검정 */
-  --panel:#131316;
-  --panel-2:#1B1B1F;
-  --line:#2C2C31;
-  --phos:#E9E7DF;       /* 인광체 백색 - 순백이 아니라 살짝 따뜻하다 */
-  --dim:#8B8A84;
-  --dimmer:#605F5B;
-  --onair:#B8352C;      /* 이 페이지에서 유일하게 허용된 색 */
-  --maxw:1080px;
+  --bg:#0E0B14;
+  --panel:#17131F;
+  --panel-2:#1F1A2A;
+  --line:#2E2739;
+  --fg:#F2EEF7;
+  --dim:#A79FB6;
+  --dimmer:#756C86;
+  --hot:#FF3D8B;
+  --gold:#FFC24D;
+  --maxw:1120px;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{
-  margin:0; background:var(--ink); color:var(--phos);
+  margin:0; background:var(--bg); color:var(--fg);
   font-family:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
   font-size:16px; line-height:1.75;
-  background-image:
-    radial-gradient(120% 80% at 50% -10%, rgba(233,231,223,.055), transparent 60%);
-  background-attachment:fixed;
 }
 .wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px}
 
-/* ── 방송국 헤더 ─────────────────────────────────────────────── */
-.slate{
-  display:flex; align-items:center; gap:18px; flex-wrap:wrap;
-  border-bottom:1px solid var(--line); padding:26px 0 20px;
-}
-.lamp{
-  display:inline-flex; align-items:center; gap:9px;
+.eyebrow{
+  display:inline-flex; align-items:center; gap:9px; margin:30px 0 0;
   font-family:"IBM Plex Mono",ui-monospace,monospace; font-weight:600;
-  font-size:12px; letter-spacing:.20em; color:var(--onair);
-  border:1px solid rgba(184,53,44,.5); border-radius:2px; padding:5px 10px;
+  font-size:11.5px; letter-spacing:.20em; color:var(--hot);
+  border:1px solid rgba(255,61,139,.42); border-radius:2px; padding:6px 11px;
 }
-.lamp i{
-  width:7px; height:7px; border-radius:50%; background:var(--onair);
-  box-shadow:0 0 9px rgba(184,53,44,.9); animation:blink 2.6s steps(1,end) infinite;
-}
-@keyframes blink{0%,88%{opacity:1}90%,94%{opacity:.25}96%,100%{opacity:1}}
-.chan{
-  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12px;
-  letter-spacing:.18em; color:var(--dimmer);
-}
-.chan b{color:var(--dim); font-weight:600}
-
 h1{
-  font-family:"Anton","Black Han Sans",Impact,sans-serif;
-  font-weight:400; letter-spacing:.035em; line-height:.95;
-  font-size:clamp(46px,9.5vw,104px); margin:34px 0 0; text-wrap:balance;
+  font-family:"Black Han Sans","Noto Sans KR",sans-serif; font-weight:400;
+  font-size:clamp(38px,7vw,74px); line-height:1.08; letter-spacing:.005em;
+  margin:20px 0 0; text-wrap:balance;
 }
-.kr-title{
-  font-family:"Black Han Sans","Noto Sans KR",sans-serif;
-  font-size:clamp(20px,3.4vw,30px); letter-spacing:.02em;
-  color:var(--phos); margin:10px 0 0;
-}
-.lede{
-  color:var(--dim); max-width:60ch; margin:16px 0 0; font-size:16.5px;
-}
-.specs{
-  display:flex; flex-wrap:wrap; gap:8px; margin:22px 0 0; padding:0; list-style:none;
-}
+h1 .hot{color:var(--hot)}
+.lede{color:var(--dim); max-width:58ch; margin:16px 0 0}
+.specs{display:flex; flex-wrap:wrap; gap:8px; margin:22px 0 0; padding:0; list-style:none}
 .specs li{
   font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11.5px;
-  letter-spacing:.10em; color:var(--dim);
+  letter-spacing:.10em; color:var(--dim); font-variant-numeric:tabular-nums;
   border:1px solid var(--line); border-radius:2px; padding:5px 9px;
-  font-variant-numeric:tabular-nums;
 }
 
-/* ── 브라운관 ────────────────────────────────────────────────── */
-.tv{margin:34px 0 0}
-.set{
-  position:relative; background:#08080A; border:1px solid var(--line);
-  border-radius:18px; padding:14px;
-  box-shadow:0 0 0 1px rgba(233,231,223,.04) inset, 0 26px 70px -30px rgba(0,0,0,.95);
+/* ── 세로 영상은 폰 안에 넣어야 크기가 납득된다 ─────────────── */
+.stage{display:grid; gap:34px; grid-template-columns:minmax(0,300px) 1fr;
+       align-items:start; margin:40px 0 0}
+.phone{
+  background:linear-gradient(160deg,#2B2438,#120F1A);
+  border:1px solid var(--line); border-radius:38px; padding:11px;
+  box-shadow:0 30px 80px -34px rgba(0,0,0,.9);
 }
-.tube{position:relative; border-radius:9px; overflow:hidden; background:#000; line-height:0}
-.tube video{width:100%; height:auto; display:block}
-.tube::after{                       /* 주사선 유리 - 조작은 통과시킨다 */
-  content:""; position:absolute; inset:0; pointer-events:none; border-radius:9px;
-  background:repeating-linear-gradient(to bottom,
-    rgba(0,0,0,.20) 0 1px, rgba(0,0,0,0) 1px 3px);
-  mix-blend-mode:multiply; opacity:.55;
-}
-.knobs{
-  display:flex; align-items:center; justify-content:space-between; gap:14px;
-  margin-top:12px; padding:0 4px;
-  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px;
-  letter-spacing:.16em; color:var(--dimmer);
-}
-.knobs span{display:inline-flex; align-items:center; gap:8px}
-.knobs em{
-  width:12px; height:12px; border-radius:50%; font-style:normal;
-  border:1px solid var(--line); background:linear-gradient(160deg,#242429,#0E0E11);
-}
+.phone video{width:100%; height:auto; display:block; border-radius:28px; background:#000}
+.aside h2{margin-top:0}
+.aside p{color:var(--dim); margin:10px 0 0}
 
-/* ── 섹션 ───────────────────────────────────────────────────── */
-section{padding:64px 0 0}
+section{padding:60px 0 0}
 h2{
   font-family:"Black Han Sans","Noto Sans KR",sans-serif; font-weight:400;
-  font-size:clamp(24px,3.6vw,34px); margin:0; letter-spacing:.01em;
+  font-size:clamp(23px,3.4vw,32px); margin:0; letter-spacing:.01em;
 }
 .sub{color:var(--dimmer); font-size:14px; margin:6px 0 0}
 .rule{height:1px; background:var(--line); margin:18px 0 0}
 
-/* ── 컷 표 ──────────────────────────────────────────────────── */
+/* ── 컷 표 ──────────────────────────────────────────────── */
 .cuts{list-style:none; margin:0; padding:0}
-.cut{
-  display:grid; gap:18px; align-items:start;
-  grid-template-columns:86px 160px 1fr;
-  padding:18px 0; border-bottom:1px solid var(--line);
-}
+.cut{display:grid; gap:20px; align-items:start;
+     grid-template-columns:96px 108px 1fr;
+     padding:20px 0; border-bottom:1px solid var(--line)}
 .seek{
   font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:13px; font-weight:600;
-  font-variant-numeric:tabular-nums; letter-spacing:.04em;
-  color:var(--dim); background:none; border:0; border-left:2px solid var(--line);
-  padding:2px 0 2px 10px; cursor:pointer; text-align:left; width:100%;
+  font-variant-numeric:tabular-nums; color:var(--dim); background:none;
+  border:0; border-left:2px solid var(--line); padding:2px 0 2px 11px;
+  cursor:pointer; text-align:left; width:100%;
   transition:color .15s ease, border-color .15s ease;
 }
-.seek:hover,.seek:focus-visible{color:var(--onair); border-color:var(--onair)}
-.seek:focus-visible{outline:2px solid var(--onair); outline-offset:3px}
-.shot{width:100%; height:auto; border-radius:3px; display:block; filter:contrast(1.05)}
-.cut h3{
-  font-family:"Black Han Sans","Noto Sans KR",sans-serif; font-weight:400;
-  font-size:19px; margin:0 0 4px; letter-spacing:.01em;
-}
-.line{color:var(--phos); margin:0; font-size:15px}
-.asset{
-  color:var(--dimmer); margin:8px 0 0;
-  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11.5px; letter-spacing:.04em;
-}
+.seek:hover,.seek:focus-visible{color:var(--hot); border-color:var(--hot)}
+.seek:focus-visible{outline:2px solid var(--hot); outline-offset:3px}
+.shot{width:100%; height:auto; border-radius:6px; display:block; border:1px solid var(--line)}
+.cut h3{font-family:"Black Han Sans","Noto Sans KR",sans-serif; font-weight:400;
+        font-size:19px; margin:0 0 5px}
+.line{margin:0; font-size:15px}
+.trope{color:var(--dimmer); margin:9px 0 0; font-size:13.5px}
 
-/* ── 제작 노트 ──────────────────────────────────────────────── */
-.notes{display:grid; gap:18px; grid-template-columns:repeat(auto-fit,minmax(258px,1fr)); margin-top:26px}
-.note{background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:20px 22px}
-.note h3{
-  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px; font-weight:600;
-  letter-spacing:.20em; color:var(--dim); margin:0 0 10px; text-transform:uppercase;
-}
-.note p{margin:0; font-size:14.5px; color:var(--phos); line-height:1.7}
+/* ── 노트 ───────────────────────────────────────────────── */
+.notes{display:grid; gap:18px; grid-template-columns:repeat(auto-fit,minmax(262px,1fr));
+       margin-top:26px}
+.note{background:var(--panel); border:1px solid var(--line); border-radius:5px;
+      padding:20px 22px}
+.note h3{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px;
+         font-weight:600; letter-spacing:.20em; color:var(--dim);
+         margin:0 0 10px; text-transform:uppercase}
+.note p{margin:0; font-size:14.5px; line-height:1.72}
 .note p + p{margin-top:10px}
-code{
-  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12.5px;
-  background:var(--panel-2); border:1px solid var(--line); border-radius:3px;
-  padding:1px 5px; color:var(--phos);
-}
-pre{
-  background:var(--panel); border:1px solid var(--line); border-radius:4px;
-  padding:16px 18px; overflow-x:auto; margin:20px 0 0;
-}
-pre code{background:none; border:0; padding:0; font-size:12.5px; line-height:1.85}
+.note b{color:var(--gold); font-weight:700}
+code{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12.5px;
+     background:var(--panel-2); border:1px solid var(--line); border-radius:3px;
+     padding:1px 5px}
+pre{background:var(--panel); border:1px solid var(--line); border-radius:5px;
+    padding:16px 18px; overflow-x:auto; margin:20px 0 0}
+pre code{background:none; border:0; padding:0; line-height:1.85}
 
-footer{
-  margin-top:70px; border-top:1px solid var(--line); padding:22px 0 60px;
-  font-family:"IBM Plex Mono",ui-monospace,monospace;
-  font-size:11px; letter-spacing:.16em; color:var(--dimmer);
-  display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;
-}
+footer{margin-top:66px; border-top:1px solid var(--line); padding:22px 0 60px;
+       font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px;
+       letter-spacing:.14em; color:var(--dimmer);
+       display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap}
 
-@media (max-width:720px){
-  .cut{grid-template-columns:74px 1fr; }
-  .cut .shot{grid-column:1 / -1; max-width:320px}
+@media (max-width:760px){
+  .stage{grid-template-columns:1fr}
+  .phone{max-width:320px; margin:0 auto}
+  .cut{grid-template-columns:84px 1fr}
+  .cut .shot{grid-column:1 / -1; max-width:180px}
 }
-@media (prefers-reduced-motion:reduce){
-  *{animation:none !important; transition:none !important}
-}
+@media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
 </style>"""
 
 
@@ -272,51 +212,51 @@ def build(out_path):
         vid = base64.b64encode(f.read()).decode()
 
     rows = []
-    for start, at, title, line, asset in CUTS:
-        thumb = grab(ff, at)
+    for start, at, title, line, trope in CUTS:
         rows.append(f"""    <li class="cut">
-      <button class="seek" type="button" data-t="{start}">{tc(start)}</button>
-      <img class="shot" src="{thumb}" alt="{title} 컷" width="320" height="180" loading="lazy">
+      <button class="seek" type="button" data-t="{start}">{tc(start)}s</button>
+      <img class="shot" src="{grab(ff, at)}" alt="{title} 컷" width="198" height="352" loading="lazy">
       <div>
         <h3>{title}</h3>
         <p class="line">{line}</p>
-        <p class="asset">{asset}</p>
+        <p class="trope">{trope}</p>
       </div>
     </li>""")
-    cuts_html = "\n".join(rows)
 
     body = f"""{HEAD}
 <div class="wrap">
 
-  <header class="slate">
-    <span class="lamp"><i></i>ON AIR</span>
-    <span class="chan">CH <b>20</b> · 흑백 · 30.0초 · 1280&times;720 · 24fps</span>
-  </header>
-
-  <h1>COMSTOCK</h1>
-  <p class="kr-title">컴스톡 30초 소개 영상</p>
+  <p class="eyebrow">15.0s · 1080&times;1920 · 30fps</p>
+  <h1>어디서 본 것 같은<br><span class="hot">그 모바일 광고</span></h1>
   <p class="lede">
-    1950년대 미국 흑백 TV 광고 톤으로 만든 게임 PV다. 화면에 나오는 좀비·보스·무기·로봇은
-    전부 게임에 실제로 들어 있는 스프라이트고, 소리도 게임의 BGM과 효과음을 그대로 썼다.
-    지직거림·주사선·수직 흔들림·필름 먼지는 프레임마다 코드로 얹었다.
+    양산형 모바일 게임 광고의 문법을 그대로 흉내 낸 컴스톡 PV다. 가짜 조작 UI,
+    손가락 커서, 미친 듯이 오르는 숫자, SSR 뽑기, 가짜 선택지, 가짜 랭킹까지
+    클리셰를 8컷에 몰아 넣었다. 화면에 나오는 좀비·보스·무기·로봇은 전부 게임에
+    실제로 들어 있는 스프라이트고, 소리도 게임의 BGM과 효과음이다.
   </p>
   <ul class="specs">
-    <li>컷 10개</li>
-    <li>프레임 720장</li>
-    <li>게임 스프라이트 130여 장</li>
-    <li>효과음 큐 23개</li>
+    <li>컷 8개</li>
+    <li>프레임 450장</li>
+    <li>게임 스프라이트 140여 장</li>
+    <li>효과음 큐 27개</li>
   </ul>
 
-  <div class="tv">
-    <div class="set">
-      <div class="tube">
-        <video id="pv" controls playsinline preload="metadata"
-               src="data:video/mp4;base64,{vid}"></video>
-      </div>
-      <div class="knobs">
-        <span><em></em><em></em>V-HOLD · TRACKING</span>
-        <span>COMSTOCK BROADCASTING</span>
-      </div>
+  <div class="stage">
+    <div class="phone">
+      <video id="pv" controls playsinline preload="metadata"
+             src="data:video/mp4;base64,{vid}"></video>
+    </div>
+    <div class="aside">
+      <h2>세로로 만든 이유</h2>
+      <p>
+        이 장르는 <b>비율 자체가 신호</b>다. 9:16 세로 화면에 조이스틱과 스킬 버튼이
+        깔려 있으면, 내용을 보기도 전에 "모바일 게임 광고"로 읽힌다. 흑백 TV 광고가
+        4:3 필러박스만으로 시대를 알려 주던 것과 같은 장치다.
+      </p>
+      <p>
+        가로가 필요하면 이 영상을 16:9 한가운데 놓고 양옆을 블러로 채우면 된다.
+        실제 광고들이 유튜브에 올릴 때 쓰는 방식이라 오히려 더 그럴듯해진다.
+      </p>
     </div>
   </div>
 
@@ -325,7 +265,7 @@ def build(out_path):
     <p class="sub">시각을 누르면 그 컷부터 재생된다.</p>
     <div class="rule"></div>
     <ol class="cuts">
-{cuts_html}
+{chr(10).join(rows)}
     </ol>
   </section>
 
@@ -335,30 +275,30 @@ def build(out_path):
     <div class="notes">
       <div class="note">
         <h3>재료</h3>
-        <p><code>Assets/Resources/</code>의 실제 게임 스프라이트만 썼다. 좀비 걷기 8프레임,
-           보스 포효 36프레임, 폭발 10프레임, 총구 화염 3프레임, 무기 12종, 머리 12종,
-           폐허 도시 배경.</p>
-        <p>새로 그린 그림은 없고, 집중선·테스트 패턴·자막만 코드로 그렸다.</p>
+        <p><code>Assets/Resources/</code>의 실제 게임 에셋만 썼다. 좀비 걷기 8프레임,
+           보스 포효 36프레임, 보스 폭사 60프레임, 레벨업 24프레임, 무기 12종,
+           머리 12종, 그리고 <b>UI 아트로 조립한 가짜 조작 화면</b>.</p>
+        <p>새로 그린 건 손가락 커서와 등급 카드뿐이고, 둘 다 코드로 그렸다.</p>
       </div>
       <div class="note">
-        <h3>흑백 브라운관</h3>
-        <p>4:3(960&times;720)으로 그린 뒤 흑백 변환 → 대비 강화 → 컴포지트 번짐 →
-           수직 롤바 → 주사선 → 비네팅 → 필름 그레인 → 수평 찢김 → 먼지·스크래치 →
-           프레임 지터 순으로 얹고, 16:9 한가운데에 필러박스로 앉혔다.</p>
-        <p>컷이 바뀌는 순간마다 정전기를 터뜨려 채널이 튀는 것처럼 보이게 했다.</p>
+        <h3>자막 3겹</h3>
+        <p>이 장르의 서명은 자막이다. <b>굵은 검은 외곽선 → 흰 테두리 → 금색
+           그라데이션 속살</b>, 이 세 겹을 겹쳐야 그 느낌이 난다. 한 겹이라도 빠지면
+           그냥 평범한 글씨가 된다.</p>
       </div>
       <div class="note">
-        <h3>소리</h3>
-        <p><code>Game_BGM01</code>에 게임 효과음 16종을 타임코드에 맞춰 얹고,
-           백색 잡음(브라운관 히스)과 60Hz 험을 섞었다.</p>
-        <p>전체를 320~3600Hz로 잘라 낡은 TV 스피커처럼 만든 뒤 방송 수준으로 정규화했다.</p>
+        <h3>후처리</h3>
+        <p>채도 +34%, 대비 살짝, 밝은 부분만 뽑아 번지게 하는 블룸, 그리고 임팩트
+           15곳마다 <b>줌 펀치와 화면 흔들림</b>. 컷이 바뀔 때는 흰 플래시로 넘긴다.</p>
+        <p>소리도 같은 방향이다. 저역을 올리고 세게 눌러 붙인 뒤 <code>loudnorm=I=-13</code>
+           으로 방송보다 높게 끌어올렸다.</p>
       </div>
       <div class="note">
-        <h3>애니메이션 프레임의 함정</h3>
-        <p>연속 프레임을 <b>프레임마다 따로</b> 알파 bbox로 자르면 안 된다. 실루엣이 변하는
-           걷기·포효는 프레임마다 bbox가 달라서, 각자 잘라 같은 높이로 그리면 그림이 매 프레임
-           튄다.</p>
-        <p>전체 프레임의 <b>합집합 bbox로 한 번에</b> 잘라야 상대 위치와 크기가 보존된다.</p>
+        <h3>솔직한 면책</h3>
+        <p>마지막 2초에 깔리는 초소형 글씨는 이 장르의 필수 요소이자, 여기서는
+           진짜 고지다. <b>랭킹·리뷰·100연차·선착순은 전부 연출</b>이고 게임에
+           존재하지 않는다.</p>
+        <p>반대로 <b>무기 65종은 사실</b>이다.</p>
       </div>
     </div>
 
@@ -371,13 +311,12 @@ python3 PV/build_page.py           # 이 페이지</code></pre>
 
   <footer>
     <span>COMSTOCK · 웨이브 서바이벌 · 로봇 모딩</span>
-    <span>※ 좀비는 실제로 제거되지 않습니다</span>
+    <span>※ 실제 게임 화면과 다를 수 있습니다</span>
   </footer>
 
 </div>
 
 <script>
-  // 컷 표의 시각을 누르면 그 지점부터 재생한다.
   var pv = document.getElementById('pv');
   document.querySelectorAll('.seek').forEach(function (b) {{
     b.addEventListener('click', function () {{
@@ -396,8 +335,7 @@ python3 PV/build_page.py           # 이 페이지</code></pre>
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("-o", "--out", default=os.path.join(OUT_DIR, "comstock_pv.html"))
-    args = ap.parse_args()
-    build(args.out)
+    build(ap.parse_args().out)
 
 
 if __name__ == "__main__":
