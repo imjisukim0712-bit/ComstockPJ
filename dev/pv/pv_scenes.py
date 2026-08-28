@@ -10,7 +10,7 @@ import random
 from PIL import Image, ImageDraw, ImageFilter
 
 from pv_common import W, H, LANG
-from pv_draw import (A, ASSET, SEQ, SPR, FNT, blit, ease_out, ease_in, clamp, twos,
+from pv_draw import (A, ASSET, VIDEO_FRAMES, SEQ, SPR, FNT, blit, ease_out, ease_in, clamp, twos,
                      draw_stage, impact_star, speed_lines, text, text_layer,
                      wobble, badge, arrow, announcer_bar, fine_print,
                      star_rating, strike, sweat, LANCZOS, BILINEAR)
@@ -170,8 +170,33 @@ def _card(cnv, lang, t, lines, kind="punch", sizes=(66,), pop=True, sub=None,
 
 
 # ---------------------------------------------------------------- 0. 스튜디오 로고
+LOGO_MODE = "video"   # "video" = 제작한 로고 영상 / "static" = 코드로 그린 로고 카드
+LOGO_VIDEO = "pyramid_logo_intro.mp4"
+LOGO_VIDEO_DUR = 2.5             # 원본 길이(초). 장면 길이에 맞춰 늘려 재생한다.
+
+
 def card_presents(cnv, t, dur, lang):
-    """TV를 켜면 가장 먼저 뜨는 스튜디오 로고 카드(2.8초).
+    """TV를 켜면 가장 먼저 뜨는 스튜디오 로고 카드."""
+    if LOGO_MODE == "video":
+        _presents_video(cnv, t, dur, lang)
+    else:
+        _presents_static(cnv, t, dur, lang)
+
+
+def _presents_video(cnv, t, dur, lang):
+    """제작한 로고 영상을 그대로 재생한다(흑백/지직 처리는 tv_process가 한다).
+
+    영상은 2.5초, 장면은 2.8초라 뒤에 죽은 시간이 생기지 않도록 재생 속도를
+    dur에 맞춰 늘린다(약 0.89배 - 눈에 띄지 않는다).
+    """
+    frames = VIDEO_FRAMES(LOGO_VIDEO, w=W, h=H, crop="1440:1080:240:0", fps=24)
+    src_t = clamp(t / max(dur, 1e-6)) * LOGO_VIDEO_DUR
+    idx = min(len(frames) - 1, int(src_t * 24))
+    cnv.paste(frames[idx], (0, 0))
+
+
+def _presents_static(cnv, t, dur, lang):
+    """코드로 그린 로고 카드(비교용 원본).
 
     등장 팝은 짧게 유지하고, 남은 시간은 로고가 아주 느리게 호흡하며 버틴다.
     2초 넘게 완전히 정지해 있으면 영상이 멈춘 것처럼 보인다.
@@ -202,6 +227,23 @@ def card_presents(cnv, t, dur, lang):
         if wpx > 20:
             d.polygon([(W / 2, y - 10), (W / 2 + 10, y), (W / 2, y + 10), (W / 2 - 10, y)],
                       fill=(200, 200, 200))
+
+
+def blackout(cnv, t, dur, lang):
+    """로고가 사라진 뒤 본편이 시작되기 전의 1초. 지직 한 번 튀고 가라앉는다.
+
+    화면 자체는 거의 검다 - 튀는 지직은 tv_process가 이 장면 시작점(CUT)에서 만든다.
+    완전한 검정은 죽어 보이므로 브라운관 잔광만 아주 옅게 남긴다.
+    """
+    cnv.paste((7, 7, 7), (0, 0, W, H))
+    p = clamp(t / max(dur, 1e-6))
+    if p < 0.45:                                   # 가운데 잔광이 서서히 꺼진다
+        a = (1 - p / 0.45)
+        glow = Image.new("L", (W // 6, H // 6), 0)
+        ImageDraw.Draw(glow).ellipse(
+            [W // 24, H // 12, W // 6 - W // 24, H // 6 - H // 12], fill=int(70 * a))
+        glow = glow.filter(ImageFilter.GaussianBlur(6)).resize((W, H), BILINEAR)
+        cnv.paste(Image.new("RGB", (W, H), (150, 150, 150)), (0, 0), glow)
 
 
 # ---------------------------------------------------------------- 1. 문제 제기
@@ -722,6 +764,7 @@ def tv_off(cnv, t, dur, lang, inner=None):
 SCENES = {
     "tv_on": tv_on,
     "card_presents": card_presents,
+    "blackout": blackout,
     "problem": problem,
     "card_betterway": card_betterway,
     "introducing": introducing,

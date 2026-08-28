@@ -411,3 +411,37 @@ def sweat(cnv, x, y, s=1.0):
               outline=(18, 18, 18), width=int(4 * s) or 1)
     d.polygon([(x - r * 0.55, y - r * 0.5), (x, y - r * 2.0), (x + r * 0.55, y - r * 0.5)],
               fill=(250, 250, 250), outline=(18, 18, 18))
+
+
+# ---------------------------------------------------------------- 영상 소재
+def VIDEO_FRAMES(name, w=None, h=None, crop=None, fps=24):
+    """assets/ 의 짧은 영상을 프레임 PNG로 펼쳐 캐시하고 리스트로 돌려준다.
+
+    ffmpeg으로 한 번만 펼친 뒤 캐시 폴더에서 읽는다(매 프레임 디코딩은 너무 느리다).
+    crop 은 "가로:세로:x:y" 형식의 ffmpeg crop 인자.
+    """
+    key = ("@vid", name, w, h, crop, fps)
+    got = _raw.get(key)
+    if got is not None:
+        return got
+
+    import subprocess
+    tag = "%s_%sx%s_%s" % (os.path.splitext(name)[0], w, h, fps)
+    outdir = _cache_path("vid_" + tag)
+    if not os.path.isdir(outdir) or not os.listdir(outdir):
+        os.makedirs(outdir, exist_ok=True)
+        vf = []
+        if crop:
+            vf.append("crop=" + crop)
+        if w and h:
+            vf.append("scale=%d:%d" % (w, h))
+        vf.append("fps=%d" % fps)
+        subprocess.run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+                        "-i", os.path.join(ASSETS_DIR, name),
+                        "-vf", ",".join(vf),
+                        os.path.join(outdir, "f_%04d.png")], check=True)
+    files = sorted(f for f in os.listdir(outdir) if f.endswith(".png"))
+    frames = [Image.open(os.path.join(outdir, f)).convert("RGB") for f in files]
+    assert frames, "영상 프레임을 못 만들었다: " + name
+    _raw[key] = frames
+    return frames

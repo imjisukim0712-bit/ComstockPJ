@@ -1,0 +1,21 @@
+{
+  "작업": "Pyramid Studio 유튜브 채널 배너",
+  "최종_파일": "pyramid-studio-youtube-banner-no-logo.jpg",
+  "미리보기_파일": "pyramid-studio-youtube-banner-no-logo-safe-preview.jpg",
+  "크기": "2560x1440",
+  "파일_형식": "JPEG",
+  "파일_크기_MB": 0.90,
+  "모바일_안전영역": [508, 509, 2052, 932],
+  "제작_방식": "Pillow 결정론적 합성",
+  "정확한_문구": null,
+  "제외한_요소": [
+    "Comstock 로고",
+    "게임 캐릭터",
+    "호루스의 눈 로고",
+    "PYRAMID STUDIO 워드마크",
+    "피라미드 상징",
+    "슬로건",
+    "생성형 배경"
+  ],
+  "시각_방향": "피라미드 스튜디오 인트로의 호박색 석벽과 필름 주사선만 남긴 무표식 배경"
+}

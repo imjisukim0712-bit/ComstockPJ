@@ -1,0 +1,56 @@
+{
+  "title": "Comstock — Build Worse. Win Better.",
+  "format": "vertical short ad",
+  "style": "1990s American local-TV / monster-truck dealer parody",
+  "size": [
+    1080,
+    1920
+  ],
+  "fps": 30,
+  "duration_seconds": 15.0,
+  "language": "English (en-US)",
+  "claims": [
+    "134 parts",
+    "14 weapons",
+    "20 waves",
+    "automatic firing"
+  ],
+  "copy": [
+    "TOO MANY ZOMBIES?",
+    "ADD MORE GUNS.",
+    "134 PARTS",
+    "14 WEAPONS",
+    "AUTO-FIRES. AIMING IS A MEETING.",
+    "20 WAVES. 1 LARGE PROBLEM.",
+    "COMSTOCK",
+    "BUILD WORSE. WIN BETTER.",
+    "PLAY NOW"
+  ],
+  "sources": [
+    "Assets/Resources/Comstock.png",
+    "Assets/Resources/Enemy_zombie.png",
+    "Assets/Resources/BossGroggy/frame_16.png",
+    "Assets/Resources/RightRocketLauncher.png",
+    "Assets/Resources/RightPlasmaCannon.png",
+    "Assets/Resources/RightCombatShotgun.png",
+    "Assets/Resources/RightLaserPistol.png",
+    "Assets/Resources/PartIcons/Leg_Rocket.png",
+    "Assets/Resources/Parts/Rocket/0.png",
+    "Assets/Resources/Parts/Rocket/3.png",
+    "Assets/Resources/SFX/*.wav"
+  ],
+  "voice": "Microsoft Zira Desktop (en-US), locally synthesized",
+  "output": "Comstock_US_Shorts_15s.mp4",
+  "sha256": "883f556c92d2ee89125151d4474686733731cb36fdfd833c5ff5ca2090953900",
+  "previews": [
+    "preview_00.8s.jpg",
+    "preview_02.8s.jpg",
+    "preview_04.8s.jpg",
+    "preview_06.7s.jpg",
+    "preview_08.7s.jpg",
+    "preview_10.8s.jpg",
+    "preview_13.4s.jpg",
+    "contact-sheet.jpg"
+  ],
+  "generator": "render_short.py"
+}

@@ -1,0 +1,124 @@
+{
+  "title": "컴스톡 인지 가능한 광고 패러디 숏츠 V3 3종 × 한/영",
+  "format": {
+    "size": [
+      1080,
+      1920
+    ],
+    "aspect": "9:16",
+    "fps": 30,
+    "duration_seconds": 15.0,
+    "video": "H.264/yuv420p",
+    "audio": "AAC 48kHz stereo"
+  },
+  "parodies": {
+    "tape": "초강력 테이프 인포머셜 문법",
+    "bodywash": "과장된 남성 향수/바디워시 원테이크 문법",
+    "keynote": "미니멀 테크 키노트 문법"
+  },
+  "trademark_policy": "실제 상표·인물·로고·원문 카피 미사용; 형식과 박자만 패러디",
+  "required_copy": {
+    "ko": "좀비보다 먼저 플레이하세요.",
+    "en": "PLAY IT BEFORE THE ZOMBIES DO."
+  },
+  "endcard": {
+    "start_seconds": 12.6,
+    "source": "endcard_source.png",
+    "sha256": "1904208b7ff27b036e5a60acf324a840dd2f292c075d91f2885326c423063624"
+  },
+  "sources": [
+    "dev/pv/assets/comstock_hero.png",
+    "Assets/Resources/Enemy_zombie.png",
+    "Assets/Resources/ZombieMove/*.png",
+    "Assets/Resources/Explosion/*.png",
+    "Assets/Resources/MuzzleFlash/*.png",
+    "Assets/Resources/Right*.png",
+    "Assets/Resources/SFX/*.wav"
+  ],
+  "exports": [
+    {
+      "concept": "tape",
+      "language": "en",
+      "output": "Comstock_ParodyV3_Tape_EN_15s.mp4",
+      "sha256": "6d92b8d736d292a0233e226b3aff730772a730e8d6548a453079ced20c8585c5",
+      "probe": {
+        "duration": 15.0,
+        "width": 1080,
+        "height": 1920,
+        "fps": 30.0,
+        "aac_audio": true
+      }
+    },
+    {
+      "concept": "tape",
+      "language": "ko",
+      "output": "Comstock_ParodyV3_Tape_KO_15s.mp4",
+      "sha256": "a957092df0ca64b27f63395961a070faac6bc756b791cab7b4bd8a95816d37b3",
+      "probe": {
+        "duration": 15.0,
+        "width": 1080,
+        "height": 1920,
+        "fps": 30.0,
+        "aac_audio": true
+      }
+    },
+    {
+      "concept": "bodywash",
+      "language": "en",
+      "output": "Comstock_ParodyV3_Bodywash_EN_15s.mp4",
+      "sha256": "d80bf394913eac532476f1faa80e86bdeb7edf897efc9338a01039229dc34e9f",
+      "probe": {
+        "duration": 15.0,
+        "width": 1080,
+        "height": 1920,
+        "fps": 30.0,
+        "aac_audio": true
+      }
+    },
+    {
+      "concept": "bodywash",
+      "language": "ko",
+      "output": "Comstock_ParodyV3_Bodywash_KO_15s.mp4",
+      "sha256": "7e2eadd16c4252e90e98e068a66eb7ebaf5e0fb1868a8f9f817ad852a4acefb7",
+      "probe": {
+        "duration": 15.0,
+        "width": 1080,
+        "height": 1920,
+        "fps": 30.0,
+        "aac_audio": true
+      }
+    },
+    {
+      "concept": "keynote",
+      "language": "en",
+      "output": "Comstock_ParodyV3_Keynote_EN_15s.mp4",
+      "sha256": "315bb27f2b12ff4350e83183d65bdc69f64b11702fab41ff4bd5e5d146b644e4",
+      "probe": {
+        "duration": 15.0,
+        "width": 1080,
+        "height": 1920,
+        "fps": 30.0,
+        "aac_audio": true
+      }
+    },
+    {
+      "concept": "keynote",
+      "language": "ko",
+      "output": "Comstock_ParodyV3_Keynote_KO_15s.mp4",
+      "sha256": "ebca0ede830dc6efca9953398f0f679ee9731bae3da54274f94b81b2cf60eeb7",
+      "probe": {
+        "duration": 15.0,
+        "width": 1080,
+        "height": 1920,
+        "fps": 30.0,
+        "aac_audio": true
+      }
+    }
+  ],
+  "contact_sheets": [
+    "contact-sheet-tape.jpg",
+    "contact-sheet-bodywash.jpg",
+    "contact-sheet-keynote.jpg"
+  ],
+  "generator": "render_parody_v3.py"
+}

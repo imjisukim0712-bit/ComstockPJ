@@ -1,0 +1,136 @@
+{
+  "title": "컴스톡 북미풍 병맛 후킹 광고 3종 × 한/영",
+  "format": {
+    "size": [
+      1280,
+      720
+    ],
+    "fps": 30,
+    "duration_seconds": 15.0,
+    "video": "H.264/yuv420p",
+    "audio": "AAC 48kHz stereo"
+  },
+  "concepts": {
+    "weather": "미국 지역방송 좀비 기상특보 패러디",
+    "lawyer": "미국 상해 전문 변호사 광고 패러디",
+    "pharma": "북미 처방약 광고 패러디"
+  },
+  "required_copy": {
+    "ko": "좀비보다 먼저 플레이하세요.",
+    "en": "PLAY IT BEFORE THE ZOMBIES DO."
+  },
+  "endcard_source": {
+    "file": "endcard_source.png",
+    "sha256": "1904208b7ff27b036e5a60acf324a840dd2f292c075d91f2885326c423063624",
+    "usage": "중앙 COMSTOCK 워드마크를 픽셀 그대로 보존하고 언어별 문구를 결정적 합성"
+  },
+  "sources": [
+    "dev/pv/assets/comstock_hero.png",
+    "Assets/Resources/ZombieMove/*.png",
+    "Assets/Resources/Enemy_zombie.png",
+    "Assets/Resources/Explosion/*.png",
+    "Assets/Resources/SFX/*.wav"
+  ],
+  "voices": {
+    "en": "narration omitted; localized on-screen copy",
+    "ko": "내레이션 생략; 화면 자막 현지화"
+  },
+  "exports": [
+    {
+      "concept": "weather",
+      "language": "en",
+      "output": "Comstock_Ad_Weather_EN_15s.mp4",
+      "sha256": "b7a67c1f7011bd0703dcf7730b2448993cd122d71a7f9cb30472910fef82b09f",
+      "probe": {
+        "duration": 15.0,
+        "width": 1280,
+        "height": 720,
+        "fps": 30.0,
+        "aac_audio": true
+      },
+      "main_voice_seconds": 0.05,
+      "cta_voice_seconds": 0.05
+    },
+    {
+      "concept": "weather",
+      "language": "ko",
+      "output": "Comstock_Ad_Weather_KO_15s.mp4",
+      "sha256": "4688100ce3cf9c5e5b7177821eb6fdaaa2ca0e4d4f35fb6d40c07453504aa4ba",
+      "probe": {
+        "duration": 15.0,
+        "width": 1280,
+        "height": 720,
+        "fps": 30.0,
+        "aac_audio": true
+      },
+      "main_voice_seconds": 0.05,
+      "cta_voice_seconds": 0.05
+    },
+    {
+      "concept": "lawyer",
+      "language": "en",
+      "output": "Comstock_Ad_Lawyer_EN_15s.mp4",
+      "sha256": "491556855aedf7e3a2927ca6d72a5dae364a6071e2b56e427214df5a8e976210",
+      "probe": {
+        "duration": 15.0,
+        "width": 1280,
+        "height": 720,
+        "fps": 30.0,
+        "aac_audio": true
+      },
+      "main_voice_seconds": 0.05,
+      "cta_voice_seconds": 0.05
+    },
+    {
+      "concept": "lawyer",
+      "language": "ko",
+      "output": "Comstock_Ad_Lawyer_KO_15s.mp4",
+      "sha256": "9406f4669d4c9788cd147865c16c8af0a74ae5c482550bd5932f439184dfe690",
+      "probe": {
+        "duration": 15.0,
+        "width": 1280,
+        "height": 720,
+        "fps": 30.0,
+        "aac_audio": true
+      },
+      "main_voice_seconds": 0.05,
+      "cta_voice_seconds": 0.05
+    },
+    {
+      "concept": "pharma",
+      "language": "en",
+      "output": "Comstock_Ad_Pharma_EN_15s.mp4",
+      "sha256": "6d01efafa6b8ce94299092effbffe3fd64f773876a3e2049197db7e6db361ced",
+      "probe": {
+        "duration": 15.0,
+        "width": 1280,
+        "height": 720,
+        "fps": 30.0,
+        "aac_audio": true
+      },
+      "main_voice_seconds": 0.05,
+      "cta_voice_seconds": 0.05
+    },
+    {
+      "concept": "pharma",
+      "language": "ko",
+      "output": "Comstock_Ad_Pharma_KO_15s.mp4",
+      "sha256": "4caa4bf3e0d00afe4e186a52743f62f94d4fd5f47b3764f131e14d92a4694fb5",
+      "probe": {
+        "duration": 15.0,
+        "width": 1280,
+        "height": 720,
+        "fps": 30.0,
+        "aac_audio": true
+      },
+      "main_voice_seconds": 0.05,
+      "cta_voice_seconds": 0.05
+    }
+  ],
+  "contact_sheets": [
+    "contact-sheet-weather.jpg",
+    "contact-sheet-lawyer.jpg",
+    "contact-sheet-pharma.jpg"
+  ],
+  "generator": "render_ads.py"
+}

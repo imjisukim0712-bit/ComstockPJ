@@ -18,47 +18,107 @@ CACHE = os.path.join(
 W, H = 960, 720
 OUT_W, OUT_H = 1280, 720
 FPS = 24
-DUR = 40.0
+DUR = 41.0
 NF = int(round(FPS * DUR))
 
 # ---------------------------------------------------------------- 타임라인
-# (시작초, 길이, 씬이름). 합계 40.0초. 광고의 정석 순서를 그대로 따른다.
+# (시작초, 길이, 씬이름). 합계 41.0초. 광고의 정석 순서를 그대로 따른다.
 #
 # ★ 장면을 늘릴 때는 그 장면 함수 안쪽의 박자(자막이 뜨는 시각 등)도 같이 벌려야 한다.
 #   안 그러면 앞부분만 빨리 끝나고 남은 시간이 정지 화면으로 남는다.
 TIMELINE = [
     (0.0, 0.8, "tv_on"),          # TV 켜짐
-    (0.8, 2.8, "card_presents"),  # 스튜디오 로고 카드 - "피라미드 스튜디오 제공"
-    (3.6, 2.6, "problem"),        # 문제 제기 - "좀비 때문에 고민이십니까?"
-    (6.2, 1.7, "card_betterway"), # "분명 더 좋은 방법이 있습니다!"
-    (7.9, 2.9, "introducing"),    # 제품 등장 - 로고 + NEW 배지
-    (10.8, 4.8, "steps"),         # 사용법 3단계 (3단계는 없다)
-    (15.6, 1.5, "card_butwait"),  # "잠깐! 이게 끝이 아닙니다!"
-    (17.1, 4.0, "more"),          # 사은품 목록
-    (21.1, 2.9, "beforeafter"),   # 사용 전 / 사용 후
-    (24.0, 2.7, "testimonial"),   # 좀비 고객 후기
-    (26.7, 3.1, "industrial"),    # 보스 = 산업용 강도 시연
-    (29.8, 2.9, "price"),         # 가격 공개
-    (32.7, 2.7, "actnow"),        # "지금 바로!" + 웨이브 카운터
-    (35.4, 3.6, "cta"),           # 로고 + itch.io + 깨알 고지 스크롤
-    (39.0, 1.0, "tv_off"),        # TV 꺼짐
+    (0.8, 2.8, "card_presents"),  # 스튜디오 로고 영상 (무음)
+    (3.6, 1.0, "blackout"),       # 로고가 사라지며 지직 한 번 -> 1초 정적
+    (4.6, 2.6, "problem"),        # 여기부터 본편 - "좀비 때문에 고민이십니까?"
+    (7.2, 1.7, "card_betterway"), # "분명 더 좋은 방법이 있습니다!"
+    (8.9, 2.9, "introducing"),    # 제품 등장 - 로고 + NEW 배지
+    (11.8, 4.8, "steps"),         # 사용법 3단계 (3단계는 없다)
+    (16.6, 1.5, "card_butwait"),  # "잠깐! 이게 끝이 아닙니다!"
+    (18.1, 4.0, "more"),          # 사은품 목록
+    (22.1, 2.9, "beforeafter"),   # 사용 전 / 사용 후
+    (25.0, 2.7, "testimonial"),   # 좀비 고객 후기
+    (27.7, 3.1, "industrial"),    # 보스 = 산업용 강도 시연
+    (30.8, 2.9, "price"),         # 가격 공개
+    (33.7, 2.7, "actnow"),        # "지금 바로!" + 웨이브 카운터
+    (36.4, 3.6, "cta"),           # 로고 + itch.io + 깨알 고지 스크롤
+    (40.0, 1.0, "tv_off"),        # TV 꺼짐
 ]
 
 # 장면이 바뀌는 지점 = 지직거림(정전기)이 튀는 지점
 # 뒤에 덧붙인 값은 장면 중간의 강조 지점: 3단계 경계 2곳(steps는 dur/3로 나뉜다),
 # 사용 전/후 와이프 직후, 가격의 "0원" 도장.
-CUTS = [t for (t, _d, _n) in TIMELINE][1:] + [12.4, 14.0, 22.6, 31.35]
+CUTS = [t for (t, _d, _n) in TIMELINE][1:] + [13.4, 15.0, 23.6, 32.35]
 # 화면이 세로로 흐르는(수직 동기 이탈) 순간
-ROLLS = [(15.6, 0.26), (29.8, 0.24), (32.7, 0.22)]
+ROLLS = [(16.6, 0.26), (30.8, 0.24), (33.7, 0.22)]
 
 
-def scene_at(t):
+def scene_at(t, timeline=None):
     """절대 시각 t가 속한 (씬이름, 씬내부시각, 씬길이)를 돌려준다."""
-    for (t0, d, name) in TIMELINE:
+    tl = timeline if timeline is not None else TIMELINE
+    for (t0, d, name) in tl:
         if t < t0 + d:
             return name, max(0.0, t - t0), d
-    t0, d, name = TIMELINE[-1]
+    t0, d, name = tl[-1]
     return name, d, d
+
+
+# ---------------------------------------------------------------- 숏츠(15초) 타임라인
+# ★ 41초 인포머셜 PV의 장면을 잘라 쓰지 않는다 - 완전히 새로 쓴 장면 4개다
+# (shorts_scenes.py). 흑백 CRT 톤도 쓰지 않는다 - 컬러로 빠르게 컷을 끊는 밈 광고 편집이다.
+# "좀비는 계속 나온다 / 그래서 이 녀석을 만들었다"(밈 구조) -> 스펙시트(무기/파츠 수) ->
+# 난사 개그 -> 가격 0원 + CTA.
+SHORTS_TIMELINE = [
+    (0.0, 3.5, "meme_setup"),
+    (3.5, 4.0, "spec_sheet"),
+    (7.5, 3.5, "chaos_gag"),
+    (11.0, 4.0, "price_cta"),
+]
+SHORTS_DUR = sum(d for (_t, d, _n) in SHORTS_TIMELINE)
+SHORTS_NF = int(round(FPS * SHORTS_DUR))
+# 컷이 바뀌는 지점 = 화면이 잠깐 하얗게 번쩍하는 지점(밈 편집의 "펀치 컷")
+SHORTS_CUTS = [t for (t, _d, _n) in SHORTS_TIMELINE][1:] + [1.5, 12.15]
+
+# ---------------------------------------------------------------- 숏츠 전용 문구
+# 41초판 LANG과 별개로 관리한다 - 완전히 새로 쓴 개그이기 때문이다.
+SHORTS_LANG = {
+    "en": {
+        "meme1": "ZOMBIES KEEP SHOWING UP.",
+        "meme1b": "AGAIN.",
+        "meme2": "SO WE BUILT THIS GUY.",
+        "meme2b": "PROBLEM SOLVED. MOSTLY.",
+        "spec_title": "WHAT YOU GET:",
+        "spec1": "14 WEAPONS",
+        "spec2": "134 PARTS",
+        "spec3": "0 CHILL",
+        "spec4": "1 KING (OPTIONAL)",
+        "spec_bar": "NO SUBSCRIPTION.  NO DLC.  NO MERCY.",
+        "chaos1": "AIM: CREATIVE.",
+        "chaos2": "RESULTS: SURPRISINGLY EFFECTIVE.",
+        "price_was2": "WORTH $59.99, PROBABLY.",
+        "price_free": "FREE",
+        "cta_main2": "PLAY IT BEFORE THE ZOMBIES DO.",
+        "cta_url": "pyramid-studio.itch.io/comstock",
+    },
+    "ko": {
+        "meme1": "좀비가 계속 나타납니다.",
+        "meme1b": "또요.",
+        "meme2": "그래서 이 녀석을 만들었습니다.",
+        "meme2b": "문제 해결. 대충.",
+        "spec_title": "포함 내역:",
+        "spec1": "무기 14종",
+        "spec2": "파츠 134종",
+        "spec3": "여유 0",
+        "spec4": "왕관 1개 (선택)",
+        "spec_bar": "구독 없음.  DLC 없음.  자비도 없음.",
+        "chaos1": "조준: 자유분방.",
+        "chaos2": "결과: 의외로 효과적.",
+        "price_was2": "정가 59,900원, 아마도.",
+        "price_free": "무료",
+        "cta_main2": "좀비보다 먼저 플레이하세요.",
+        "cta_url": "pyramid-studio.itch.io/comstock",
+    },
+}
 
 
 # ---------------------------------------------------------------- 문구

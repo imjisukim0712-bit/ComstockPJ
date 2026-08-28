@@ -76,24 +76,26 @@ def static_at(t):
     v = 0.11
     for c in CUTS:
         v += 0.92 * math.exp(-((t - c) / 0.085) ** 2)
-    if 5.2 < t < 6.2:                     # 좀비가 좁혀올 때 점점 심해진다 (문제 제기 3.6~6.2)
-        v += 0.315 * (t - 5.2)
-    if 28.70 < t < 29.15:                 # 보스가 터질 때 (industrial 26.7 + 2.0)
+    if 6.2 < t < 7.2:                     # 좀비가 좁혀올 때 점점 심해진다 (문제 제기 4.6~7.2)
+        v += 0.315 * (t - 6.2)
+    if 29.70 < t < 30.15:                 # 보스가 터질 때 (industrial 27.7 + 2.0)
         v += 0.40
     return min(1.0, v)
 
 
 def shake_at(t):
-    if 14.0 < t < 15.6:                   # 3단계: 총 8정 난사 (steps 10.8 + 3.2)
+    if 15.0 < t < 16.6:                   # 3단계: 총 8정 난사 (steps 11.8 + 3.2)
         return 4.0
-    if 26.7 < t < 29.8:                   # 보스 시연
-        return 3.0 + (3.0 if t > 28.6 else 0.0)
-    if 32.7 < t < 35.4:                   # 지금 바로!
+    if 27.7 < t < 30.8:                   # 보스 시연
+        return 3.0 + (3.0 if t > 29.6 else 0.0)
+    if 33.7 < t < 36.4:                   # 지금 바로!
         return 3.2
-    if 21.1 < t < 24.0:                   # 사용 전/후
+    if 22.1 < t < 25.0:                   # 사용 전/후
         return 2.0
-    if 3.6 < t < 6.2:                     # 좀비가 좁혀온다 (문제 제기 씬)
+    if 4.6 < t < 7.2:                     # 좀비가 좁혀온다 (문제 제기 씬)
         return 1.7
+    if 0.8 < t < 3.6:                     # 로고 영상 구간은 화면을 흔들지 않는다
+        return 0.0
     return 0.8
 
 
@@ -113,7 +115,7 @@ def render_content(t, lang):
     if name == "tv_on":
         fn(cnv, tl, dur, lang, inner=render_content(0.84, lang))
     elif name == "tv_off":
-        fn(cnv, tl, dur, lang, inner=render_content(38.94, lang))
+        fn(cnv, tl, dur, lang, inner=render_content(39.94, lang))
     else:
         fn(cnv, tl, dur, lang)
     return cnv

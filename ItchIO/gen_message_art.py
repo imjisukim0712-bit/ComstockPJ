@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
-"""itch.io 설명의 「HOW TO PLAY」 / 「FEATURES」 두 구역을 픽셀아트 이미지로 뽑는다.
+"""itch.io 설명의 「HOW TO PLAY」 안내와 「FEATURES」 아이콘을 이미지로 뽑는다.
 
 itch.io는 설명 HTML의 인라인 style을 지운다. 그래서 이 두 구역을 인라인 CSS로 칠해 두면
 실제 페이지에서는 디자인이 통째로 사라진다. 이미지로 구우면 그 검열을 통과한다.
+
+HOW TO PLAY는 읽기 쉬운 2배 해상도 산세리프 UI이고, FEATURES 아이콘만 아래의 픽셀아트
+팔레트 변환을 사용한다.
 
 `gen_banners.py`(GBJAM 레이아웃용 4색 팔레트)와 별개다. 이쪽은 팔레트가 넓다.
 
@@ -54,6 +57,8 @@ KEYCAP = (233, 228, 214)
 F_TITLE = os.path.join(os.path.dirname(ROOT), "Assets", "Fonts", "Orbitron",
                        "Orbitron-Black.ttf")
 F_MONO = "C:/Windows/Fonts/consolab.ttf"
+F_UI = "C:/Windows/Fonts/segoeui.ttf"
+F_UI_BOLD = "C:/Windows/Fonts/segoeuib.ttf"
 
 
 def _ramp(r, g, b):
@@ -290,7 +295,7 @@ def save(img, name):
 
 
 # ================================================================ HOW TO PLAY
-W = 276          # 논리 폭 → 표시 552px (itch.io 본문 칸 553px)
+W = 276          # FEATURES용 논리 폭 기준. HOW TO PLAY는 별도의 2배 해상도로 직접 그린다.
 
 
 def reticle(img, cx, cy, r):
@@ -306,43 +311,58 @@ def reticle(img, cx, cy, r):
 
 
 def controls():
-    H = 128
-    img = canvas(W, H)
-    rrect(img, 0, 0, W, H, 8, BG_PANEL + (255,))
-    rrect(img, 0, 0, W, H, 8, None, edge=(58, 54, 54, 255))
+    # HTML 키캡은 itch.io 저장 과정에서 크기/배경 스타일이 지워진다. 이 안내만큼은
+    # 2배 해상도의 매끈한 산세리프 이미지로 굽고 552px 폭으로 축소 표시한다.
+    w, h = 1104, 400
+    img = canvas(w, h, BG_PANEL + (255,))
+    d = ImageDraw.Draw(img)
+    orange = ACCENT + (255,)
+    cream = KEYCAP + (255,)
+    ink = (32, 32, 32, 255)
+    white = (244, 242, 236, 255)
+    muted = (166, 162, 156, 255)
 
-    text(img, (W // 2, 15), "HOW TO PLAY", F_TITLE, 13, ACCENT, track=1)
-    ImageDraw.Draw(img).line([W // 2 - 46, 25, W // 2 + 46, 25], fill=(88, 60, 42, 255))
+    d.rounded_rectangle([3, 3, w - 4, h - 4], radius=28,
+                        fill=BG_PANEL + (255,), outline=orange, width=6)
 
-    col = [W // 6, W // 2, W - W // 6]
-    art_cy, key_cy, lab_y, sub_y = 54, 86, 105, 116
+    title_font = ImageFont.truetype(F_UI_BOLD, 46)
+    label_font = ImageFont.truetype(F_UI_BOLD, 34)
+    sub_font = ImageFont.truetype(F_UI, 25)
+    key_font = ImageFont.truetype(F_UI_BOLD, 32)
+    badge_font = ImageFont.truetype(F_UI_BOLD, 31)
 
-    # -- 이동: WASD 키캡. 그림 대신 키 자체가 삽화다.
-    cx, ks, kg = col[0], 16, 2
-    keycap(img, cx, art_cy - 10, ks, ks, "W")
-    for i, c in enumerate("ASD"):
-        keycap(img, cx + (i - 1) * (ks + kg), art_cy + 9, ks, ks, c)
+    def centered(x, y, value, font, fill):
+        d.text((x, y), value, font=font, fill=fill, anchor="mm")
 
-    # -- 자동 사격: 조준 표식 안에 좀비
-    cx = col[1]
-    put(img, fit(art("Zombie.png", 36, sat=1.25), 36, 36), cx, art_cy - 2)
-    reticle(img, cx, art_cy - 2, 20)
-    badge(img, cx, key_cy, 44, 14, "AUTO")
+    def smooth_key(x, y, width, height, value):
+        box = [x - width // 2, y - height // 2,
+               x + width // 2, y + height // 2]
+        d.rounded_rectangle(box, radius=14, fill=cream, outline=orange, width=5)
+        centered(x, y - 1, value, key_font, ink)
 
-    # -- 구르기: 대시 아이콘 + SPACE
-    # 원본 대시 아이콘은 파란색이라 주황 테마에서 튄다 - ORANGE 램프로 강제 변환한다.
-    cx = col[2]
-    put(img, fit(art("UI/Dash_skill.png", 36, force=ORANGE), 40, 36), cx, art_cy - 2)
-    keycap(img, cx, key_cy, 56, 14, "SPACE")
+    centered(w // 2, 50, "HOW TO PLAY", title_font, orange)
+    d.rounded_rectangle([w // 2 - 48, 84, w // 2 + 48, 90], radius=3, fill=orange)
 
-    labels = [("MOVE", "walk it off"),
-              ("AIM & FIRE", "closest enemy, always"),
-              ("DODGE ROLL", "brief i-frames")]
-    for cx, (lab, sub) in zip(col, labels):
-        text(img, (cx, lab_y), lab, F_MONO, 11, INK, track=1)
-        text(img, (cx, sub_y), sub, F_MONO, 8, (152, 144, 136), thr=100)
+    cols = [184, 552, 920]
 
-    save(img, "60_controls.png")
+    # W / A S D
+    smooth_key(cols[0], 140, 72, 64, "W")
+    for i, value in enumerate("ASD"):
+        smooth_key(cols[0] + (i - 1) * 82, 212, 72, 64, value)
+
+    # 자동 사격 / 회피
+    d.rounded_rectangle([cols[1] - 76, 150, cols[1] + 76, 214],
+                        radius=14, fill=orange)
+    centered(cols[1], 181, "AUTO", badge_font, ink)
+    smooth_key(cols[2], 182, 188, 64, "SPACE")
+
+    centered(cols[0], 292, "Move", label_font, white)
+    centered(cols[1], 292, "Aim & Fire", label_font, white)
+    centered(cols[1], 329, "closest enemy, always", sub_font, muted)
+    centered(cols[2], 292, "Dodge Roll", label_font, white)
+
+    img.save(OUT + "60_controls.png")
+    print("  %-22s %dx%d" % ("60_controls.png", w, h))
 
 
 # ================================================================ FEATURES

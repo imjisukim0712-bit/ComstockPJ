@@ -1,0 +1,22 @@
+{
+  "작업": "Pyramid Origin 유튜브 채널 배너",
+  "최종_파일": "pyramid-origin-youtube-banner.png",
+  "미리보기_파일": "pyramid-origin-youtube-banner-safe-preview.jpg",
+  "크기": "2560x1440",
+  "파일_형식": "PNG",
+  "파일_크기_MB": 3.27,
+  "모바일_안전영역": [508, 509, 2052, 932],
+  "최종_SHA256": "408666A7EDA1200B550732D4D868D9C834A875EBC7032E37475AB5734122FA51",
+  "배경_SHA256": "6B0DB79BAD6C338C4ED28E05E4AD89D049685EB3CA6DFD1D234154B3A186DD68",
+  "제작_방식": "내장 imagegen으로 배경 생성 후 Pillow로 원본 로고·캐릭터·텍스트를 결정론적으로 합성",
+  "원본_소재": [
+    "dev/pv/assets/pyramid_logo.png",
+    "Assets/Resources/Comstock.png",
+    "ItchIO/images/50_zombie.png",
+    "ItchIO/images/51_charger.png",
+    "ItchIO/images/52_sprinter.png",
+    "ItchIO/images/53_spitter.png",
+    "ItchIO/images/54_disruptor.png"
+  ],
+  "imagegen_프롬프트": "1950년대 흑백 TV 인포머셜과 절제된 이집트 금색 브랜드 아이덴티티를 결합한 16:9 유튜브 채널 배너 배경. 폐허 도시 실루엣, 복고 방송형 선버스트, CRT 비네트, 빈티지 스크린프린트와 하프톤, 숯검정·앤티크 골드·아이보리·회색 제한 팔레트. 중앙 가로 영역은 로고·채널명·캐릭터 합성을 위해 단순하고 비워 두며 시각적 활동은 양쪽 끝에 집중. 글자·로고·눈 문양·로봇·주요 캐릭터·워터마크 없음."
+}
