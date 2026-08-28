@@ -1,0 +1,125 @@
+{
+  "title": "컴스톡 단일 상황 패러디 숏츠 V4 3종 × 한/영",
+  "format": {
+    "size": [
+      1080,
+      1920
+    ],
+    "aspect": "9:16",
+    "fps": 30,
+    "duration_seconds": 15.0,
+    "video": "H.264/yuv420p",
+    "audio": "AAC 48kHz stereo"
+  },
+  "narration": "Windows TTS API가 보안 설정으로 음성 합성을 거부하여 미사용. 무음 자동재생 기준의 행동·짧은 자막으로 설계.",
+  "story_rule": "상황 1개 → 잘못된 해결 1개 → 결과 1개",
+  "parodies": {
+    "cooking": "15초 요리 숏츠",
+    "firstaid": "응급처치 교육 영상",
+    "sit": "반려동물 훈련 영상"
+  },
+  "required_copy": {
+    "ko": "좀비보다 먼저 플레이하세요.",
+    "en": "PLAY IT BEFORE THE ZOMBIES DO."
+  },
+  "endcard": {
+    "start_seconds": 12.6,
+    "source": "endcard_source.png",
+    "sha256": "1904208b7ff27b036e5a60acf324a840dd2f292c075d91f2885326c423063624"
+  },
+  "sources": [
+    "dev/pv/assets/comstock_hero.png",
+    "Assets/Resources/Enemy_zombie.png",
+    "Assets/Resources/Parts/Foot.png",
+    "Assets/Resources/Right*.png",
+    "Assets/Resources/Explosion/*.png",
+    "Assets/Resources/MuzzleFlash/*.png",
+    "Assets/Resources/SFX/*.wav"
+  ],
+  "exports": [
+    {
+      "concept": "cooking",
+      "language": "en",
+      "output": "Comstock_ClearV4_Cooking_EN_15s.mp4",
+      "sha256": "777d500283bdb36656b52ab9810a8cff52c00f6f40dc5e8e1dc0eb617e5fa33d",
+      "probe": {
+        "duration": 15.0,
+        "width": 1080,
+        "height": 1920,
+        "fps": 30.0,
+        "aac_audio": true
+      }
+    },
+    {
+      "concept": "cooking",
+      "language": "ko",
+      "output": "Comstock_ClearV4_Cooking_KO_15s.mp4",
+      "sha256": "78a84ddb44495500b28e4bde35fe540a9af5499e6a5e4a83c9a92f05b0e74aec",
+      "probe": {
+        "duration": 15.0,
+        "width": 1080,
+        "height": 1920,
+        "fps": 30.0,
+        "aac_audio": true
+      }
+    },
+    {
+      "concept": "firstaid",
+      "language": "en",
+      "output": "Comstock_ClearV4_Firstaid_EN_15s.mp4",
+      "sha256": "9d1604c7c21d2f36534137769e7b64078ea180091eaeff0f6cbacabd6a6456ae",
+      "probe": {
+        "duration": 15.0,
+        "width": 1080,
+        "height": 1920,
+        "fps": 30.0,
+        "aac_audio": true
+      }
+    },
+    {
+      "concept": "firstaid",
+      "language": "ko",
+      "output": "Comstock_ClearV4_Firstaid_KO_15s.mp4",
+      "sha256": "b3ea795ca4f4a0968157fea3b8fd99148850ee8f43a401eadb6d525adc87421a",
+      "probe": {
+        "duration": 15.0,
+        "width": 1080,
+        "height": 1920,
+        "fps": 30.0,
+        "aac_audio": true
+      }
+    },
+    {
+      "concept": "sit",
+      "language": "en",
+      "output": "Comstock_ClearV4_Sit_EN_15s.mp4",
+      "sha256": "19fa25965c08f8546574aea048875bd34cc1ffac037a54263ef18c9d7b49c001",
+      "probe": {
+        "duration": 15.0,
+        "width": 1080,
+        "height": 1920,
+        "fps": 30.0,
+        "aac_audio": true
+      }
+    },
+    {
+      "concept": "sit",
+      "language": "ko",
+      "output": "Comstock_ClearV4_Sit_KO_15s.mp4",
+      "sha256": "8991866e1d69d1faa4c98f6bde30fab486204e6807eae61298861e9fe2630451",
+      "probe": {
+        "duration": 15.0,
+        "width": 1080,
+        "height": 1920,
+        "fps": 30.0,
+        "aac_audio": true
+      }
+    }
+  ],
+  "storyboards": [
+    "storyboard-cooking.jpg",
+    "storyboard-firstaid.jpg",
+    "storyboard-sit.jpg"
+  ],
+  "generator": "render_clear_v4.py"
+}
