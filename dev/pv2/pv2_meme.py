@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """컴스톡 병맛 PV #2 - 인스타그램 릴스 밈 몽타주. 9:16 1080x1920, 30fps, 20초.
 
-밈 문법을 그대로 따른다: 흰 캡션 바 + 산세리프, 컷마다 바인 붐, 딥프라이드
-플렉스, 모아이(🗿) 보스, 그리고 "link in bio" 개그. 마지막은 반드시
-"DOWNLOAD IT BEFORE THE ZOMBIES DO" + itch.io 링크.
+밈 문법을 그대로 따른다: 흰 캡션 바 + 산세리프, 컷마다 바인 붐, 그리고
+마지막은 반드시 "좀비보다 먼저 다운로드" + itch.io 링크. CTA의 다운로드 경쟁
+게이지가 "좀비들도 와이파이가 있습니다" 개그를 받쳐 준다.
+(2026-08-29 리뉴얼: 가짜 SNS 오버레이 삭제, 중간 컷을 게임 시스템 개그로 교체)
 
 사용법:
     python3 pv2_meme.py --lang en            # dev/pv2/Comstock_Meme_IG_EN.mp4
@@ -19,9 +20,8 @@ import sys
 from PIL import Image, ImageDraw, ImageFilter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from pv2_common import (A, EMOJI, F, Mixer, ITCH_URL, SPR, WPN, add_grain,
-                        apply_vignette, bass808, blit, boom, boss_img, clamp,
-                        clap, deep_fry, desaturate, draw_robot, ease_in,
+from pv2_common import (A, EMOJI, F, Mixer, ITCH_URL, SEQ, SPR, WPN, bass808,
+                        blit, boom, boss_img, clamp, clap, draw_robot, ease_in,
                         ease_out, emoji_line, encode_frames, explosion_at,
                         fast_post, fit_size, game_snd, gradient_v, ground_tex,
                         hat, kick808, make_web_version, muzzle_at, note, nf,
@@ -41,13 +41,13 @@ BAR = BEAT * 4             # 1.6초
 
 # (시작, 길이, 이름). 컷은 비트 경계에 맞춘다. 합계 20.0초.
 TIMELINE = [
-    (0.0, 2.4, "pov"),      # POV: 지구 최후의 로봇
-    (2.4, 2.4, "am3"),      # nobody: / zombies at 3 AM:
-    (4.8, 2.4, "choice"),   # 도망 ❌ / 총 6정 ✅
-    (7.2, 2.8, "guns"),     # 감성지원 로봇에 7번째 총 달기
-    (10.0, 2.4, "crown"),   # 레전더리 왕관 (딥프라이드)
+    (0.0, 2.8, "howit"),    # 캐릭터 성장 과정: 1일차 vs 20일차
+    (2.8, 2.4, "shop"),     # 웨이브 사이 상점 싹쓸이
+    (5.2, 2.4, "levelup"),  # 레벨업 3택 (전부 총)
+    (7.6, 2.4, "dodge"),    # 구르기로 전부 회피
+    (10.0, 2.4, "povz"),    # POV: 당신이 좀비
     (12.4, 2.8, "boss"),    # 웨이브 20 보스 🗿
-    (15.2, 4.8, "cta"),     # 좀비보다 먼저 다운로드
+    (15.2, 4.8, "cta"),     # 좀비보다 먼저 다운로드 (+ 다운로드 경쟁 게이지)
 ]
 CUTS = [t for (t, _d, _n) in TIMELINE][1:]
 
@@ -57,16 +57,17 @@ CREAM = (250, 246, 236)
 # 화면에 보이는 모든 문구는 영어/한글 두 벌을 함께 관리한다(협업 규칙 9번과 같은 원칙).
 LANG = {
     "en": {
-        "pov": "POV: you're the last robot on Earth",
-        "nobody": "nobody:",
-        "am3": "zombies at 3 AM:",
-        "choice_head": "how to survive the apocalypse:",
-        "choiceA": "option A: run",
-        "choiceB": "option B: six guns",
-        "guns": "me adding a 7th gun to the\nemotional support robot",
-        "guns_counter": "GUNS: %d",
-        "guns_font": "orbitron",
-        "crown": "when the LEGENDARY crown\nfinally drops",
+        "howit_cap": "character development:",
+        "howit1": "day 1",
+        "howit2": "day 20",
+        "shop1": "nobody:",
+        "shop2": "me in the shop between waves:",
+        "shop_gold": "GOLD: %d",
+        "lvl_cap": "the level-up options:",
+        "lvl_cards": ["gun", "more gun", "gun (shiny)"],
+        "lvl_all": "yes.",
+        "dodge_cap": "me dodging zombies, taxes,\nand feelings",
+        "povz_cap": "POV: you're the zombie",
         "boss_cap": "wave 20 boss:",
         "boss_you": "you",
         "cta1": "DOWNLOAD IT",
@@ -74,23 +75,24 @@ LANG = {
         "cta3": "ZOMBIES DO",
         "free1": "FREE",
         "free2": "on itch.io",
+        "race_you": "you:  %d%%",
+        "race_z": "zombies:  %d%%",
         "cta_btn": "DOWNLOAD",
         "cta_hurry": "the zombies have wifi. HURRY.",
         "cta_bio": "link in bio*   (*jk. it's right here)",
-        "handle": "@pyramid.studio",
-        "audio_tag": "Comstock OST - original audio",
     },
     "ko": {
-        "pov": "POV: 당신이 지구 최후의 로봇",
-        "nobody": "아무도:",
-        "am3": "새벽 3시 좀비들:",
-        "choice_head": "종말에서 살아남는 법:",
-        "choiceA": "선택 A: 도주",
-        "choiceB": "선택 B: 총 6정",
-        "guns": "감성지원 로봇에\n7번째 총을 다는 나",
-        "guns_counter": "총: %d정",
-        "guns_font": "korean",       # 오비트론에는 한글이 없다
-        "crown": "레전더리 왕관이\n드디어 떴을 때",
+        "howit_cap": "캐릭터 성장 과정:",
+        "howit1": "1일차",
+        "howit2": "20일차",
+        "shop1": "아무도:",
+        "shop2": "웨이브 사이 상점에서 나:",
+        "shop_gold": "골드: %d",
+        "lvl_cap": "레벨업 선택지:",
+        "lvl_cards": ["총", "더 많은 총", "총 (반짝임)"],
+        "lvl_all": "전부요.",
+        "dodge_cap": "좀비도, 세금도, 감정도\n구르기로 회피하는 나",
+        "povz_cap": "POV: 당신이 좀비",
         "boss_cap": "웨이브 20 보스:",
         "boss_you": "당신",
         "cta1": "좀비보다",
@@ -98,11 +100,11 @@ LANG = {
         "cta3": "다운로드",
         "free1": "무료",
         "free2": "itch.io에서",
+        "race_you": "나:  %d%%",
+        "race_z": "좀비:  %d%%",
         "cta_btn": "다운로드",
         "cta_hurry": "좀비들도 와이파이가 있습니다. 서두르세요.",
         "cta_bio": "링크는 프로필에*   (*뻥임. 바로 여기 있음)",
-        "handle": "@pyramid.studio",
-        "audio_tag": "Comstock OST - 오리지널 오디오",
     },
 }
 T = LANG["en"]
@@ -113,6 +115,7 @@ def set_video_lang(lang):
     global T
     T = LANG[lang]
     set_lang(lang)
+
 
 _misc = {}
 
@@ -147,51 +150,6 @@ def meme_bar(cnv, lines, y0=170, size=62, pad=34, bar_fill=(255, 255, 255, 244),
     return y0 + bar_h
 
 
-def reels_overlay(cnv, t, show_handle=True):
-    """오른쪽 액션 아이콘 + 왼쪽 아래 핸들(어느 플랫폼이라고는 안 했다)."""
-    d = ImageDraw.Draw(cnv, "RGBA")
-    x = W - 92
-    wh = (255, 255, 255, 235)
-    sh = (0, 0, 0, 110)
-    # 하트
-    y = 1210
-    like_pop = 1.0 + 0.25 * math.exp(-((t % 2.3) / 0.14) ** 2)
-    r = 32 * like_pop
-    for (ox, oy, col) in ((3, 4, sh), (0, 0, (255, 68, 92, 240))):
-        d.ellipse([x - r + ox, y - r * 0.9 + oy, x + ox, y + r * 0.1 + oy], fill=col)
-        d.ellipse([x + ox, y - r * 0.9 + oy, x + r + ox, y + r * 0.1 + oy], fill=col)
-        d.polygon([(x - r * 0.96 + ox, y - r * 0.22 + oy),
-                   (x + r * 0.96 + ox, y - r * 0.22 + oy),
-                   (x + ox, y + r * 0.95 + oy)], fill=col)
-    otext(cnv, (x, y + 76), "42.0K", "roboto", 30, fill=wh, anchor="mm", stroke=3,
-          stroke_fill=(0, 0, 0, 130))
-    # 말풍선
-    y = 1395
-    for (ox, oy, col) in ((3, 4, sh), (0, 0, wh)):
-        d.rounded_rectangle([x - 34 + ox, y - 30 + oy, x + 34 + ox, y + 22 + oy],
-                            radius=22, fill=col)
-        d.polygon([(x - 14 + ox, y + 18 + oy), (x + 8 + ox, y + 18 + oy),
-                   (x - 20 + ox, y + 42 + oy)], fill=col)
-    otext(cnv, (x, y + 92), "1.3K", "roboto", 30, fill=wh, anchor="mm", stroke=3,
-          stroke_fill=(0, 0, 0, 130))
-    # 종이비행기
-    y = 1580
-    for (ox, oy, col) in ((3, 4, sh), (0, 0, wh)):
-        d.polygon([(x - 34 + ox, y + 6 + oy), (x + 36 + ox, y - 26 + oy),
-                   (x + 6 + ox, y + 34 + oy), (x - 4 + ox, y + 12 + oy)], fill=col)
-    otext(cnv, (x, y + 92), "9.9K", "roboto", 30, fill=wh, anchor="mm", stroke=3,
-          stroke_fill=(0, 0, 0, 130))
-    # 핸들 + 오디오 (음표는 DejaVu에만 있어서 serif 폰트로 그린다)
-    if show_handle:
-        otext(cnv, (56, 1712), T["handle"], "roboto", 36, fill=wh, anchor="lm",
-              stroke=4, stroke_fill=(0, 0, 0, 130))
-        otext(cnv, (56, 1770), "♪", "serifb", 30, fill=(240, 240, 240, 220),
-              anchor="lm", stroke=4, stroke_fill=(0, 0, 0, 120))
-        otext(cnv, (98, 1768), T["audio_tag"], "roboto", 30,
-              fill=(240, 240, 240, 220), anchor="lm", stroke=4,
-              stroke_fill=(0, 0, 0, 120))
-
-
 def night_bg(cnv, t, camx=0.0, moon=True, dark=1.0):
     cnv.paste(gradient_v(W, H, (26, 24, 44), (58, 52, 78)), (0, 0))
     d = ImageDraw.Draw(cnv, "RGBA")
@@ -212,208 +170,301 @@ def night_bg(cnv, t, camx=0.0, moon=True, dark=1.0):
     d.line([(0, 1180), (W, 1180)], fill=(16, 14, 20), width=7)
 
 
-# ---------------------------------------------------------------- 1. POV
-def sc_pov(cnv, t, dur):
-    night_bg(cnv, t, camx=t * 30)
-    # 무리가 사방에서 좁혀온다
-    p = t / dur
-    for i in range(12):
-        rng = random.Random(500 + i)
-        side = 1 if i % 2 == 0 else -1
-        row = i % 4
-        gy = 1215 + row * 165
-        x0 = W / 2 + side * (430 + rng.uniform(0, 420))
-        x = x0 - side * (120 * t + 260 * p * rng.uniform(0.7, 1.2))
-        hh = 250 + row * 66
-        kind = ("Zombie", "Zombie", "Spitter", "Zombie", "Leader", "Zombie")[i % 6]
-        blit(cnv, zombie_img(t, i, kind, h=hh, face=-side), x, gy, anchor="cb")
-    # 최후의 로봇(전등 아래서 떨고 있다)
-    rob = draw_robot(cnv, W / 2, 1855, 300, t, bounce=False,
-                     rot=math.sin(t * 26) * 2.5)
-    e = EMOJI("😰", 74)
-    blit(cnv, e, rob["top"][0] + 130, rob["top"][1] - 30, anchor="cc")
+def panel_frame(cnv, x0, y0, x1, y1):
+    d = ImageDraw.Draw(cnv)
+    d.rounded_rectangle([x0 - 8, y0 - 8, x1 + 8, y1 + 8], radius=26,
+                        fill=(255, 255, 255), outline=(60, 56, 60), width=5)
 
-    meme_bar(cnv, [(T["pov"], INK)])
-    out = zoom_at(cnv, 1.0 + 0.09 * p, W / 2, 1500)
+
+# ---------------------------------------------------------------- 1. 성장 과정
+def sc_howit(cnv, t, dur):
+    cnv.paste((236, 232, 226), (0, 0, W, H))
+    top = meme_bar(cnv, [(T["howit_cap"], INK)], y0=140, size=58)
+    pw, ph = W - 120, 560
+    y1 = top + 80
+    y2 = y1 + ph + 96
+
+    # ---- 1일차: 칼 한 자루, 덜덜, 좀비들이 다가온다
+    p1 = Image.new("RGB", (pw, ph), (52, 54, 76))
+    p1.paste(gradient_v(pw, ph, (46, 48, 72), (76, 72, 96)), (0, 0))
+    d1 = ImageDraw.Draw(p1, "RGBA")
+    gy = ph - 56
+    d1.rectangle([0, gy, pw, ph], fill=(64, 58, 70))
+    d1.line([(0, gy), (pw, gy)], fill=(28, 24, 32), width=6)
+    rob = draw_robot(p1, pw * 0.26, gy + 16, 300, t, bounce=False,
+                     rot=math.sin(t * 28) * 3.5)
+    blit(p1, SPR("SurvivalKnife.png", h=110, rot=24), rob["x"] + 120,
+         rob["y"] - rob["h"] * 0.42, anchor="cc")
+    for k in range(2):                     # 식은땀
+        phs = (t * 1.8 + k * 0.5) % 1.0
+        d1.ellipse([rob["top"][0] + 60 + k * 26, rob["top"][1] + 20 + phs * 40,
+                    rob["top"][0] + 74 + k * 26, rob["top"][1] + 40 + phs * 40],
+                   fill=(180, 220, 255, int(220 * (1 - phs))))
+    for i in range(3):
+        blit(p1, zombie_img(t * 0.8, i, "Zombie", h=230, face=-1),
+             pw * 0.68 + i * 130 - 26 * t, gy + 10, anchor="cb")
+
+    # ---- 20일차: 왕관 + 총기 전신 무장, 좀비들이 도망간다
+    p2 = Image.new("RGB", (pw, ph), (40, 40, 40))
+    p2.paste(sunburst(pw, ph, twos(t) * 40, c1=(255, 214, 60), c2=(255, 172, 40)),
+             (0, 0))
+    d2 = ImageDraw.Draw(p2, "RGBA")
+    gy2 = ph - 56
+    d2.rectangle([0, gy2, pw, ph], fill=(150, 120, 60))
+    d2.line([(0, gy2), (pw, gy2)], fill=(70, 52, 26), width=6)
+    rob2 = draw_robot(p2, pw * 0.30, gy2 + 16, 330, t, bounce=True)
+    for (g, ox, oyr, rot) in (("SMG", -40, -0.62, -14), ("SawedOff", -110, -0.28, -36),
+                              ("LaserPistol", 96, -0.5, 26),
+                              ("RocketLauncher", 66, -0.12, -8)):
+        blit(p2, WPN(g, +1, 96).rotate(rot, resample=BILINEAR, expand=True),
+             rob2["x"] + ox, rob2["y"] + oyr * rob2["h"], anchor="cc")
+    blit(p2, SPR("Accessories/Crown-transparent.png", w=int(rob2["head_w"] * 1.0)),
+         rob2["top"][0] + 4, rob2["top"][1] + 6, anchor="cb")
+    muzzle_at(p2, rob2["x"] + 210, rob2["y"] - rob2["h"] * 0.30, t, size=110, seed=1)
+    for i in range(3):                     # 도망가는 좀비(오른쪽으로, 뒤돌아서)
+        zx = pw * 0.62 + i * 120 + 90 * t
+        blit(p2, zombie_img(t, 3 + i, "Sprinter" if i == 1 else "Zombie",
+                            h=220, face=1), zx, gy2 + 10, anchor="cb")
+        for k in range(3):
+            ly = gy2 - 120 - (i % 2) * 40 + k * 26
+            d2.line([(zx - 200 - k * 16, ly), (zx - 90, ly)],
+                    fill=(255, 255, 255, 170), width=7)
+
+    panel_frame(cnv, 60, y1, 60 + pw, y1 + ph)
+    cnv.paste(p1, (60, y1))
+    otext(cnv, (60 + 36, y1 + 44), T["howit1"], "anton", 54, fill=(255, 255, 255),
+          anchor="lm", stroke=7, stroke_fill=(20, 18, 24))
+    if t > 0.9:                            # 20일차 패널이 쾅 등장
+        q = pop_scale(t - 0.9, 0.22, 0.6)
+        panel_frame(cnv, 60, y2, 60 + pw, y2 + ph)
+        cnv.paste(p2, (60, y2))
+        otext(cnv, (60 + 36, y2 + 44), T["howit2"], "anton", 54, fill=(255, 255, 255),
+              anchor="lm", stroke=7, stroke_fill=(120, 70, 10))
+        if q < 1.0:
+            screen_flash(cnv, (1 - q) * 0.35)
+
+
+# ---------------------------------------------------------------- 2. 상점
+# 로봇이 x = -220 + 1520·(t/2.3) 로 등속 이동하므로, 각 아이템의 흡수 시각은
+# 로봇이 그 선반 칸 아래를 지나는 순간과 일치시킨다.
+SHOP_ITEMS = (("SMG", 0.64), ("CombatShotgun", 0.90), ("LaserPistol", 1.15),
+              ("GrenadeLauncher", 1.40), ("HMG", 1.66))
+
+
+def sc_shop(cnv, t, dur):
+    cnv.paste(gradient_v(W, H, (86, 62, 46), (60, 42, 32)), (0, 0))
+    d = ImageDraw.Draw(cnv, "RGBA")
+    top = meme_bar(cnv, [(T["shop1"], (120, 116, 124)), (T["shop2"], INK)],
+                   y0=150, size=56)
+
+    # 선반 두 단
+    shelf_y = (980, 1330)
+    for sy in shelf_y:
+        d.rectangle([90, sy, W - 90, sy + 34], fill=(122, 84, 52))
+        d.rectangle([90, sy, W - 90, sy + 12], fill=(150, 106, 66))
+        d.line([(90, sy + 34), (W - 90, sy + 34)], fill=(50, 34, 22), width=6)
+
+    # 로봇이 카트처럼 밀고 지나가며 전부 쓸어담는다(등속)
+    rx = -220 + (W + 440) * clamp(t / 2.3)
+    rob = draw_robot(cnv, rx, 1700, 340, t, bounce=True,
+                     rot=math.sin(twos(t) * 6) * 4)
+
+    for i, (g, tg) in enumerate(SHOP_ITEMS):
+        sy = shelf_y[i % 2]
+        ix = 210 + i * 170
+        if t < tg:                         # 아직 선반 위
+            blit(cnv, WPN(g, +1, 120), ix, sy - 4, anchor="cb")
+        elif t < tg + 0.30:                # 로봇 쪽으로 빨려 들어간다
+            q = ease_in((t - tg) / 0.30)
+            fx = ix + (rob["x"] - ix) * q
+            fy = (sy - 60) + (rob["y"] - rob["h"] * 0.4 - (sy - 60)) * q
+            blit(cnv, WPN(g, +1, int(120 * (1 - 0.4 * q))).rotate(
+                q * 200, resample=BILINEAR, expand=True), fx, fy, anchor="cc")
+        # 흡수 후에는 사라진다(로봇이 이미 총투성이다)
+        if tg <= t < tg + 0.5:             # 금화가 튄다
+            gp = (t - tg) / 0.5
+            blit(cnv, SPR("Gold.png", h=48), ix, sy - 90 - 130 * ease_out(gp),
+                 anchor="cc", alpha=1 - ease_in(gp))
+    if t >= 1.76 and t < 2.06:             # 마지막엔 아이템 상자까지
+        q = ease_in((t - 1.76) / 0.30)
+        blit(cnv, SPR("ItemBox.png", h=140), 940 + (rob["x"] - 940) * q,
+             1300 - 200 * q * (1 - q) * 4 + (rob["y"] - rob["h"] * 0.4 - 1300) * q,
+             anchor="cc")
+    elif t < 1.76:
+        blit(cnv, SPR("ItemBox.png", h=140), 940, shelf_y[1] - 4, anchor="cb")
+
+    # 골드 카운터(신나게 깎인다)
+    gold = max(0, int(347 * (1 - clamp((t - 0.25) / 1.6))))
+    d.rounded_rectangle([W - 360, 560, W - 70, 668], radius=20,
+                        fill=(16, 14, 18, 225), outline=(255, 214, 64, 255), width=5)
+    otext(cnv, (W - 215, 614), T["shop_gold"] % gold, "roboto", 46,
+          fill=(255, 224, 90), anchor="mm", max_w=260)
+    if t > 2.1:                            # 탈탈 털고 퇴장
+        speed_lines(cnv, rob["x"] - 160, rob["y"] - 200, 8, 60, 200,
+                    seed=int(t * 20), width=6, color=(255, 255, 255, 180))
+    out = zoom_at(cnv, beat_pulse(t, 0.03), W / 2, 1200)
     cnv.paste(out, (0, 0))
 
 
-# ---------------------------------------------------------------- 2. 3AM
-def sc_am3(cnv, t, dur):
-    night_bg(cnv, t, moon=True, dark=0.7)
-    dim = Image.new("RGBA", (W, H), (10, 8, 20, 90))
+# ---------------------------------------------------------------- 3. 레벨업
+GRADE = ((168, 168, 172), (86, 140, 255), (255, 196, 44))   # 일반/레어/레전더리
+
+
+def sc_levelup(cnv, t, dur):
+    night_bg(cnv, t, moon=False, dark=0.8)
+    dim = Image.new("RGBA", (W, H), (12, 10, 24, 120))
     cnv.paste(dim, (0, 0), dim)
     d = ImageDraw.Draw(cnv, "RGBA")
-    # 디지털 시계
-    d.rounded_rectangle([W / 2 - 200, 640, W / 2 + 200, 780], radius=22,
-                        fill=(12, 10, 14, 235), outline=(80, 20, 24, 255), width=5)
-    blink = ":" if int(t * 2) % 2 == 0 else " "
-    otext(cnv, (W / 2, 710), "3%s00 AM" % blink, "orbitron", 64,
-          fill=(255, 64, 58), anchor="mm")
-    # 스프린터가 굉음을 내며 가로지른다 (3번, 점점 크게)
-    passes = ((0.55, 1330, 380), (1.15, 1520, 540), (1.75, 1720, 700))
-    for i, (t0, gy, hh) in enumerate(passes):
-        if t0 - 0.5 <= t < t0 + 0.5:
-            p = (t - (t0 - 0.5)) / 1.0
-            x = W + 400 - (W + 900) * p
-            z = zombie_img(t, i, "Sprinter", h=hh, face=-1)
-            blit(cnv, z, x, gy, anchor="cb")
-            for k in range(7):             # 모션 라인
-                ly = gy - hh * 0.5 + (k - 3) * hh * 0.11
-                d.line([(x + hh * 0.4, ly), (x + hh * 0.4 + 240 + k * 14, ly)],
-                       fill=(255, 255, 255, 150), width=8)
-    meme_bar(cnv, [(T["nobody"], (120, 116, 124)), (T["am3"], INK)])
+    top = meme_bar(cnv, [(T["lvl_cap"], INK)], y0=150, size=58)
 
+    # 레벨업 이펙트를 뒤집어쓴 로봇(아래쪽에 작게)
+    fr = SEQ("LevelUpEffect")
+    rob = draw_robot(cnv, W / 2, 1800, 280, t, bounce=True)
+    blit(cnv, SPR(fr[int(t * 20) % len(fr)], h=430), rob["x"],
+         rob["y"] - rob["h"] * 0.45, anchor="cc", alpha=0.9)
 
-# ---------------------------------------------------------------- 3. 선택
-def _panel(w, h, which, t):
-    im = Image.new("RGB", (w, h), (120, 170, 220))
-    im.paste(gradient_v(w, h, (150, 200, 240), (200, 235, 250)), (0, 0))
-    d = ImageDraw.Draw(im)
-    gy = h - 60
-    d.rectangle([0, gy, w, h], fill=(126, 196, 100))
-    d.line([(0, gy), (w, gy)], fill=(52, 110, 62), width=6)
-    if which == "A":                       # 도망 - 로봇이 왼쪽으로 내뺀다
-        wig = math.sin(twos(t) * 24) * 10
-        rob = draw_robot(im, w * 0.34 - 40 * math.sin(t * 2), gy + 20, 300, t,
-                         bounce=True, rot=wig, flip=True)
-        for k in range(3):
-            d.line([(rob["x"] + 170 + k * 40, gy - 150 - k * 40),
-                    (rob["x"] + 320 + k * 40, gy - 150 - k * 40)],
-                   fill=(255, 255, 255), width=10)
-        for i in range(2):
-            blit(im, zombie_img(t, i, "Zombie", h=260, face=-1),
-                 w * 0.74 + i * 150 - 30 * t, gy + 14, anchor="cb")
-    else:                                  # 총 6정 - 생각이란 것을 그만둔다
-        rob = draw_robot(im, w * 0.5, gy + 20, 320, t, bounce=True)
-        guns = (("SMG", -60, -230, -18), ("RocketLauncher", 60, -260, 14),
-                ("SawedOff", -150, -120, -40), ("LaserPistol", 150, -140, 32),
-                ("GrenadeLauncher", -110, -320, 20), ("PlasmaCannon", 120, -60, -12))
-        for (g, ox, oy, rot) in guns:
-            spr = WPN(g, +1, 110)
-            blit(im, spr.rotate(rot, resample=BILINEAR, expand=True),
-                 rob["x"] + ox, rob["y"] + oy, anchor="cc")
-        for k in range(3):
-            muzzle_at(im, rob["x"] + 240 + (k % 2) * 60, rob["y"] - 140 - k * 90,
-                      t, size=100, seed=k)
-    return im
-
-
-def sc_choice(cnv, t, dur):
-    cnv.paste((236, 232, 226), (0, 0, W, H))
-    top = meme_bar(cnv, [(T["choice_head"], INK)], y0=140, size=56)
-    ph = H // 2 - 140
-    y1 = top + 40
-    y2 = y1 + ph - 340 + 60
-    pw = W - 120
-    p1 = _panel(pw, ph - 380, "A", t)
-    p2 = _panel(pw, ph - 380, "B", t)
-    d = ImageDraw.Draw(cnv)
-    for (pimg, py, label, ok, t_pop) in ((p1, y1, T["choiceA"], False, 0.35),
-                                         (p2, y2, T["choiceB"], True, 1.15)):
-        d.rounded_rectangle([54, py - 6, 54 + pw + 12, py + pimg.height + 90],
-                            radius=26, fill=(255, 255, 255), outline=(60, 56, 60),
-                            width=5)
-        cnv.paste(pimg, (60, py))
-        otext(cnv, (W / 2, py + pimg.height + 40), label, "roboto", 46, fill=INK,
-              anchor="mm")
-        if t > t_pop:
-            s = pop_scale(t - t_pop, 0.22, 1.1)
-            mark = EMOJI("✅" if ok else "❌", int(190 * s))
-            blit(cnv, mark, W - 200, py + 90, anchor="cc")
-
-
-# ---------------------------------------------------------------- 4. 총 더 달기
-GUN_SCHED = (("SMG", 0.30, -30, -0.63, -16), ("SawedOff", 0.65, -160, -0.30, -38),
-             ("LaserPistol", 1.00, 150, -0.52, 30), ("GrenadeLauncher", 1.35, -140, -0.05, 14),
-             ("RocketLauncher", 1.70, 120, -0.13, -10), ("PlasmaCannon", 2.05, 40, -0.78, 8))
-
-
-def sc_guns(cnv, t, dur):
-    cnv.paste(sunburst(W, H, twos(t) * 24, c1=(84, 104, 150), c2=(60, 76, 116)), (0, 0))
-    d = ImageDraw.Draw(cnv, "RGBA")
-    d.rectangle([0, 1560, W, H], fill=(70, 60, 80))
-    d.line([(0, 1560), (W, 1560)], fill=(30, 26, 36), width=7)
-
-    rob = draw_robot(cnv, W / 2, 1550, 560, t, bounce=True,
-                     rot=math.sin(twos(t) * 5.2) * 3)
-    n_on = 0
-    for (g, t0, ox, oyr, rot) in GUN_SCHED:
+    cards = ((W / 2 - 330, 0.30, 0), (W / 2, 0.55, 1), (W / 2 + 330, 0.80, 2))
+    cw, ch = 300, 430
+    cy = 900
+    icons = (("🔫",), ("🔫", "🔫"), ("👑", "🔫"))
+    for (cx, t0, gi) in cards:
         if t < t0:
             continue
-        n_on += 1
-        q = clamp((t - t0) / 0.16)
-        # 화면 밖에서 날아와 척 붙는다
-        fx = rob["x"] + ox * (1 + 3.5 * (1 - ease_out(q)))
-        fy = rob["y"] + oyr * rob["h"] - 500 * (1 - ease_out(q)) * (1 if ox < 0 else -0.4)
-        spr = WPN(g, +1, 150 + 24 * math.sin(t0 * 99))
-        spr = spr.rotate(rot + 360 * (1 - q) * (1 if ox > 0 else -1),
-                         resample=BILINEAR, expand=True)
-        blit(cnv, spr, fx, fy, anchor="cc")
-        if q >= 1.0 and t - t0 < 0.35:
-            speed_lines(cnv, rob["x"] + ox, rob["y"] + oyr * rob["h"], 7, 60, 130,
-                        seed=int(t0 * 100), width=5, color=(255, 255, 255, 200))
-    # 카운터
-    d.rounded_rectangle([W - 320, 560, W - 60, 680], radius=20,
-                        fill=(16, 14, 18, 220), outline=(255, 214, 64, 255), width=5)
-    otext(cnv, (W - 190, 620), T["guns_counter"] % (n_on + 1), T["guns_font"], 52,
-          fill=(255, 224, 90), anchor="mm", max_w=240)
-    # 다 붙으면 일제 사격
-    if t > 2.35:
-        for k in range(5):
-            muzzle_at(cnv, rob["x"] - 260 + k * 130, rob["y"] - rob["h"] * (0.3 + 0.14 * (k % 3)),
-                      t, size=130, seed=k)
-        screen_flash(cnv, 0.10 + 0.06 * math.sin(t * 60))
-    meme_bar(cnv, [(s, INK) for s in T["guns"].split("\n")], size=56)
-    out = zoom_at(cnv, beat_pulse(t, 0.03), W / 2, 1100)
-    cnv.paste(out, (0, 0))
+        q = pop_scale(t - t0, 0.2, 0.8)
+        w2, h2 = cw * q / 2, ch * q / 2
+        col = GRADE[gi]
+        d.rounded_rectangle([cx - w2, cy - h2, cx + w2, cy + h2], radius=24,
+                            fill=(30, 28, 40, 245), outline=col + (255,), width=8)
+        if gi == 2:                        # 레전더리는 반짝인다
+            rng = random.Random(int(t * 10))
+            for _ in range(3):
+                sx = cx + rng.uniform(-w2, w2)
+                sy = cy + rng.uniform(-h2, h2)
+                ln = rng.randint(8, 20)
+                d.line([(sx - ln, sy), (sx + ln, sy)], fill=(255, 240, 170, 220),
+                       width=5)
+                d.line([(sx, sy - ln), (sx, sy + ln)], fill=(255, 240, 170, 220),
+                       width=5)
+        ix0 = cx - (len(icons[gi]) - 1) * 55
+        for k, ic in enumerate(icons[gi]):
+            blit(cnv, EMOJI(ic, int(120 * q)), ix0 + k * 110, cy - 60 * q,
+                 anchor="cc")
+        otext(cnv, (cx, cy + 110 * q), T["lvl_cards"][gi], "roboto", int(42 * q),
+              fill=(240, 238, 246), anchor="mm", max_w=int(cw * q - 40))
+    # 셋 다 고른다
+    if t > 1.5:
+        for i, (cx, _t0, _gi) in enumerate(cards):
+            qq = pop_scale(t - 1.5 - i * 0.12, 0.18, 1.0)
+            if t > 1.5 + i * 0.12:
+                blit(cnv, EMOJI("✅", int(150 * qq)), cx + 90, cy - 160, anchor="cc")
+    if t > 1.95:
+        q = pop_scale(t - 1.95, 0.2, 0.9)
+        otext(cnv, (W / 2, 1420), T["lvl_all"], "anton", int(130 * q),
+              fill=(255, 255, 255), anchor="mm", stroke=10, stroke_fill=(20, 18, 26),
+              max_w=W - 200)
 
 
-# ---------------------------------------------------------------- 5. 왕관
-def sc_crown(cnv, t, dur):
-    fry = clamp((t - 0.5) / 1.2)
-    cnv.paste(sunburst(W, H, twos(t) * 40, c1=(255, 214, 60), c2=(255, 168, 36)), (0, 0))
-    speed_lines(cnv, W / 2, 1150, 10, 420, 800, seed=int(t * 10), width=7,
-                color=(255, 255, 255, 120))
-    rob = draw_robot(cnv, W / 2, 1660, 560, t, bounce=True)
-    # 왕관 강림
-    cp = clamp((t - 0.12) / 0.4)
-    cy = rob["top"][1] - 40 - (1 - ease_out(cp)) * 700
-    crown = SPR("Accessories/Crown-transparent.png", w=int(rob["head_w"] * 1.02))
-    blit(cnv, crown, rob["top"][0] + 6, cy, anchor="cb")
-    # 선글라스 강림 (deal with it)
-    gp = clamp((t - 0.95) / 0.35)
-    if t > 0.95:
-        gl = SPR("Accessories/8Bitsunglass-transparent.png", w=int(rob["head_w"] * 0.94))
-        gy = rob["face"][1] - 24 - (1 - ease_out(gp)) * 520
-        blit(cnv, gl, rob["face"][0], gy, anchor="cc")
-    # 스티커
-    for (ch, sx, sy, t0) in (("👑", 170, 620, 0.55), ("💯", W - 190, 800, 0.8),
-                             ("🔥", 170, 1050, 1.05), ("🔥", W - 170, 1290, 1.2),
-                             ("😂", 210, 1420, 1.35)):
-        if t > t0:
-            s = pop_scale(t - t0, 0.2, 1.2)
-            blit(cnv, EMOJI(ch, int(150 * s)), sx, sy, anchor="cc")
-    # 작은 반짝이들
-    if t > 0.6:
-        d = ImageDraw.Draw(cnv, "RGBA")
-        rng = random.Random(int(t * 9))
-        for _ in range(5):
-            fx, fy = rng.randrange(80, W - 80), rng.randrange(520, 1500)
-            ln = rng.randint(16, 42)
-            d.line([(fx - ln, fy), (fx + ln, fy)], fill=(255, 255, 255, 220), width=7)
-            d.line([(fx, fy - ln), (fx, fy + ln)], fill=(255, 255, 255, 220), width=7)
-    meme_bar(cnv, [(s, INK) for s in T["crown"].split("\n")], size=56)
-    out = zoom_at(cnv, beat_pulse(t, 0.06, 7.0), W / 2, 1150)
-    out = deep_fry(out, fry * 0.85)
-    cnv.paste(out, (0, 0))
+# ---------------------------------------------------------------- 4. 구르기
+DODGE_ZOMBIES = (0.35, 0.95, 1.55)         # 각 좀비 앞을 지나는 시각
+
+
+def sc_dodge(cnv, t, dur):
+    night_bg(cnv, t, camx=t * 120, moon=True, dark=1.0)
+    d = ImageDraw.Draw(cnv, "RGBA")
+    cap_lines = [(s, INK) for s in T["dodge_cap"].split("\n")]
+    meme_bar(cnv, cap_lines, y0=150, size=56)
+
+    gy = 1560
+    rx = -160 + (W + 320) * (t / dur)
+    # 좀비들이 헛스윙한다
+    att = SEQ("ZombieAttack")
+    for i, tz in enumerate(DODGE_ZOMBIES):
+        zx = -160 + (W + 320) * (tz / dur) + 10
+        swing = clamp((t - (tz - 0.25)) / 0.4)
+        if swing <= 0 or swing >= 1:
+            blit(cnv, zombie_img(t, i, "Zombie", h=300, face=(-1 if zx > rx else 1)),
+                 zx, gy + 10, anchor="cb")
+        else:
+            fr = att[int(swing * (len(att) - 1))]
+            blit(cnv, SPR(fr, h=300, flip=(zx < rx)), zx, gy + 10, anchor="cb")
+        if 0.1 < swing < 0.6:              # 헛스윙 이펙트
+            d.arc([zx - 130, gy - 300, zx + 130, gy - 40], 300, 60,
+                  fill=(255, 255, 255, 200), width=9)
+
+    # 데굴데굴 구르는 로봇 + 먼지
+    dust = SEQ("RollDust")
+    for k in range(3):
+        dxp = rx - 130 - k * 120
+        if dxp > -100:
+            blit(cnv, SPR(dust[(int(t * 18) + k) % len(dust)], h=170 + k * 20),
+                 dxp, gy - 30, anchor="cc", alpha=0.75 - k * 0.2)
+    hop = -abs(math.sin(t * 9)) * 40
+    spr = robot_img(300, rot=(-t * 640) % 360)
+    blit(cnv, spr, rx, gy + hop - 110, anchor="cc")
+    for k in range(4):                     # 속도선
+        ly = gy - 220 + k * 60
+        d.line([(rx - 420 - k * 20, ly), (rx - 190, ly)],
+               fill=(255, 255, 255, 150), width=7)
+
+
+# ---------------------------------------------------------------- 5. POV 좀비
+def sc_povz(cnv, t, dur):
+    cnv.paste(gradient_v(W, H, (34, 20, 26), (66, 30, 34)), (0, 0))
+    d = ImageDraw.Draw(cnv, "RGBA")
+    g = ground_tex(W, 320, dark=0.5)
+    cnv.paste(g, (0, H - 320))
+    d.line([(0, H - 320), (W, H - 320)], fill=(14, 10, 12), width=7)
+
+    q = clamp(t / 0.5)
+    rob = draw_robot(cnv, W / 2, 1560, int(430 + 60 * ease_out(q)), t, bounce=True)
+    guns = (("SMG", -170, -0.60, -30), ("SawedOff", 170, -0.58, 30),
+            ("LaserPistol", -230, -0.30, -12), ("GrenadeLauncher", 230, -0.30, 12),
+            ("RocketLauncher", 0, -0.80, 0))
+    for (gname, ox, oyr, rot) in guns:
+        spr = WPN(gname, +1 if ox >= 0 else -1, 130)
+        blit(cnv, spr.rotate(rot + (14 if ox >= 0 else -14) * math.sin(t * 3),
+                             resample=BILINEAR, expand=True),
+             rob["x"] + ox, rob["y"] + oyr * rob["h"], anchor="cc")
+    # 레이저 조준점이 화면(=시청자)으로 모인다
+    if t > 0.5:
+        for i, (ox, oyr) in enumerate(((-170, -0.6), (170, -0.58), (0, -0.8))):
+            lx, ly = rob["x"] + ox, rob["y"] + oyr * rob["h"]
+            tx = W / 2 + math.sin(t * 5 + i * 2) * 60
+            ty = H - 160 + math.cos(t * 4 + i) * 30
+            d.line([(lx, ly), (tx, ty)], fill=(255, 40, 40, 140), width=6)
+            d.ellipse([tx - 16, ty - 16, tx + 16, ty + 16], fill=(255, 50, 50, 220))
+    # 일제 사격 + 화면 금 가기
+    if t > 1.35:
+        for k, (ox, oyr) in enumerate(((-170, -0.6), (170, -0.58), (0, -0.8),
+                                       (-230, -0.3), (230, -0.3))):
+            muzzle_at(cnv, rob["x"] + ox, rob["y"] + oyr * rob["h"] - 40, t,
+                      size=130, seed=k)
+        if int(t * 30) % 3 == 0:
+            screen_flash(cnv, 0.18)
+    if t > 1.6:                            # 렌즈에 금이 간다
+        rng = random.Random(7)
+        cq = clamp((t - 1.6) / 0.5)
+        ccx, ccy = W / 2, H * 0.62
+        for i in range(int(10 * cq) + 3):
+            a = rng.random() * math.tau
+            r1 = 40 + rng.random() * 90
+            r2 = r1 + (140 + rng.random() * 420) * cq
+            mx = ccx + (r1 + r2) / 2 * math.cos(a + 0.2)
+            my = ccy + (r1 + r2) / 2 * math.sin(a + 0.2)
+            d.line([(ccx + r1 * math.cos(a), ccy + r1 * math.sin(a)), (mx, my),
+                    (ccx + r2 * math.cos(a + 0.12), ccy + r2 * math.sin(a + 0.12))],
+                   fill=(255, 255, 255, 210), width=5)
+    if t > 1.95:
+        blit(cnv, EMOJI("💀", int(300 * pop_scale(t - 1.95, 0.2, 0.9))),
+             W / 2, H * 0.62, anchor="cc")
+    meme_bar(cnv, [(T["povz_cap"], (245, 240, 238))], y0=170, size=62,
+             bar_fill=(20, 14, 16, 235), bar_line=(150, 40, 40, 255))
 
 
 # ---------------------------------------------------------------- 6. 보스
 def sc_boss(cnv, t, dur):
     cnv.paste(gradient_v(W, H, (30, 12, 16), (74, 22, 26)), (0, 0))
     d = ImageDraw.Draw(cnv, "RGBA")
-    # 경광등
     al = 0.5 + 0.5 * math.sin(t * 9)
     d.rectangle([0, 0, W, H], fill=(120, 10, 14, int(44 * al)))
     g = ground_tex(W, 240, dark=0.42)
@@ -424,12 +475,16 @@ def sc_boss(cnv, t, dur):
     bh = 1150 + 420 * ease_out(clamp(t / 2.2))
     bs = boss_img(t, h=int(bh), roar=(t > 1.1))
     blit(cnv, bs, W / 2, 320 + bh / 2, anchor="cc")
-    # 스케일용 꼬마 로봇 (덜덜)
+    # 스케일용 꼬마 로봇 - 떨면서도 일단 쏜다
     rob = draw_robot(cnv, 230, H - 300, 210, t, bounce=False,
                      rot=math.sin(t * 30) * 4)
+    if t > 0.8 and int(t * 15) % 2 == 0:
+        mx, my = rob["x"] + 90, rob["y"] - rob["h"] * 0.55
+        muzzle_at(cnv, mx, my, t, size=90, seed=3, rot=50)
+        d.line([(mx, my), (W / 2 + math.sin(t * 7) * 120, 760)],
+               fill=(255, 238, 120, 190), width=7)
     otext(cnv, (230, H - 540), T["boss_you"], "roboto", 44, fill=(255, 255, 255),
           anchor="mm", stroke=6, stroke_fill=(20, 10, 12))
-    # 🗿 도장
     if t > 1.35:
         s = pop_scale(t - 1.35, 0.24, 0.9)
         blit(cnv, EMOJI("🗿", int(430 * s)), W - 260, 1500, anchor="cc")
@@ -441,6 +496,17 @@ def sc_boss(cnv, t, dur):
 
 
 # ---------------------------------------------------------------- 7. CTA
+def race_bar(d, x0, x1, y, hgt, frac, label, fill_col):
+    d.rounded_rectangle([x0, y, x1, y + hgt], radius=hgt // 2,
+                        fill=(228, 222, 208, 255), outline=(60, 56, 60, 255),
+                        width=5)
+    wpx = int((x1 - x0 - 12) * clamp(frac))
+    if wpx > hgt:
+        d.rounded_rectangle([x0 + 6, y + 6, x0 + 6 + wpx, y + hgt - 6],
+                            radius=(hgt - 12) // 2, fill=fill_col + (255,))
+    return y + hgt / 2
+
+
 def sc_cta(cnv, t, dur):
     cnv.paste(gradient_v(W, H, (250, 246, 236), (240, 230, 206)), (0, 0))
     d = ImageDraw.Draw(cnv, "RGBA")
@@ -461,9 +527,9 @@ def sc_cta(cnv, t, dur):
         blit(cnv, EMOJI("📱", int(110 * pop_scale(t - 1.1, 0.2, 1.0))), 160, 980,
              anchor="cc")
     # FREE 배지
-    if t > 1.25:
-        q = pop_scale(t - 1.25, 0.22, 0.9)
-        bs = int(235 * q)
+    if t > 1.15:
+        q = pop_scale(t - 1.15, 0.22, 0.9)
+        bs = int(225 * q)
         star = Image.new("RGBA", (bs * 2, bs * 2), (0, 0, 0, 0))
         sd = ImageDraw.Draw(star)
         c = bs
@@ -475,16 +541,30 @@ def sc_cta(cnv, t, dur):
         sd.polygon(pts, fill=(255, 214, 64, 255), outline=(60, 50, 40, 255))
         sd.line(pts + [pts[0]], fill=(60, 50, 40, 255), width=6)
         star = star.rotate(12, resample=BILINEAR, expand=False)
-        blit(cnv, star, 180, 1265, anchor="cc")
-        otext(cnv, (180, 1225), T["free1"], "anton", int(66 * q), fill=INK,
-              anchor="mm", max_w=300)
-        otext(cnv, (180, 1292), T["free2"], "roboto", int(30 * q), fill=INK,
-              anchor="mm", max_w=300)
-    # 거대 다운로드 버튼 + 좀비 손가락 연타
+        blit(cnv, star, 175, 1170, anchor="cc")
+        otext(cnv, (175, 1132), T["free1"], "anton", int(64 * q), fill=INK,
+              anchor="mm", max_w=280)
+        otext(cnv, (175, 1196), T["free2"], "roboto", int(29 * q), fill=INK,
+              anchor="mm", max_w=280)
+
+    # 다운로드 경쟁 게이지 - "좀비들도 와이파이가 있습니다"의 근거
+    if t > 1.45:
+        you = min(7, int(2 + (t - 1.45) * 1.8))
+        zom = min(99, int(34 + (t - 1.45) * 26))
+        ly = race_bar(d, 400, W - 90, 1090, 76, you / 100, "", (208, 52, 44))
+        otext(cnv, (416, ly), T["race_you"] % you, "roboto", 38, fill=INK,
+              anchor="lm", max_w=520)
+        ly2 = race_bar(d, 400, W - 90, 1196, 76, zom / 100, "", (86, 176, 92))
+        otext(cnv, (416, ly2), T["race_z"] % zom, "roboto", 38, fill=INK,
+              anchor="lm", max_w=520)
+        blit(cnv, EMOJI("🤖", 66), 352, ly, anchor="cc")
+        blit(cnv, EMOJI("🧟", 66), 352, ly2, anchor="cc")
+
+    # 거대 다운로드 버튼 + 좀비 두 마리가 양옆에서 연타
     if t > 1.55:
         press = math.exp(-((t * 2.5) % 1) * 7)          # 0.4초마다 꾹
-        bw, bh = 660, 190
-        bx, by = W / 2 + 60, 1430
+        bw, bh = 640, 190
+        bx, by = W / 2, 1430
         sq = 1.0 - 0.07 * press
         d.rounded_rectangle([bx - bw / 2 * sq, by - bh / 2 * sq + 14,
                              bx + bw / 2 * sq, by + bh / 2 * sq + 14],
@@ -493,7 +573,6 @@ def sc_cta(cnv, t, dur):
                              bx + bw / 2 * sq, by + bh / 2 * sq - 10 * (1 - press)],
                             radius=40, fill=(86, 190, 96, 255),
                             outline=(30, 70, 36, 255), width=7)
-        # 아래 화살표는 폰트에 없어서 직접 그린다
         aw = 26 * sq
         ax = bx - text_w(T["cta_btn"], "oswald", int(64 * sq)) / 2 - aw - 26
         ay = by - 12 * (1 - press)
@@ -502,13 +581,14 @@ def sc_cta(cnv, t, dur):
                    (ax - aw, ay), (ax - aw * 0.45, ay)], fill=(255, 255, 255, 255))
         otext(cnv, (bx + aw, by - 12 * (1 - press)), T["cta_btn"], "oswald",
               int(64 * sq), fill=(255, 255, 255), anchor="mm")
-        # 좀비가 옆에서 손을 뻗는다
         zp = clamp((t - 1.55) / 0.5)
-        blit(cnv, zombie_img(t, 3, "Zombie", h=430, face=-1),
-             W - 140 + 40 * (1 - ease_out(zp)), by + 260, anchor="cb")
+        blit(cnv, zombie_img(t, 3, "Zombie", h=420, face=-1),
+             W - 130 + 40 * (1 - ease_out(zp)), by + 250, anchor="cb")
+        blit(cnv, zombie_img(t + 0.2, 5, "Zombie", h=400, face=1),
+             130 - 40 * (1 - ease_out(zp)), by + 250, anchor="cb")
     if t > 2.5:
-        otext(cnv, (W / 2 - 60, 1600), T["cta_hurry"], "roboto", 44, fill=INK,
-              anchor="mm", max_w=700)
+        otext(cnv, (W / 2, 1600), T["cta_hurry"], "roboto", 44, fill=INK,
+              anchor="mm", max_w=760)
     # URL 판
     if t > 1.9:
         q = pop_scale(t - 1.9, 0.22, 0.5)
@@ -525,8 +605,8 @@ def sc_cta(cnv, t, dur):
         screen_flash(cnv, ease_in((t - (dur - 0.35)) / 0.35), color=(8, 8, 10))
 
 
-SCENES = {"pov": sc_pov, "am3": sc_am3, "choice": sc_choice, "guns": sc_guns,
-          "crown": sc_crown, "boss": sc_boss, "cta": sc_cta}
+SCENES = {"howit": sc_howit, "shop": sc_shop, "levelup": sc_levelup,
+          "dodge": sc_dodge, "povz": sc_povz, "boss": sc_boss, "cta": sc_cta}
 
 
 # ---------------------------------------------------------------- 렌더
@@ -536,11 +616,13 @@ def shake_at(t):
     for c in CUTS:                          # 컷마다 화면이 울린다
         if 0 <= t - c < 0.22:
             v = max(v, 14.0 * (1 - (t - c) / 0.22))
-    if name == "am3":
-        for (t0, _gy, hh) in ((0.55, 0, 300), (1.15, 0, 420), (1.75, 0, 560)):
-            if 0 <= tl - t0 < 0.3:
-                v = max(v, hh * 0.02)
-    if name == "guns" and tl > 2.35:
+    if name == "howit" and 0.9 <= tl < 1.2:
+        v = max(v, 11.0)
+    if name == "levelup" and 1.95 <= tl < 2.2:
+        v = max(v, 8.0)
+    if name == "dodge":
+        v = max(v, 3.0)
+    if name == "povz" and tl > 1.35:
         v = max(v, 9.0)
     if name == "boss":
         v = max(v, 3.0 + 7.0 * clamp(tl / 2.6))
@@ -566,7 +648,6 @@ def render_frame(f):
         if 0 <= t - c < 0.14:
             cnv = rgb_shift(cnv, int(10 * (1 - (t - c) / 0.14)))
             break
-    reels_overlay(cnv, t, show_handle=(name != "cta"))
     cnv = fast_post(cnv, strength=0.34, power=2.8, grain=4, f=f)
     return cnv
 
@@ -609,49 +690,74 @@ def build_audio(path):
         mx.put(boom(0.6, 150, 38, 0.9), c)
     mx.put(sub_drop(2.0, 100, 26, 0.8), 12.4)          # 보스 등장은 더 깊게
 
-    # ---- 1. POV: 좀비 신음 웅성웅성
-    for i, tt in enumerate((0.3, 0.9, 1.5, 2.0)):
-        mx.put(game_snd(("Enemy_Hit_A.wav", "Enemy_Hit_B.wav")[i % 2], rate=0.5),
-               tt, 0.4, pan=(-0.5, 0.5, -0.3, 0.4)[i])
-    # ---- 2. 3AM: 스프린터 슝슝
-    for i, tt in enumerate((2.95, 3.55, 4.15)):
-        mx.put(whoosh(0.4, up=False, gain=0.85, seed=i), tt - 0.08, pan=0.4 - 0.4 * i)
-        mx.put(game_snd("Enemy_Hit_C.ogg", rate=1.3), tt + 0.12, 0.35)
-    # ---- 3. 선택: 땡(X) 딩(V)
-    mx.put(note(110, 0.4, 0.5, "organ"), 5.15)          # 오답 부저
-    mx.put(note(nf("C6"), 0.5, 0.4, "glock"), 5.95)
-    mx.put(note(nf("E6"), 0.5, 0.3, "glock"), 6.05)
-    mx.put(game_snd("Weapon_RapidFire.wav"), 6.3, 0.3, pan=0.2)
-    mx.put(game_snd("Weapon_RapidFire.wav"), 6.5, 0.3, pan=0.2)
-    # ---- 4. 총 붙이기: 착착착
-    for (g, t0, _ox, _oyr, _rot) in GUN_SCHED:
-        mx.put(game_snd("UI_Click.wav"), 7.2 + t0, 0.8)
-        mx.put(game_snd("Weapon_Melee.wav"), 7.2 + t0 + 0.03, 0.5)
-    for k in range(9):                                   # 일제 사격
-        mx.put(game_snd("Weapon_RapidFire.wav"), 9.55 + k * 0.05, 0.4,
+    # ---- 1. 성장 과정: 1일차는 처량하게, 20일차는 신나게
+    mx.put(note(nf("E3"), 0.7, 0.28, "ep"), 0.25)
+    mx.put(note(nf("C3"), 0.9, 0.26, "ep"), 0.65)
+    mx.put(game_snd("Enemy_Hit_A.wav", rate=0.55), 0.5, 0.4, pan=0.4)
+    mx.put(boom(0.5, 140, 42, 0.8), 0.92)              # 20일차 쾅
+    mx.put(game_snd("LevelUp.wav"), 0.96, 0.85)
+    for k in range(6):
+        mx.put(game_snd("Weapon_RapidFire.wav"), 1.25 + k * 0.22, 0.30, pan=0.3)
+    mx.put(game_snd("Enemy_Hit_C.ogg", rate=1.25), 1.9, 0.35, pan=0.5)
+
+    # ---- 2. 상점: 착착 쓸어담는 소리 + 금전 등록기
+    for (_g, tg) in SHOP_ITEMS:
+        mx.put(game_snd("UI_Click.wav"), 2.8 + tg, 0.7)
+        mx.put(note(nf("A5"), 0.25, 0.15, "glock"), 2.8 + tg + 0.06, pan=0.2)
+    mx.put(game_snd("UI_Click.wav"), 4.58, 0.7)        # 아이템 상자
+    mx.put(game_snd("LevelUp.wav"), 4.82, 0.7)         # 결제 완료(?)
+    mx.put(whoosh(0.4, up=True, gain=0.8, seed=3), 4.98)
+
+    # ---- 3. 레벨업: 카드 3장 + 전부 선택
+    for i, tc in enumerate((0.30, 0.55, 0.80)):
+        mx.put(whoosh(0.25, up=True, gain=0.6, seed=10 + i), 5.2 + tc - 0.08)
+        mx.put(game_snd("UI_Click.wav"), 5.2 + tc, 0.6, pan=(i - 1) * 0.4)
+    for i in range(3):                                  # 체크 3연타
+        mx.put(game_snd("UI_Click.wav"), 6.7 + i * 0.12, 0.75, pan=(i - 1) * 0.4)
+        mx.put(note(nf(("C6", "E6", "G6")[i]), 0.4, 0.22, "glock"), 6.7 + i * 0.12)
+    mx.put(boom(0.5, 130, 40, 0.75), 7.17)              # "전부요."
+
+    # ---- 4. 구르기: 슝슝 + 헛스윙
+    for i, tz in enumerate(DODGE_ZOMBIES):
+        mx.put(whoosh(0.35, up=False, gain=0.75, seed=20 + i), 7.6 + tz - 0.2,
+               pan=-0.3 + i * 0.3)
+        mx.put(game_snd("Weapon_Melee.wav", rate=0.9), 7.6 + tz + 0.05, 0.45)
+        mx.put(game_snd("Enemy_Hit_B.wav", rate=0.7), 7.6 + tz + 0.28, 0.3)
+    mx.put(game_snd("Enemy_Hit_C.ogg", rate=0.6), 9.7, 0.4, pan=0.4)  # 분한 신음
+
+    # ---- 5. POV 좀비: 조준 → 일제 사격 → 화면 파손
+    mx.put(riser(0.8, 180, 900, 0.45), 10.5)
+    for k in range(8):
+        mx.put(game_snd("Weapon_RapidFire.wav"), 11.35 + k * 0.07, 0.42,
                pan=(k % 3 - 1) * 0.4)
-    mx.put(game_snd("Weapon_Explosive.wav"), 9.8, 0.6)
-    # ---- 5. 왕관: 라이저 + 성가 + 짝퉁 에어혼
-    mx.put(riser(0.9, 200, 1200, 0.5), 9.6)
-    mx.put(game_snd("LevelUp.wav"), 10.12, 0.9)
-    for i, nm in enumerate(("C5", "E5", "G5")):          # 천사 화음
-        mx.put(note(nf(nm), 1.6, 0.22, "ep"), 10.15 + i * 0.02)
-    for i in range(3):                                   # 에어혼 삼연타
-        mx.put(note(nf("E5") * (1 - 0.06 * i), 0.30, 0.5, "organ"), 11.05 + i * 0.17)
-    mx.put(boom(0.5, 140, 40, 0.7), 11.6)
-    # ---- 6. 보스: 드론 + 경보 + 포효
+    mx.put(game_snd("Weapon_Explosive.wav"), 11.9, 0.6)
+    mx.put(clap(0.9, seed=42), 12.0)                    # 렌즈 깨지는 소리
+    mx.put(clap(0.7, seed=43), 12.1)
+    mx.put(boom(0.5, 140, 40, 0.8), 12.32)              # 💀
+
+    # ---- 6. 보스: 드론 + 경보 + 포효 + 꼬마 로봇의 발악
     mx.put(bass808(2.7, nf("E1"), 0.65), 12.45)
     for i in range(5):
         mx.put(note(nf("A4"), 0.16, 0.30, "organ"), 12.6 + i * 0.5, pan=0.3)
     mx.put(game_snd("Boss_Death.wav", rate=0.65), 13.5, 0.85)   # 포효로 재활용
     mx.put(game_snd("Boss_Hit_A.wav", rate=0.7), 14.5, 0.6)
+    for k in range(9):
+        mx.put(game_snd("Weapon_RapidFire.wav"), 13.3 + k * 0.17, 0.16, pan=-0.5)
+
     # ---- 7. CTA
     mx.put(game_snd("LevelUp.wav"), 15.25, 0.9)
     for i, nm in enumerate(("C5", "E5", "G5", "C6")):
         mx.put(note(nf(nm), 0.5, 0.18, "glock"), 15.3 + i * 0.07)
-    mx.put(boom(0.5, 150, 42, 0.8), 16.0)                # ZOMBIES DO 슬램
-    for i in range(6):                                   # 좀비 연타
-        mx.put(game_snd("UI_Click.wav"), 16.8 + i * 0.4, 0.55, pan=0.25)
+    mx.put(boom(0.5, 150, 42, 0.8), 16.0)                # 3번째 줄 슬램
+    # 좀비 게이지가 차오르는 틱틱(점점 빠르게) + 양옆 좀비 연타
+    tt, step = 16.7, 0.30
+    while tt < 18.9:
+        mx.put(note(nf("E6"), 0.08, 0.12, "glock"), tt, pan=0.3)
+        step = max(0.10, step * 0.90)
+        tt += step
+    for i in range(6):
+        mx.put(game_snd("UI_Click.wav"), 16.8 + i * 0.4, 0.5,
+               pan=0.35 if i % 2 == 0 else -0.35)
     mx.put(game_snd("Enemy_Hit_A.wav", rate=0.6), 17.7, 0.4, pan=0.4)
     mx.put(boom(0.7, 130, 34, 0.9), 19.35)               # 마지막 붐
     return mx.write(path, master=0.93)
