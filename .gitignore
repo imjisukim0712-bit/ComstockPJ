@@ -108,7 +108,3 @@ InitTestScene*.unity*
 # ===== External assets (never commit) =====
 /[Aa]ssets/ExternalAssets/
 /[Aa]ssets/ExternalAssets.meta
-
-# Python 바이트코드 캐시 (dev/pv, dev/pv2 렌더 스크립트가 생성)
-__pycache__/
-*.pyc
