@@ -7,7 +7,8 @@
 마지막은 반드시 "DOWNLOAD IT BEFORE THE ZOMBIES DO." + itch.io 링크.
 
 사용법:
-    python3 pv2_tvad.py                     # dev/pv2/Comstock_Ad_TV.mp4
+    python3 pv2_tvad.py --lang en           # dev/pv2/Comstock_Ad_TV_EN.mp4
+    python3 pv2_tvad.py --lang ko           # dev/pv2/Comstock_Ad_TV_KO.mp4
     python3 pv2_tvad.py --test 1.0,5.0,9.0  # 미리보기 PNG만
 """
 import argparse
@@ -25,7 +26,7 @@ from pv2_common import (A, SPR, WPN, EMOJI, F, Mixer, ITCH_URL, add_grain,
                         explosion_at, fast_post, fit_size, game_snd, gradient_v,
                         make_web_version, muzzle_at, note, nf, otext, pop_scale,
                         rain_noise, robot_img, ruined_skyline, screen_flash,
-                        sunburst, text_w, twos, zombie_img, zoom_at,
+                        set_lang, sunburst, text_w, twos, zombie_img, zoom_at,
                         BILINEAR, LANCZOS, CACHE)
 
 W, H = 1920, 1080
@@ -49,38 +50,84 @@ INK = (44, 40, 36)
 PHARMA_GREEN = (86, 168, 96)
 STAMP_RED = (208, 52, 44)
 
-T = {
-    "gray1": "Feeling... surrounded lately?",
-    "gray2": "Chronic Zombies affect 10 out of 10 survivors.*",
-    "gray_fine": "*the other 0 are already zombies.",
-    "ask": "ASK YOUR DOCTOR ABOUT",
-    "ask_sub": "COMSTOCK is a robot, not a medication.",
-    "ask_badge": "NOW\nWITH\nGUNS",
-    "mon1": "Get back out there.",
-    "mon2": "Enjoy the little things. Then shoot them.",
-    "mon3": "Up to 6 guns. Zero thoughts.",
-    "mon_docs": "9 out of 10 doctors agree*",
-    "mon_fine": "*the 10th doctor turned. he agrees much louder now.",
-    "pic1": "Spend more time with what matters.*",
-    "pic_fine": "*loot. what matters is loot.",
-    "se_head": "COMSTOCK may cause side effects.",
-    "se_list": ["excessive winning", "chronic modding",
-                "spontaneous gun acquisition", "crown-related confidence",
-                "compulsive shopping between waves", "mild robot smugness",
-                "zombie unemployment", "sudden onset of Wave 20",
-                "loss of loss", "fun"],
-    "se_not1": "COMSTOCK is not for zombies.",
-    "se_not2": "Zombies should not take COMSTOCK.",
-    "cta_free": "FREE.  No prescription.  No ammo.  No refills.",
-    "cta_stamp1": "DOWNLOAD IT BEFORE",
-    "cta_stamp2": "THE ZOMBIES DO.",
-    "cta_url": ITCH_URL,
-    "cta_fine": "COMSTOCK is a video game. zombies cannot download it. probably.",
-    "ticker": ("DO NOT OPERATE HEAVY MACHINERY UNLESS THE MACHINERY IS COMSTOCK   ·   "
-               "IF WINNING PERSISTS FOR MORE THAN 20 WAVES, THAT IS THE WHOLE GAME   ·   "
-               "ROBOT MAY CONTAIN ROBOT   ·   TALK TO YOUR DOCTOR. IF YOUR DOCTOR "
-               "GROANS, RUN   ·   SIDE EFFECTS ARE THE POINT   ·   "),
+# 화면에 보이는 모든 문구는 영어/한글 두 벌을 함께 관리한다(협업 규칙 9번과 같은 원칙).
+LANG = {
+    "en": {
+        "gray1": "Feeling... surrounded lately?",
+        "gray2": "Chronic Zombies affect 10 out of 10 survivors.*",
+        "gray_fine": "*the other 0 are already zombies.",
+        "ask": "ASK YOUR DOCTOR ABOUT",
+        "ask_sub": "COMSTOCK is a robot, not a medication.",
+        "ask_badge": "NOW\nWITH\nGUNS",
+        "mon1": "Get back out there.",
+        "mon2": "Enjoy the little things. Then shoot them.",
+        "mon3": "Up to 6 guns. Zero thoughts.",
+        "mon_docs": "9 out of 10 doctors agree*",
+        "mon_fine": "*the 10th doctor turned. he agrees much louder now.",
+        "pic1": "Spend more time with what matters.*",
+        "pic_fine": "*loot. what matters is loot.",
+        "se_head": "COMSTOCK may cause side effects.",
+        "se_incl": "side effects may include:",
+        "se_list": ["excessive winning", "chronic modding",
+                    "spontaneous gun acquisition", "crown-related confidence",
+                    "compulsive shopping between waves", "mild robot smugness",
+                    "zombie unemployment", "sudden onset of Wave 20",
+                    "loss of loss", "fun"],
+        "se_not1": "COMSTOCK is not for zombies.",
+        "se_not2": "Zombies should not take COMSTOCK.",
+        "cta_free": "FREE.  No prescription.  No ammo.  No refills.",
+        "cta_stamp1": "DOWNLOAD IT BEFORE",
+        "cta_stamp2": "THE ZOMBIES DO.",
+        "cta_play": "PLAY FREE ON ITCH.IO",
+        "cta_url": ITCH_URL,
+        "cta_fine": "COMSTOCK is a video game. zombies cannot download it. probably.",
+        "ticker": ("DO NOT OPERATE HEAVY MACHINERY UNLESS THE MACHINERY IS COMSTOCK   ·   "
+                   "IF WINNING PERSISTS FOR MORE THAN 20 WAVES, THAT IS THE WHOLE GAME   ·   "
+                   "ROBOT MAY CONTAIN ROBOT   ·   TALK TO YOUR DOCTOR. IF YOUR DOCTOR "
+                   "GROANS, RUN   ·   SIDE EFFECTS ARE THE POINT   ·   "),
+    },
+    "ko": {
+        "gray1": "요즘… 사방에서 조여오십니까?",
+        "gray2": "만성 좀비는 생존자 10명 중 10명이 겪는 질환입니다.*",
+        "gray_fine": "※ 나머지 0명은 이미 좀비입니다.",
+        "ask": "주치의에게 문의하세요:",
+        "ask_y": 92,       # 한글은 글리프가 세로로 꽉 차서 로고와 겹치지 않게 올린다
+        "ask_sub": "컴스톡은 약이 아니라 로봇입니다.",
+        "ask_badge": "이젠\n총도\n포함",
+        "mon1": "다시 바깥으로 나가세요.",
+        "mon2": "소소한 행복을 즐기세요. 그리고 쏘세요.",
+        "mon3": "총 6정. 생각 0개.",
+        "mon_docs": "의사 10명 중 9명이 동의*",
+        "mon_fine": "※ 10번째 의사는 좀비가 됐습니다. 지금은 더 크게 동의합니다.",
+        "pic1": "소중한 것과 더 많은 시간을 보내세요.*",
+        "pic_fine": "※ 소중한 것 = 전리품.",
+        "se_head": "컴스톡은 부작용을 유발할 수 있습니다.",
+        "se_incl": "부작용 예시:",
+        "se_list": ["과도한 승리", "만성 모딩", "돌발적 총기 획득", "왕관발 자신감",
+                    "웨이브 사이 충동구매", "경미한 로봇 거만증", "좀비 실업",
+                    "갑작스러운 웨이브 20", "패배 상실증", "재미"],
+        "se_not1": "컴스톡은 좀비용이 아닙니다.",
+        "se_not2": "좀비는 컴스톡을 복용하지 마십시오.",
+        "cta_free": "무료.  처방전 없음.  탄약 없음.  리필 없음.",
+        "cta_stamp1": "좀비보다 먼저",
+        "cta_stamp2": "다운로드하세요.",
+        "cta_play": "ITCH.IO에서 무료 플레이",
+        "cta_url": ITCH_URL,
+        "cta_fine": "컴스톡은 비디오 게임입니다. 좀비는 다운로드할 수 없습니다. 아마도요.",
+        "ticker": ("컴스톡이 아닌 중장비는 조작하지 마십시오   ·   승리가 20웨이브 넘게 "
+                   "지속되면 그게 정상입니다   ·   로봇에는 로봇이 함유되어 있습니다   ·   "
+                   "의사와 상담하세요. 의사가 으르렁거리면 도망치세요   ·   "
+                   "부작용이 곧 콘텐츠입니다   ·   "),
+    },
 }
+T = LANG["en"]
+
+
+def set_video_lang(lang):
+    """문구 사전과 폰트 대체(한글=NotoSansKR)를 함께 전환한다."""
+    global T
+    T = LANG[lang]
+    set_lang(lang)
 
 _misc = {}
 
@@ -328,8 +375,9 @@ def sc_turn(cnv, t, dur):
         d.line([(sx, sy - s), (sx, sy + s)], fill=(255, 255, 255, 200), width=4)
 
     if t > 0.30:
-        sz = otext(cnv, (W / 2, 130), T["ask"], "oswald", 64, fill=INK, anchor="mm",
-                   stroke=8, stroke_fill=(255, 252, 240), max_w=W - 400)
+        sz = otext(cnv, (W / 2, T.get("ask_y", 130)), T["ask"], "oswald", 64,
+                   fill=INK, anchor="mm", stroke=8, stroke_fill=(255, 252, 240),
+                   max_w=W - 400)
     if t > 0.55:
         s = pop_scale(t - 0.55, 0.3, 0.8)
         logo = SPR("UI/title_logo.png", w=int(1000 * s))
@@ -491,7 +539,7 @@ def sc_sideeffects(cnv, t, dur):
     if t > 0.55 and t < 4.9:
         d.rounded_rectangle([120, band_y0, W - 120, band_y0 + 220], radius=26,
                             fill=CREAM + (232,), outline=INK + (255,), width=5)
-        otext(cnv, (150, band_y0 + 44), "side effects may include:", "serifb", 30,
+        otext(cnv, (150, band_y0 + 44), T["se_incl"], "serifb", 30,
               fill=(120, 60, 50), anchor="lm")
         for i in range(n_show):
             if n_show - i > 6:             # 밴드에는 6칸뿐 - 오래된 줄은 밀려난다
@@ -565,7 +613,7 @@ def sc_cta(cnv, t, dur):
         blit(cnv, pl, W / 2, 922, anchor="cc")
         otext(cnv, (W / 2, 922), T["cta_url"], "roboto", 58, fill=(255, 238, 130),
               anchor="mm", max_w=940)
-        otext(cnv, (W / 2, 840), "PLAY FREE ON ITCH.IO", "oswald", 40, fill=INK,
+        otext(cnv, (W / 2, 840), T["cta_play"], "oswald", 40, fill=INK,
               anchor="mm", stroke=7, stroke_fill=(250, 244, 228))
     # 좀비 손이 URL을 노린다
     if t > 2.3:
@@ -714,10 +762,12 @@ def build_audio(path):
 # ---------------------------------------------------------------- 메인
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--lang", default="en", choices=("en", "ko"))
     ap.add_argument("--test", default=None, help="미리보기 시각(초, 쉼표 구분)")
     ap.add_argument("--out", default=None)
     ap.add_argument("--fast", action="store_true", help="빠른 인코딩 프리셋")
     args = ap.parse_args()
+    set_video_lang(args.lang)
 
     here = os.path.dirname(os.path.abspath(__file__))
     if args.test:
@@ -726,16 +776,17 @@ def main():
         for s in args.test.split(","):
             t = float(s)
             im = render_frame(int(round(t * FPS)))
-            p = os.path.join(outdir, "tv_%05.2f.png" % t)
+            p = os.path.join(outdir, "tv_%s_%05.2f.png" % (args.lang, t))
             im.save(p)
             print(p)
         return
 
     os.makedirs(CACHE, exist_ok=True)
     audio = build_audio(os.path.join(CACHE, "tvad_audio.wav"))
-    out = args.out or os.path.join(here, "Comstock_Ad_TV.mp4")
+    out = args.out or os.path.join(here, "Comstock_Ad_TV_%s.mp4" % args.lang.upper())
     encode_frames(render_frame, NFRAMES, FPS, (W, H), out, audio=audio,
-                  crf=22, label="tvad", preset="veryfast" if args.fast else "medium")
+                  crf=22, label="tvad-" + args.lang,
+                  preset="veryfast" if args.fast else "medium")
     print("완성:", out)
     web = os.path.splitext(out)[0] + "_web.mp4"
     make_web_version(out, web, height=720, crf=25)

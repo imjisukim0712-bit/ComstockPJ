@@ -39,6 +39,7 @@ _FONT_FILES = {
     "liberation": "Assets/TextMesh Pro/Fonts/LiberationSans.ttf",
     "orbitron": "Assets/Fonts/Orbitron/Orbitron-Black.ttf",
     "korean": "Assets/Fonts/NotoSansKR/NotoSansKR-Bold.ttf",
+    "korean_r": "Assets/Fonts/NotoSansKR/NotoSansKR-Regular.ttf",
 }
 _SYS_FONTS = {
     "serif": "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
@@ -58,7 +59,20 @@ def font_file(name):
     return _SYS_FONTS[name]
 
 
+# 한글판에서는 라틴 전용 폰트(Anton/Oswald/Roboto/DejaVu)를 NotoSansKR로 바꿔치기
+# 한다. 장면 코드는 폰트 이름을 그대로 쓰고, set_lang()만 호출하면 된다.
+_KO_SUB = {"anton": "korean", "oswald": "korean", "roboto": "korean",
+           "bangers": "korean", "serif": "korean_r", "serifb": "korean"}
+_font_sub = {}
+
+
+def set_lang(lang):
+    global _font_sub
+    _font_sub = dict(_KO_SUB) if lang == "ko" else {}
+
+
 def F(name, size):
+    name = _font_sub.get(name, name)
     key = (name, int(size))
     f = _fnt.get(key)
     if f is None:

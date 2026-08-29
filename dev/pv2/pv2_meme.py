@@ -6,7 +6,8 @@
 "DOWNLOAD IT BEFORE THE ZOMBIES DO" + itch.io 링크.
 
 사용법:
-    python3 pv2_meme.py                      # dev/pv2/Comstock_Meme_IG.mp4
+    python3 pv2_meme.py --lang en            # dev/pv2/Comstock_Meme_IG_EN.mp4
+    python3 pv2_meme.py --lang ko            # dev/pv2/Comstock_Meme_IG_KO.mp4
     python3 pv2_meme.py --test 1.0,3.4,6.0   # 미리보기 PNG만
 """
 import argparse
@@ -25,9 +26,9 @@ from pv2_common import (A, EMOJI, F, Mixer, ITCH_URL, SPR, WPN, add_grain,
                         fast_post, fit_size, game_snd, gradient_v, ground_tex,
                         hat, kick808, make_web_version, muzzle_at, note, nf,
                         otext, pop_scale, rgb_shift, riser, robot_img,
-                        ruined_skyline, screen_flash, speed_lines, sub_drop,
-                        sunburst, text_w, twos, whoosh, zombie_img, zoom_at,
-                        BILINEAR, LANCZOS, CACHE)
+                        ruined_skyline, screen_flash, set_lang, speed_lines,
+                        sub_drop, sunburst, text_w, twos, whoosh, zombie_img,
+                        zoom_at, BILINEAR, LANCZOS, CACHE)
 
 W, H = 1080, 1920
 FPS = 30
@@ -53,25 +54,65 @@ CUTS = [t for (t, _d, _n) in TIMELINE][1:]
 INK = (28, 26, 30)
 CREAM = (250, 246, 236)
 
-T = {
-    "pov": "POV: you're the last robot on Earth",
-    "nobody": "nobody:",
-    "am3": "zombies at 3 AM:",
-    "choiceA": "option A: run",
-    "choiceB": "option B: six guns",
-    "guns": "me adding a 7th gun to the\nemotional support robot",
-    "crown": "when the LEGENDARY crown\nfinally drops",
-    "boss_cap": "wave 20 boss:",
-    "cta1": "DOWNLOAD IT",
-    "cta2": "BEFORE THE",
-    "cta3": "ZOMBIES DO",
-    "cta_free": "FREE on itch.io",
-    "cta_btn": "DOWNLOAD",
-    "cta_hurry": "the zombies have wifi. HURRY.",
-    "cta_bio": "link in bio*   (*jk. it's right here)",
-    "handle": "@pyramid.studio",
-    "audio_tag": "Comstock OST - original audio",
+# 화면에 보이는 모든 문구는 영어/한글 두 벌을 함께 관리한다(협업 규칙 9번과 같은 원칙).
+LANG = {
+    "en": {
+        "pov": "POV: you're the last robot on Earth",
+        "nobody": "nobody:",
+        "am3": "zombies at 3 AM:",
+        "choice_head": "how to survive the apocalypse:",
+        "choiceA": "option A: run",
+        "choiceB": "option B: six guns",
+        "guns": "me adding a 7th gun to the\nemotional support robot",
+        "guns_counter": "GUNS: %d",
+        "guns_font": "orbitron",
+        "crown": "when the LEGENDARY crown\nfinally drops",
+        "boss_cap": "wave 20 boss:",
+        "boss_you": "you",
+        "cta1": "DOWNLOAD IT",
+        "cta2": "BEFORE THE",
+        "cta3": "ZOMBIES DO",
+        "free1": "FREE",
+        "free2": "on itch.io",
+        "cta_btn": "DOWNLOAD",
+        "cta_hurry": "the zombies have wifi. HURRY.",
+        "cta_bio": "link in bio*   (*jk. it's right here)",
+        "handle": "@pyramid.studio",
+        "audio_tag": "Comstock OST - original audio",
+    },
+    "ko": {
+        "pov": "POV: 당신이 지구 최후의 로봇",
+        "nobody": "아무도:",
+        "am3": "새벽 3시 좀비들:",
+        "choice_head": "종말에서 살아남는 법:",
+        "choiceA": "선택 A: 도주",
+        "choiceB": "선택 B: 총 6정",
+        "guns": "감성지원 로봇에\n7번째 총을 다는 나",
+        "guns_counter": "총: %d정",
+        "guns_font": "korean",       # 오비트론에는 한글이 없다
+        "crown": "레전더리 왕관이\n드디어 떴을 때",
+        "boss_cap": "웨이브 20 보스:",
+        "boss_you": "당신",
+        "cta1": "좀비보다",
+        "cta2": "먼저",
+        "cta3": "다운로드",
+        "free1": "무료",
+        "free2": "itch.io에서",
+        "cta_btn": "다운로드",
+        "cta_hurry": "좀비들도 와이파이가 있습니다. 서두르세요.",
+        "cta_bio": "링크는 프로필에*   (*뻥임. 바로 여기 있음)",
+        "handle": "@pyramid.studio",
+        "audio_tag": "Comstock OST - 오리지널 오디오",
+    },
 }
+T = LANG["en"]
+
+
+def set_video_lang(lang):
+    """문구 사전과 폰트 대체(한글=NotoSansKR)를 함께 전환한다."""
+    global T
+    T = LANG[lang]
+    set_lang(lang)
 
 _misc = {}
 
@@ -260,7 +301,7 @@ def _panel(w, h, which, t):
 
 def sc_choice(cnv, t, dur):
     cnv.paste((236, 232, 226), (0, 0, W, H))
-    top = meme_bar(cnv, [("how to survive the apocalypse:", INK)], y0=140, size=56)
+    top = meme_bar(cnv, [(T["choice_head"], INK)], y0=140, size=56)
     ph = H // 2 - 140
     y1 = top + 40
     y2 = y1 + ph - 340 + 60
@@ -315,8 +356,8 @@ def sc_guns(cnv, t, dur):
     # 카운터
     d.rounded_rectangle([W - 320, 560, W - 60, 680], radius=20,
                         fill=(16, 14, 18, 220), outline=(255, 214, 64, 255), width=5)
-    otext(cnv, (W - 190, 620), "GUNS: %d" % (n_on + 1), "orbitron", 52,
-          fill=(255, 224, 90), anchor="mm")
+    otext(cnv, (W - 190, 620), T["guns_counter"] % (n_on + 1), T["guns_font"], 52,
+          fill=(255, 224, 90), anchor="mm", max_w=240)
     # 다 붙으면 일제 사격
     if t > 2.35:
         for k in range(5):
@@ -386,8 +427,8 @@ def sc_boss(cnv, t, dur):
     # 스케일용 꼬마 로봇 (덜덜)
     rob = draw_robot(cnv, 230, H - 300, 210, t, bounce=False,
                      rot=math.sin(t * 30) * 4)
-    otext(cnv, (230, H - 540), "you", "roboto", 44, fill=(255, 255, 255), anchor="mm",
-          stroke=6, stroke_fill=(20, 10, 12))
+    otext(cnv, (230, H - 540), T["boss_you"], "roboto", 44, fill=(255, 255, 255),
+          anchor="mm", stroke=6, stroke_fill=(20, 10, 12))
     # 🗿 도장
     if t > 1.35:
         s = pop_scale(t - 1.35, 0.24, 0.9)
@@ -435,9 +476,10 @@ def sc_cta(cnv, t, dur):
         sd.line(pts + [pts[0]], fill=(60, 50, 40, 255), width=6)
         star = star.rotate(12, resample=BILINEAR, expand=False)
         blit(cnv, star, 180, 1265, anchor="cc")
-        otext(cnv, (180, 1225), "FREE", "anton", int(66 * q), fill=INK, anchor="mm")
-        otext(cnv, (180, 1292), "on itch.io", "roboto", int(30 * q), fill=INK,
-              anchor="mm")
+        otext(cnv, (180, 1225), T["free1"], "anton", int(66 * q), fill=INK,
+              anchor="mm", max_w=300)
+        otext(cnv, (180, 1292), T["free2"], "roboto", int(30 * q), fill=INK,
+              anchor="mm", max_w=300)
     # 거대 다운로드 버튼 + 좀비 손가락 연타
     if t > 1.55:
         press = math.exp(-((t * 2.5) % 1) * 7)          # 0.4초마다 꾹
@@ -618,10 +660,12 @@ def build_audio(path):
 # ---------------------------------------------------------------- 메인
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--lang", default="en", choices=("en", "ko"))
     ap.add_argument("--test", default=None, help="미리보기 시각(초, 쉼표 구분)")
     ap.add_argument("--out", default=None)
     ap.add_argument("--fast", action="store_true")
     args = ap.parse_args()
+    set_video_lang(args.lang)
 
     here = os.path.dirname(os.path.abspath(__file__))
     if args.test:
@@ -630,16 +674,17 @@ def main():
         for s in args.test.split(","):
             t = float(s)
             im = render_frame(int(round(t * FPS)))
-            p = os.path.join(outdir, "ig_%05.2f.png" % t)
+            p = os.path.join(outdir, "ig_%s_%05.2f.png" % (args.lang, t))
             im.save(p)
             print(p)
         return
 
     os.makedirs(CACHE, exist_ok=True)
     audio = build_audio(os.path.join(CACHE, "meme_audio.wav"))
-    out = args.out or os.path.join(here, "Comstock_Meme_IG.mp4")
+    out = args.out or os.path.join(here, "Comstock_Meme_IG_%s.mp4" % args.lang.upper())
     encode_frames(render_frame, NFRAMES, FPS, (W, H), out, audio=audio,
-                  crf=22, label="meme", preset="veryfast" if args.fast else "medium")
+                  crf=22, label="meme-" + args.lang,
+                  preset="veryfast" if args.fast else "medium")
     print("완성:", out)
     web = os.path.splitext(out)[0] + "_web.mp4"
     make_web_version(out, web, height=1280, crf=26)
