@@ -8,6 +8,7 @@
 4. 판정 표시가 구간마다 제때 뜨고 색이 맞는가
 5. 마지막 골드 구간에서 로봇이 커지는가
 6. 상단 제목이 지원 언어 전부에서 두부(□) 없이 그려지는가
+7. 애니메이션 박자가 원곡의 실측 박자 격자와 맞는가
 
     python verify_short.py
 """
@@ -19,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PIL import Image
 
 from short_common import (W, H, BG, FPS, DUR, NF, SEG_LEN, T0, SEG_MARK, SEGMENTS,
-                          ROBOT_CX, GREEN, RED, LANG)
+                          ROBOT_CX, GREEN, RED, LANG, BEAT, SONG)
 from render_short import frame
 
 FAIL = []
@@ -176,6 +177,22 @@ def main():
             # 두부(□)는 속이 빈 네모라 같은 크기의 글자보다 픽셀이 훨씬 적다. 채움 비율로 거른다.
             fill = b[4] / max(1, (b[2] - b[0] + 1) * (b[3] - b[1] + 1))
             check(fill > 0.14, f"{lang} 제목 채움 비율 {fill:.3f} (두부 글자가 아니다)")
+
+    print("7) 애니메이션 박자가 원곡과 맞는가")
+    if not os.path.exists(SONG):
+        print(f"  건너뜀 - 원곡이 없다({SONG}). --game-audio / --silent 로 뽑는 중이면 정상.")
+    else:
+        import analyze_song
+        t, flux, dur = analyze_song.envelope(SONG)
+        _, beat, phase = analyze_song.grid_search(t, flux, dur)
+        check(abs(beat - BEAT) < 0.006, f"박자 {beat:.4f}s vs 코드 {BEAT:.4f}s")
+        check(abs(phase - T0) < 0.030, f"첫 박 {phase:.4f}s vs 코드 T0 {T0:.4f}s")
+        check(abs(NF - round(dur * FPS)) <= 1, f"프레임 수 {NF} vs 음원 {dur * FPS:.1f}프레임")
+        # 판정 도장과 품목 등장이 실제 박 위에 있는가 (한 프레임 = 0.033초 안)
+        for i, (key, ok) in enumerate(SEGMENTS):
+            for label, tt in (("등장", T0 + i * SEG_LEN), ("판정", T0 + i * SEG_LEN + SEG_MARK)):
+                off = abs((tt - phase) / beat - round((tt - phase) / beat)) * beat
+                check(off < 1.0 / FPS, f"{key:6s} {label} {tt:.3f}s 가 박에서 {off * 1000:.0f}ms 어긋남")
 
     print()
     if FAIL:

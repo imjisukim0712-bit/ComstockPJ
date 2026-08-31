@@ -4,10 +4,14 @@
 레퍼런스(https://www.youtube.com/shorts/7Il55sXlulw)의 구성을 그대로 따르되
 고양이 자리에 컴스톡 로봇을, 오른쪽 품목 자리에 게임 리소스를 넣는다.
 
-    python render_short.py                      # 무음 mp4
-    python render_short.py --audio              # 게임 BGM/효과음을 얹은 mp4
+    python render_short.py                      # 원곡을 얹은 mp4 (기본)
+    python render_short.py --silent             # 무음 mp4
+    python render_short.py --game-audio         # 게임 BGM/효과음을 얹은 mp4
+    python render_short.py --lang en            # 상단 제목을 영문으로
     python render_short.py --frames 0,30,60     # 특정 프레임만 png로 뽑아 확인
     python render_short.py --contact            # 전체 흐름을 한 장의 콘택트시트로
+
+애니메이션의 박자는 **원곡에서 실측한 값**(110.3 BPM)이다 - `short_common` 참고.
 
 게임 코드·씬·에셋은 건드리지 않는다. 읽기만 한다.
 """
@@ -22,7 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from short_common import (HERE, W, H, BG, FPS, DUR, NF, SEGMENTS, SEG_LEN, seg_at,
                           ROBOT_CX, ROBOT_CY, ROBOT_W, ITEM_CX, ITEM_CY,
-                          MARK_CX, MARK_CY, MARK_W, WATERMARK, LANG, DEFAULT_LANG)
+                          MARK_CX, MARK_CY, MARK_W, WATERMARK, LANG, DEFAULT_LANG, SONG)
 from short_draw import draw_robot, draw_items, draw_mark, draw_title, draw_watermark
 
 OUT_DIR = HERE
@@ -86,8 +90,10 @@ def contact_sheet(path, cols=8, rows=5, lang=DEFAULT_LANG):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=os.path.join(OUT_DIR, "Comstock_DamDidi.mp4"))
-    ap.add_argument("--audio", action="store_true", help="게임 BGM/효과음 트랙을 만들어 함께 넣는다")
-    ap.add_argument("--audio-file", default=None, help="직접 만든 오디오 파일을 쓴다")
+    ap.add_argument("--silent", action="store_true", help="소리 없이 뽑는다(다른 음원을 얹을 때)")
+    ap.add_argument("--game-audio", action="store_true",
+                    help="원곡 대신 게임 BGM/효과음으로 만든 트랙을 넣는다")
+    ap.add_argument("--audio-file", default=None, help="지정한 오디오 파일을 쓴다")
     ap.add_argument("--crf", type=int, default=18)
     ap.add_argument("--frames", default=None, help="쉼표로 구분한 프레임 번호만 png로 저장")
     ap.add_argument("--contact", action="store_true")
@@ -105,10 +111,21 @@ def main():
         contact_sheet(os.path.join(OUT_DIR, "contact.png"), lang=a.lang)
         return
 
+    # 기본은 **원곡**이다. 애니메이션의 박자(BEAT/T0)가 이 곡에서 실측한 값이라
+    # 다른 소리를 넣으면 박자가 어긋난다.
     audio = a.audio_file
-    if a.audio and not audio:
-        import build_short_audio
-        audio = build_short_audio.build(os.path.join(OUT_DIR, "short_audio.m4a"))
+    if a.silent:
+        audio = None
+    elif not audio:
+        if a.game_audio:
+            import build_short_audio
+            audio = build_short_audio.build(os.path.join(OUT_DIR, "short_audio.m4a"))
+        elif os.path.exists(SONG):
+            audio = SONG
+        else:
+            raise SystemExit(f"원곡이 없다: {SONG}\n"
+                             "  - 파일을 그 경로에 두거나\n"
+                             "  - --game-audio (게임 BGM/효과음) 또는 --silent 를 쓸 것")
     encode(a.out, audio, a.crf, a.lang)
 
 

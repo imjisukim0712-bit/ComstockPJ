@@ -6,3 +6,6 @@ contact.png
 frame_*.png
 .cache/
 __pycache__/
+
+# 레퍼런스 원곡(제3자 저작물) - 저장소에 넣지 않는다
+assets/*.mp3
