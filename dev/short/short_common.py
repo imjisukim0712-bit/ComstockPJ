@@ -71,7 +71,7 @@ MARK_W = 300                        # 판정 표시 폭 0.27 x 1080 ≒ 292
 # 레퍼런스에는 없는 우리 추가분(사용자 지시). 협업 규칙 9번대로 지원 언어를 함께 넣는다.
 LANG = {
     "ko": {"title": "컴스톡의 취향"},
-    "en": {"title": "COMSTOCK'S TASTE"},
+    "en": {"title": "Comstock's Tastes"},
 }
 DEFAULT_LANG = "ko"
 TITLE_Y = 300                       # 글자 아랫선(baseline). 내용 상자 윗변 240보다 살짝 아래
