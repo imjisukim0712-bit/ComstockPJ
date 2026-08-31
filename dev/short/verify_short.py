@@ -6,7 +6,8 @@
 2. 로봇과 품목 뭉치가 겹치는가(왼쪽 덩어리와 오른쪽 덩어리 사이에 빈 칸이 있는가)
 3. 로봇이 실제로 박자에 맞춰 통통 튀는가(프레임별 세로 위치/폭 변화량)
 4. 판정 표시가 구간마다 제때 뜨고 색이 맞는가
-5. 마지막 골드 구간에서 로봇이 커지는가(레퍼런스 실측 1.28배)
+5. 마지막 골드 구간에서 로봇이 커지는가
+6. 상단 제목이 지원 언어 전부에서 두부(□) 없이 그려지는가
 
     python verify_short.py
 """
@@ -18,7 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PIL import Image
 
 from short_common import (W, H, BG, FPS, DUR, NF, SEG_LEN, T0, SEG_MARK, SEGMENTS,
-                          ROBOT_CX, GREEN, RED)
+                          ROBOT_CX, GREEN, RED, LANG)
 from render_short import frame
 
 FAIL = []
@@ -30,12 +31,21 @@ def check(ok, msg):
         FAIL.append(msg)
 
 
-def mask_of(im, tol=12):
-    """배경(흰색)이 아닌 픽셀을 True로 하는 2차원 리스트를 만든다."""
+# 상단 제목과 워터마크는 "배경이 아닌 픽셀"이지만 로봇/품목이 아니다. 재는 구간에서
+# 빼기 위해 무대(로봇·품목이 사는 세로 구간)를 따로 잡아 둔다.
+STAGE_Y0, STAGE_Y1 = 600, 1300
+
+
+def mask_of(im, tol=12, y0=0, y1=None):
+    """배경(흰색)이 아닌 픽셀을 True로 하는 2차원 리스트를 만든다(y0~y1 밖은 전부 0)."""
     px = im.load()
+    y1 = im.height if y1 is None else y1
     out = []
     for y in range(im.height):
         row = bytearray(im.width)
+        if not (y0 <= y < y1):
+            out.append(row)
+            continue
         for x in range(im.width):
             r, g, b = px[x, y]
             if abs(r - BG[0]) > tol or abs(g - BG[1]) > tol or abs(b - BG[2]) > tol:
@@ -91,28 +101,33 @@ def main():
     check(worst is None, f"가장자리 침범 {'없음' if worst is None else worst}")
 
     print("2) 로봇과 품목 뭉치가 떨어져 있는가 (구간마다 가장 벌어진 시점)")
+    splits = {}
     for i, (key, ok) in enumerate(SEGMENTS):
         t = T0 + i * SEG_LEN + 1.2          # 품목이 완전히 자리잡은 시각
-        m = mask_of(frame(t))
+        m = mask_of(frame(t), y0=STAGE_Y0, y1=STAGE_Y1)
         cols = columns_used(m)
         # 로봇 쪽(왼쪽)과 품목 쪽(오른쪽) 사이에 완전히 빈 세로 띠가 있어야 한다.
-        gap = [x for x in range(300, 900) if x not in cols]
-        # 연속된 빈 띠 중 가장 넓은 것
-        best, cur = 0, 0
-        for x in range(300, 900):
-            cur = cur + 1 if x not in cols else 0
-            best = max(best, cur)
+        best, cur, end = 0, 0, 0
+        for x in range(400, 1000):
+            if x not in cols:
+                cur += 1
+                if cur > best:
+                    best, end = cur, x
+            else:
+                cur = 0
         check(best >= 8, f"{key:6s} 로봇-품목 사이 빈 띠 {best}px (8px 이상이어야 함)")
-        r = bbox_of(m, 0, ROBOT_CX + 300)
-        it = bbox_of(m, ROBOT_CX + 300, W)
+        split = end - best // 2 if best else 700
+        splits[key] = split
+        it = bbox_of(m, split, W)
         if it:
             check(it[2] <= W - 12, f"{key:6s} 품목 오른쪽 끝 x={it[2]} (화면 안)")
 
     print("3) 로봇이 박자에 맞춰 튀는가")
+    split = splits["zombie"]
     ys, ws = [], []
     for n in range(0, 60):                   # 첫 2초 = 박자 약 3.7회
-        m = mask_of(frame(n / FPS))
-        b = bbox_of(m, 0, 620)               # 로봇만(품목은 x>620)
+        m = mask_of(frame(n / FPS), y0=STAGE_Y0, y1=STAGE_Y1)
+        b = bbox_of(m, 0, split)             # 로봇만(품목은 빈 띠 오른쪽)
         ys.append(b[1])
         ws.append(b[2] - b[0])
     check(max(ys) - min(ys) >= 4, f"로봇 윗변 변화폭 {max(ys) - min(ys)}px")
@@ -141,10 +156,26 @@ def main():
         check(count(after, other) == 0, f"{key:6s} 반대 색은 안 나온다")
 
     print("5) 골드 구간에서 로봇이 커지는가")
-    b1 = bbox_of(mask_of(frame(T0 + SEG_LEN * 2 + 1.0)), 0, 620)
-    b2 = bbox_of(mask_of(frame(T0 + SEG_LEN * 3 + 1.0)), 0, 620)
+    # 두 시각 모두 "구간 시작 +1.0초"라 박자 위상이 같다(1.0 / 0.54 = 1.852박) - 그래야
+    # 스쿼시가 섞이지 않고 확대만 비교된다.
+    sp = min(splits["disc"], splits["gold"])
+    b1 = bbox_of(mask_of(frame(T0 + SEG_LEN * 2 + 1.0), y0=STAGE_Y0, y1=STAGE_Y1), 0, sp)
+    b2 = bbox_of(mask_of(frame(T0 + SEG_LEN * 3 + 1.0), y0=STAGE_Y0, y1=STAGE_Y1), 0, sp)
     ratio = (b2[2] - b2[0]) / (b1[2] - b1[0])
-    check(1.05 <= ratio <= 1.20, f"로봇 폭 비율 {ratio:.3f} (레퍼런스 1.28은 화면을 벗어나 1.10으로 낮춤)")
+    check(1.02 <= ratio <= 1.12,
+          f"로봇 폭 비율 {ratio:.3f} (레퍼런스 1.28은 화면을 벗어나 1.05로 낮추고 홉/기울기로 보완)")
+
+    print("6) 상단 제목이 언어마다 제대로 그려지는가")
+    for lang in sorted(LANG):
+        m = mask_of(frame(0.0, lang), y0=180, y1=340)
+        b = bbox_of(m)
+        check(b is not None and b[4] > 400,
+              f"{lang} 제목 글자 픽셀 {0 if b is None else b[4]}개")
+        if b:
+            check(60 <= b[0] and b[2] <= W - 60, f"{lang} 제목 좌우 x={b[0]}~{b[2]} (여백 안)")
+            # 두부(□)는 속이 빈 네모라 같은 크기의 글자보다 픽셀이 훨씬 적다. 채움 비율로 거른다.
+            fill = b[4] / max(1, (b[2] - b[0] + 1) * (b[3] - b[1] + 1))
+            check(fill > 0.14, f"{lang} 제목 채움 비율 {fill:.3f} (두부 글자가 아니다)")
 
     print()
     if FAIL:

@@ -7,7 +7,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 from short_common import (RES, FONTS, W, H, BG, BEAT, T0, SEG_LEN, SEG_IN, SEG_IN_STAGGER,
                           SEG_MARK, SEG_MARK_POP, SEG_OUT, SEG_OUT_LEN, SEGMENTS, ITEMS,
-                          CLUSTER, CLUSTERS, ITEM_BOX, ITEM_BOXES, ITEM_CXS, GREEN, RED)
+                          CLUSTER, CLUSTERS, ITEM_BOX, ITEM_BOXES, ITEM_CXS, GREEN, RED,
+                          LANG, DEFAULT_LANG, TITLE_Y, TITLE_SIZE, TITLE_MAX_W, TITLE_COLOR)
 
 LANCZOS = Image.Resampling.LANCZOS
 BICUBIC = Image.Resampling.BICUBIC
@@ -61,12 +62,19 @@ def SPR(rel, h=None, w=None, flip=False, rot=0.0):
     return im
 
 
-def FNT(size):
-    f = _fnt.get(size)
+def FNT(size, lang="en"):
+    """글자 크기와 언어에 맞는 폰트.
+
+    Orbitron은 게임의 브랜드 폰트지만 **라틴 전용**이라 한글이 두부(□)로 나온다.
+    게임 안과 같은 규칙으로 한글은 NotoSansKR이 받는다.
+    """
+    key = (size, lang)
+    f = _fnt.get(key)
     if f is None:
-        p = os.path.join(FONTS, "Orbitron", "Orbitron-Bold.ttf")
+        p = (os.path.join(FONTS, "NotoSansKR", "NotoSansKR-Bold.ttf") if lang == "ko"
+             else os.path.join(FONTS, "Orbitron", "Orbitron-Bold.ttf"))
         f = ImageFont.truetype(p, size)
-        _fnt[size] = f
+        _fnt[key] = f
     return f
 
 
@@ -106,20 +114,24 @@ def ease_out_back(p, s=1.70158):
 # 레퍼런스의 고양이는 컷아웃 한 장이 박자에 맞춰 통통 튀는 것이 전부다
 # (스토리보드 실측: 세로 위치가 거의 고정, 면적만 미세하게 오르내린다).
 # 그래서 "박자 홉 + 스쿼시&스트레치 + 아주 얕은 좌우 기울기"만 준다.
-HOP = 0.035          # 튀는 높이(로봇 높이 대비)
-SQUASH = 0.060       # 착지에서 납작해지는 비율
-TILT = 2.4           # 좌우 기울기 최대 각도
+#
+# ★ 스쿼시와 기울기는 "가로로 부푸는 양"이라 로봇을 키울수록 화면 왼쪽 여유를 갉아먹는다.
+#   2026-08-31에 로봇을 520 → 590으로 키우면서 스쿼시 6→5%, 기울기 2.4→2.0°로 낮췄다.
+#   대신 튀는 높이(HOP)를 3.5 → 4.2%로 올려 움직임의 세기는 오히려 커졌다.
+HOP = 0.042          # 튀는 높이(로봇 높이 대비)
+SQUASH = 0.050       # 착지에서 납작해지는 비율
+TILT = 2.0           # 좌우 기울기 최대 각도
 
 # 마지막(돈=골드) 구간에서 고양이가 눈에 띄게 커진다(스토리보드 면적 44 → 72픽셀 = 선형 1.28배).
 #
 # ★ 그 1.28배를 우리 로봇에 그대로 주면 화면 왼쪽으로 삐져나간다. 레퍼런스의 고양이는
 #   폭이 화면의 45%인 정사각형 덩어리라 커져도 여유가 있지만, 우리 로봇은 이미 폭
-#   520px(스쿼시·기울기 최대에서 10~626)을 쓰는 가로로 긴 그림이라 1.10배가 한계다.
+#   590px(스쿼시·기울기 최대에서 12~680)을 쓰는 가로로 긴 그림이라 1.05배가 한계다.
 #   대신 **튀는 높이와 기울기를 키워서** 신난 느낌을 배율 대신 움직임으로 낸다
 #   (레퍼런스도 이 구간에서 품목 뭉치가 가장 작아지므로 크기 대비는 함께 살아난다).
-GOLD_ZOOM = 1.10
-GOLD_HOP = 1.9        # 이 구간에서 튀는 높이 배수
-GOLD_TILT = 1.6       # 이 구간에서 기울기 배수
+GOLD_ZOOM = 1.05
+GOLD_HOP = 2.1        # 이 구간에서 튀는 높이 배수
+GOLD_TILT = 1.45      # 이 구간에서 기울기 배수
 
 
 def gold_mix(t):
@@ -177,7 +189,7 @@ def fit(rel, cw, ch, flip=False, rot=0.0):
 
 
 def draw_items(cnv, key, cx, cy, st):
-    """구간 내부시각 st에 맞춰 품목 4개를 아래에서 솟아오르게 그린다.
+    """구간 내부시각 st에 맞춰 품목(3~4개)을 아래에서 솟아오르게 그린다.
 
     레퍼런스 실측: 뭉치가 화면 아래에서 올라오면서 커지고, 품목이 하나씩 늦게 뜬다.
     구간 끝에서는 반대로 작아지며 아래로 빠진다.
@@ -264,6 +276,28 @@ def draw_mark(cnv, ok, cx, cy, base, st):
         return
     size = max(2, int(round(base * scale)))
     blit(cnv, mark_img(ok, size), cx, cy, alpha=alpha)
+
+
+# ---------------------------------------------------------------- 화면 상단 제목
+def draw_title(cnv, lang="ko"):
+    """화면 상단에 "컴스톡의 취향"을 가운데 정렬로 얹는다.
+
+    구간마다 바뀌지 않고 9초 내내 떠 있다(레퍼런스에는 없는 우리 추가분).
+    """
+    d = ImageDraw.Draw(cnv)
+    s = LANG.get(lang, LANG[DEFAULT_LANG])["title"]
+
+    # ★ 크기를 언어마다 다시 재야 한다. 같은 84pt인데 "컴스톡의 취향"은 476px,
+    #   "COMSTOCK'S TASTE"는 993px로 화면(1080)을 거의 꽉 채운다. 한국어만 보고
+    #   크기를 정하면 다른 언어에서 가장자리까지 밀린다.
+    size = TITLE_SIZE
+    while size > 24:
+        f = FNT(size, lang)
+        if d.textlength(s, font=f) <= TITLE_MAX_W:
+            break
+        size -= 2
+    d.text((W / 2, TITLE_Y), s, font=FNT(size, lang),
+           fill=TITLE_COLOR + (255,), anchor="ms")
 
 
 # ---------------------------------------------------------------- 워터마크

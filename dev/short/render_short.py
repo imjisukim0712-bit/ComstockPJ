@@ -22,15 +22,17 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from short_common import (HERE, W, H, BG, FPS, DUR, NF, SEGMENTS, SEG_LEN, seg_at,
                           ROBOT_CX, ROBOT_CY, ROBOT_W, ITEM_CX, ITEM_CY,
-                          MARK_CX, MARK_CY, MARK_W, WATERMARK)
-from short_draw import draw_robot, draw_items, draw_mark, draw_watermark
+                          MARK_CX, MARK_CY, MARK_W, WATERMARK, LANG, DEFAULT_LANG)
+from short_draw import draw_robot, draw_items, draw_mark, draw_title, draw_watermark
 
 OUT_DIR = HERE
 
 
-def frame(t):
+def frame(t, lang=DEFAULT_LANG):
     """절대 시각 t의 한 프레임을 그린다."""
     cnv = Image.new("RGBA", (W, H), BG + (255,))
+
+    draw_title(cnv, lang)
 
     i, st = seg_at(t)
     if i >= 0:
@@ -44,7 +46,7 @@ def frame(t):
     return cnv.convert("RGB")
 
 
-def encode(out, audio=None, crf=18):
+def encode(out, audio=None, crf=18, lang=DEFAULT_LANG):
     cmd = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
            "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-"]
     if audio:
@@ -57,7 +59,7 @@ def encode(out, audio=None, crf=18):
 
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     for n in range(NF):
-        p.stdin.write(frame(n / FPS).tobytes())
+        p.stdin.write(frame(n / FPS, lang).tobytes())
         if n % 30 == 0:
             print(f"  {n:3d}/{NF}", flush=True)
     p.stdin.close()
@@ -66,7 +68,7 @@ def encode(out, audio=None, crf=18):
     print(f"완성: {out}  ({os.path.getsize(out) / 1e6:.1f} MB)")
 
 
-def contact_sheet(path, cols=8, rows=5):
+def contact_sheet(path, cols=8, rows=5, lang=DEFAULT_LANG):
     """전체 흐름을 한 장으로 펼쳐 본다(레퍼런스 스토리보드와 나란히 비교용)."""
     n = cols * rows
     tw = 200
@@ -74,7 +76,7 @@ def contact_sheet(path, cols=8, rows=5):
     sheet = Image.new("RGB", (cols * tw, rows * th), (225, 225, 225))
     for k in range(n):
         t = k * DUR / n
-        im = frame(t).resize((tw - 2, th - 2), Image.Resampling.LANCZOS)
+        im = frame(t, lang).resize((tw - 2, th - 2), Image.Resampling.LANCZOS)
         r, c = divmod(k, cols)
         sheet.paste(im, (c * tw + 1, r * th + 1))
     sheet.save(path)
@@ -89,24 +91,25 @@ def main():
     ap.add_argument("--crf", type=int, default=18)
     ap.add_argument("--frames", default=None, help="쉼표로 구분한 프레임 번호만 png로 저장")
     ap.add_argument("--contact", action="store_true")
+    ap.add_argument("--lang", default=DEFAULT_LANG, choices=sorted(LANG), help="상단 제목 언어")
     a = ap.parse_args()
 
     if a.frames:
         for s in a.frames.split(","):
             n = int(s)
             p = os.path.join(OUT_DIR, f"frame_{n:03d}.png")
-            frame(n / FPS).save(p)
+            frame(n / FPS, a.lang).save(p)
             print(p)
         return
     if a.contact:
-        contact_sheet(os.path.join(OUT_DIR, "contact.png"))
+        contact_sheet(os.path.join(OUT_DIR, "contact.png"), lang=a.lang)
         return
 
     audio = a.audio_file
     if a.audio and not audio:
         import build_short_audio
         audio = build_short_audio.build(os.path.join(OUT_DIR, "short_audio.m4a"))
-    encode(a.out, audio, a.crf)
+    encode(a.out, audio, a.crf, a.lang)
 
 
 if __name__ == "__main__":
