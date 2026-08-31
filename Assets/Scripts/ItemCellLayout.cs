@@ -225,7 +225,7 @@ public class ItemCellLayout : MonoBehaviour
         // 같은 배율로 작아지기 때문이다(ResponsiveTextScaler와 같은 배율·같은 상하한).
         // 안 곱했더니 1366x768에서 파츠 칸(안쪽 44.9px)까지 이름표가 사라졌다 - 그 칸은
         // 원래 잘 들어가던 자리라 과잉이었다(2026-08-26 실측).
-        float scale = Mathf.Clamp(Screen.height / ResponsiveTextScaler.DesignHeight, 0.6f, 2f);
+        float scale = UiCanvasLayout.ContentScale(this);
         bool captionFits = innerHeight >= (CaptionMinHeight + RowGap + MinIconBandHeight) * scale;
         bool hasCaption = caption != null && captionFits;
         SetCaptionVisible(hasCaption);

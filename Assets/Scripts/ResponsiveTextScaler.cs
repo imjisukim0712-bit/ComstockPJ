@@ -113,7 +113,7 @@ public class ResponsiveTextScaler : MonoBehaviour
             Canvas canvas = text.canvas;
             if (canvas != null)
             {
-                CanvasScaler scaler = canvas.GetComponent<CanvasScaler>();
+                CanvasScaler scaler = canvas.rootCanvas.GetComponent<CanvasScaler>();
                 if (scaler != null && scaler.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize) continue;
             }
 

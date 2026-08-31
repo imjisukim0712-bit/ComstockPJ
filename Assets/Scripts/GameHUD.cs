@@ -68,6 +68,7 @@ public class GameHUD : MonoBehaviour
 
     private void Awake()
     {
+        UiCanvasLayout.Configure(GetComponentInParent<Canvas>());
         if (gameOverObject != null) gameOverObject.SetActive(false); // 게임 시작 시 항상 비활성화
 
         FindPlayer();

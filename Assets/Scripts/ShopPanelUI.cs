@@ -215,13 +215,16 @@ public class ShopPanelUI : MonoBehaviour
     // 칸을 다시 만드는 Refresh()가 필요하다. 그래서 매 프레임이 아니라 <b>해상도가 실제로
     // 바뀐 프레임에만</b> 돈다. 패널이 꺼져 있으면 Update 자체가 호출되지 않으므로 전투 중
     // 비용은 0이다.
-    private Vector2Int last_screen_size;
+    private Vector2 last_layout_size;
 
-    private void Update()
+    private void LateUpdate()
     {
-        Vector2Int now = new Vector2Int(Screen.width, Screen.height);
-        if (now == last_screen_size) return;
-        last_screen_size = now;
+        // CanvasScaler.Update가 끝난 뒤 실제 설계 좌표를 읽는다. Screen 크기만 먼저 읽으면
+        // 이전 배율로 계산된 임시 rect를 사용하고, 다음 프레임에는 재계산하지 않아 깨진 채 남는다.
+        var panel = (RectTransform)transform;
+        Vector2 now = panel.rect.size;
+        if ((now - last_layout_size).sqrMagnitude < 0.01f) return;
+        last_layout_size = now;
 
         // 격자 컨테이너는 테두리(고정 픽셀)와 제목 띠(화면 비례)를 섞어 놓기 때문에 해상도가
         // 바뀌면 다시 계산해야 한다. 참조를 비워 두면 EnsureEquipGrids가 새로 만든다.
@@ -1155,7 +1158,7 @@ public class ShopPanelUI : MonoBehaviour
         Vector2 anchorMin = background != null ? background.anchorMin : Vector2.zero;
         Vector2 anchorMax = background != null ? background.anchorMax : Vector2.one;
 
-        float titleHeight = Mathf.Max(1f, titleHeightRatio * Screen.height);
+        float titleHeight = Mathf.Max(1f, titleHeightRatio * panel.rect.height);
         const float titleGap = 4f;
 
         // <b>제목 글자는 격자보다 테두리 쪽으로 더 붙인다</b>(2026-08-26 사용자 지시: "상점에서

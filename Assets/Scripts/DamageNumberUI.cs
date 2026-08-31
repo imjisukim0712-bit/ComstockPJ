@@ -173,7 +173,8 @@ public class DamageNumberUI : MonoBehaviour
         if (cam == null || root == null) return;
 
         Vector3 screenPoint = cam.WorldToScreenPoint(world_pos);
-        root.anchoredPosition = new Vector2(screenPoint.x, screenPoint.y) + pixel_jitter;
+        root.anchoredPosition = UiCanvasLayout.ScreenToBottomLeft(root,
+            new Vector2(screenPoint.x, screenPoint.y) + pixel_jitter);
     }
 
     private void SetAlpha(float alpha)

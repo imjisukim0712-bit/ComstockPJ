@@ -66,7 +66,8 @@ public class PartBoxIndicatorUI : MonoBehaviour
     }
 
     /// <summary>현재 화면 해상도에 맞춘 픽셀 배율. ConstantPixelSize Canvas를 직접 보정한다.</summary>
-    private float UiScale => referenceScreenHeight > 1f ? Mathf.Max(0.1f, Screen.height / referenceScreenHeight) : 1f;
+    private float UiScale => referenceScreenHeight > 1f
+        ? Mathf.Max(0.1f, Screen.height / referenceScreenHeight) / UiCanvasLayout.PixelsPerCanvasUnit(this) : 1f;
 
     private void BuildPool()
     {
@@ -142,7 +143,7 @@ public class PartBoxIndicatorUI : MonoBehaviour
         last_screen_height = Screen.height;
     }
 
-    private void Update()
+    private void LateUpdate()
     {
         if (cam == null) cam = Camera.main;
         if (cam == null) return;
@@ -206,7 +207,7 @@ public class PartBoxIndicatorUI : MonoBehaviour
         // 화면 안에 보이면 표시하지 않는다.
         if (Mathf.Abs(x) <= halfW && Mathf.Abs(y) <= halfH) return false;
 
-        float margin = edgeMargin * UiScale;
+        float margin = edgeMargin * UiScale * UiCanvasLayout.PixelsPerCanvasUnit(this);
         float insetW = Mathf.Max(1f, halfW - margin);
         float insetH = Mathf.Max(1f, halfH - margin);
 

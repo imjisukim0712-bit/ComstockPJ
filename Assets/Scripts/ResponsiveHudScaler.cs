@@ -16,8 +16,8 @@ using UnityEngine;
 /// 축소"하는 것과 같은 이유이며(프로젝트 안내 참고), 여기서도 같은 방법을 쓴다 - 묶음 안의
 /// 비율·간격·글자 크기가 전부 그대로 유지된다.
 ///
-/// <b>왜 Canvas Scaler를 바꾸지 않는가</b> — 모든 화면(정비/상점/AI 코어/타이틀)이
-/// ConstantPixelSize를 전제로 픽셀 단위 튜닝돼 있어 스케일 모드를 바꾸면 전 화면이 한꺼번에 틀어진다.
+/// 2026-08-31: UiCanvasLayout이 캔버스 전체를 축소한다. 이 래퍼도 화면 픽셀이 아니라
+/// 부모의 설계 좌표 크기를 기준으로 계산하여 이중 축소를 피한다.
 ///
 /// <b>붙이는 방법</b> — 씬을 고치지 않고 <see cref="Wrap"/>로 런타임에 래퍼를 만들어 감싼다
 /// (<see cref="GameHUD"/>가 Awake에서 호출).
@@ -28,14 +28,8 @@ public class ResponsiveHudScaler : MonoBehaviour
     /// <summary>설계 기준 해상도의 세로 픽셀. 이 프로젝트 UI는 전부 1080p 기준으로 잡혀 있다.</summary>
     public const float DesignHeight = 1080f;
 
-    /// <summary>너무 작은 창에서 글자가 읽을 수 없게 되지 않도록 두는 배율 하한.</summary>
-    private const float MinScale = 0.45f;
-
-    /// <summary>4K(2160p)까지는 1080p와 같은 화면 비율을 유지한다. 그 위로는 더 키우지 않는다.</summary>
-    private const float MaxScale = 2f;
-
     private RectTransform rect;
-    private int applied_height = -1;
+    private Vector2 applied_size = Vector2.zero;
 
     /// <summary>
     /// 대상들을 하나의 래퍼 아래로 옮기고, 그 래퍼에 화면 높이 비례 배율을 준다.
@@ -107,13 +101,14 @@ public class ResponsiveHudScaler : MonoBehaviour
 
     private void LateUpdate()
     {
-        int height = Screen.height;
-        if (height == applied_height) return; // 해상도가 바뀐 프레임에만 일한다
-        applied_height = height;
-
         if (rect == null) return;
+        RectTransform parent = rect.parent as RectTransform;
+        Vector2 size = parent != null ? parent.rect.size : new Vector2(Screen.width, Screen.height);
+        if (size == applied_size) return;
+        applied_size = size;
 
-        float scale = Mathf.Clamp(height / DesignHeight, MinScale, MaxScale);
+        // 화면 픽셀이 아닌 부모 설계 좌표를 사용한다. CanvasScaler와 이중 축소하지 않는다.
+        float scale = Mathf.Min(size.x / 1920f, size.y / DesignHeight);
         rect.localScale = new Vector3(scale, scale, 1f);
     }
 }

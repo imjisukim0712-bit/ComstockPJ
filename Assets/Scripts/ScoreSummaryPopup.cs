@@ -66,12 +66,12 @@ public class ScoreSummaryPopup : MonoBehaviour
         headerText = CreateLabel(panelRect, "Header", "", 0.06f, 0.86f, 0.94f, 0.96f, 40f);
         breakdownText = CreateLabel(panelRect, "Breakdown", "", 0.10f, 0.30f, 0.90f, 0.84f, 30f);
         breakdownText.alignment = TextAlignmentOptions.TopLeft;
-        // 점수 내역은 줄 수가 고정돼 있고 숫자가 잘리면 안 되므로, 칸에 맞춰 줄어드는
-        // 자동 크기 대신 고정 크기 + 줄바꿈 허용으로 바꾼다(ApplyTextSizing의 Ellipsis는
-        // 여러 줄 표에서 뒷줄이 통째로 잘려나갈 수 있다).
-        breakdownText.enableAutoSizing = false;
-        breakdownText.fontSize = 26f;
-        breakdownText.overflowMode = TextOverflowModes.Overflow;
+        // 긴 점수와 영문 안내까지 패널 안에 들어오게 한다. Overflow는 세로 맞춤을
+        // 포기하므로 사용하지 않는다. 배경과 함께 캔버스가 축소되어 작은 창에서도 비율이 같다.
+        breakdownText.enableAutoSizing = true;
+        breakdownText.fontSizeMin = 12f;
+        breakdownText.fontSizeMax = 26f;
+        breakdownText.overflowMode = TextOverflowModes.Ellipsis;
 
         continueButton = CreateButton(panelRect, "ContinueButton", Loc.T("score.continue"), 0.10f, 0.155f, 0.90f, 0.26f);
         declineButton = CreateButton(panelRect, "DeclineButton", Loc.T("common.to_title"), 0.10f, 0.04f, 0.90f, 0.145f);
@@ -90,12 +90,8 @@ public class ScoreSummaryPopup : MonoBehaviour
 
         if (breakdownText != null)
         {
-            // 패널(Panel)은 정규화 앵커라 화면 비례로 커지고 줄어드는데, 이 글자는 표 줄바꿈이
-            // 깨지지 않도록 fontSize를 고정해 뒀다(Build() 참고 - ApplyTextSizing의 자동 크기 대신
-            // 고정 크기 + Overflow를 쓴 이유는 그쪽 주석 참고). 고정 크기라 ResponsiveTextScaler가
-            // 못 건드리므로(enableAutoSizing=false는 스캔에서 제외됨) 같은 비율을 여기서 직접 준다
-            // (2026-08-26, "창모드에서 텍스트·리소스 비율이 안 맞는다" 리포트 대응).
-            breakdownText.fontSize = 26f * Mathf.Clamp(Screen.height / ResponsiveTextScaler.DesignHeight, 0.6f, 2f);
+            // CanvasScaler가 주는 배율과 중복해서 축소하지 않는다.
+            breakdownText.fontSizeMax = 26f * UiCanvasLayout.ContentScale(breakdownText);
 
             breakdownText.text =
                 // 2026-08-20: WaveNumber/CoreLevel은 "현재 값"(1부터 시작)이라 그대로 곱하면

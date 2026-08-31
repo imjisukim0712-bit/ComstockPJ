@@ -156,14 +156,14 @@ public class DashGaugeUI : MonoBehaviour
         // 1유닛이 화면에서 몇 픽셀인지(직교 카메라). 이 값으로 막대 크기를 잡으면
         // 해상도·줌이 바뀌어도 캐릭터 대비 비율이 유지된다.
         float pixelsPerUnit = cam.orthographic && cam.orthographicSize > 0f
-            ? Screen.height / (2f * cam.orthographicSize)
+            ? cam.pixelHeight / (2f * cam.orthographicSize) / UiCanvasLayout.PixelsPerCanvasUnit(root)
             : 100f;
 
         root.sizeDelta = new Vector2(WorldWidth * pixelsPerUnit, WorldHeight * pixelsPerUnit);
 
         Vector3 worldPoint = player.transform.position + new Vector3(0f, WorldOffsetY, 0f);
         Vector3 screenPoint = cam.WorldToScreenPoint(worldPoint);
-        root.anchoredPosition = new Vector2(screenPoint.x, screenPoint.y);
+        root.anchoredPosition = UiCanvasLayout.ScreenToBottomLeft(root, screenPoint);
 
         fill_rect.anchorMax = new Vector2(ready, 1f);
 
