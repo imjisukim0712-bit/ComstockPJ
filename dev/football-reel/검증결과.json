@@ -1,0 +1,70 @@
+{
+  "videos": {
+    "KO": {
+      "file": "Comstock_Football_KO_1080x1920.mp4",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "frames": 660,
+      "duration": 22.0,
+      "video_codec": "H.264",
+      "pixel_format": "yuv420p",
+      "audio_codec": "AAC",
+      "audio_channels": 2,
+      "sample_rate": 48000,
+      "bytes": 4685081,
+      "sha256": "5b6ee1ffd27a325e1a01226073c0151e1b3a0490f0212b5ada9b5d0864a0c55a",
+      "decode_errors": 0,
+      "loudness_lufs": "-15.62",
+      "true_peak_dbtp": "-1.16",
+      "ending_seconds": 4.4
+    },
+    "EN": {
+      "file": "Comstock_Football_EN_1080x1920.mp4",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "frames": 660,
+      "duration": 22.0,
+      "video_codec": "H.264",
+      "pixel_format": "yuv420p",
+      "audio_codec": "AAC",
+      "audio_channels": 2,
+      "sample_rate": 48000,
+      "bytes": 4680057,
+      "sha256": "34c42900d4692330b82b74d84312bfb5e6c00f4dcaab02115046632281f11882",
+      "decode_errors": 0,
+      "loudness_lufs": "-15.62",
+      "true_peak_dbtp": "-1.16",
+      "ending_seconds": 4.4
+    }
+  },
+  "timeline": [
+    [
+      0,
+      2.4,
+      "소개"
+    ],
+    [
+      2.4,
+      8.4,
+      "좀비 세 명 돌파"
+    ],
+    [
+      8.4,
+      11.7,
+      "슈팅과 골"
+    ],
+    [
+      11.7,
+      17.6,
+      "점프 회전 SIUUU"
+    ],
+    [
+      17.6,
+      22,
+      "다운로드 엔딩"
+    ]
+  ],
+  "ending_text_bounds_passed": true
+}

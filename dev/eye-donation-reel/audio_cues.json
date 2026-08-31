@@ -1,0 +1,294 @@
+{
+  "voices": {
+    "KO": [
+      {
+        "id": "news",
+        "start": 0.55,
+        "end": 2.8721041666666665,
+        "slot_end": 3.25
+      },
+      {
+        "id": "who",
+        "start": 3.4,
+        "end": 5.151395833333333,
+        "slot_end": 5.45
+      },
+      {
+        "id": "friends",
+        "start": 5.75,
+        "end": 7.759375,
+        "slot_end": 7.85
+      },
+      {
+        "id": "see",
+        "start": 9.3,
+        "end": 11.716791666666667,
+        "slot_end": 11.8
+      },
+      {
+        "id": "wait",
+        "start": 15.1,
+        "end": 15.722208333333333,
+        "slot_end": 16.6
+      },
+      {
+        "id": "cry",
+        "start": 16.85,
+        "end": 18.337979166666667,
+        "slot_end": 18.45
+      },
+      {
+        "id": "cta",
+        "start": 19.15,
+        "end": 21.055625,
+        "slot_end": 22.45
+      }
+    ],
+    "EN": [
+      {
+        "id": "news",
+        "start": 0.55,
+        "end": 2.5395833333333333,
+        "slot_end": 3.25
+      },
+      {
+        "id": "who",
+        "start": 3.4,
+        "end": 4.643979166666666,
+        "slot_end": 5.45
+      },
+      {
+        "id": "friends",
+        "start": 5.75,
+        "end": 7.6221250000000005,
+        "slot_end": 7.85
+      },
+      {
+        "id": "see",
+        "start": 9.3,
+        "end": 11.696291666666667,
+        "slot_end": 11.8
+      },
+      {
+        "id": "wait",
+        "start": 15.1,
+        "end": 15.721291666666666,
+        "slot_end": 16.6
+      },
+      {
+        "id": "cry",
+        "start": 16.85,
+        "end": 18.337979166666667,
+        "slot_end": 18.45
+      },
+      {
+        "id": "cta",
+        "start": 19.15,
+        "end": 20.579479166666665,
+        "slot_end": 22.45
+      }
+    ]
+  },
+  "effects": [
+    {
+      "time": 0.14,
+      "duration": 0.14,
+      "name": "시작 팝"
+    },
+    {
+      "time": 3.4,
+      "duration": 0.26,
+      "name": "질문 고개 기울이기"
+    },
+    {
+      "time": 5.58,
+      "duration": 0.15,
+      "name": "좀비 투샷 전환"
+    },
+    {
+      "time": 8.05,
+      "duration": 0.1,
+      "name": "시간 경과 시계"
+    },
+    {
+      "time": 8.32,
+      "duration": 0.1,
+      "name": "시간 경과 시계"
+    },
+    {
+      "time": 8.58,
+      "duration": 0.1,
+      "name": "시간 경과 시계"
+    },
+    {
+      "time": 8.81,
+      "duration": 0.6,
+      "name": "붕대 풀리는 소리"
+    },
+    {
+      "time": 9.18,
+      "duration": 0.85,
+      "name": "새 눈 공개 반짝임"
+    },
+    {
+      "time": 9.254999999999999,
+      "duration": 0.85,
+      "name": "새 눈 공개 반짝임"
+    },
+    {
+      "time": 9.33,
+      "duration": 0.85,
+      "name": "새 눈 공개 반짝임"
+    },
+    {
+      "time": 9.405,
+      "duration": 0.85,
+      "name": "새 눈 공개 반짝임"
+    },
+    {
+      "time": 11.98,
+      "duration": 0.34,
+      "name": "반전 레코드 스크래치"
+    },
+    {
+      "time": 12.75,
+      "duration": 0.14,
+      "name": "어색한 정적 귀뚜라미"
+    },
+    {
+      "time": 13.15,
+      "duration": 0.14,
+      "name": "어색한 정적 귀뚜라미"
+    },
+    {
+      "time": 13.7,
+      "duration": 0.14,
+      "name": "어색한 정적 귀뚜라미"
+    },
+    {
+      "time": 14.1,
+      "duration": 0.14,
+      "name": "어색한 정적 귀뚜라미"
+    },
+    {
+      "time": 12.35,
+      "duration": 0.15,
+      "name": "좀비 엄지 척"
+    },
+    {
+      "time": 15.0,
+      "duration": 0.27,
+      "name": "당황한 심장 박자"
+    },
+    {
+      "time": 16.82,
+      "duration": 0.65,
+      "name": "눈물 클로즈업 임팩트"
+    },
+    {
+      "time": 16.88,
+      "duration": 1.7,
+      "name": "과장된 슬픔 화음"
+    },
+    {
+      "time": 16.88,
+      "duration": 1.7,
+      "name": "과장된 슬픔 화음"
+    },
+    {
+      "time": 16.88,
+      "duration": 1.7,
+      "name": "과장된 슬픔 화음"
+    },
+    {
+      "time": 18.54,
+      "duration": 0.27,
+      "name": "엔딩 전환"
+    },
+    {
+      "time": 18.82,
+      "duration": 0.6,
+      "name": "다운로드 엔딩"
+    },
+    {
+      "time": 18.92,
+      "duration": 0.6,
+      "name": "다운로드 엔딩"
+    },
+    {
+      "time": 19.02,
+      "duration": 0.6,
+      "name": "다운로드 엔딩"
+    },
+    {
+      "time": 0.55,
+      "duration": 2.3221041666666666,
+      "name": "KO news"
+    },
+    {
+      "time": 3.4,
+      "duration": 1.7513958333333333,
+      "name": "KO who"
+    },
+    {
+      "time": 5.75,
+      "duration": 2.009375,
+      "name": "KO friends"
+    },
+    {
+      "time": 9.3,
+      "duration": 2.4167916666666667,
+      "name": "KO see"
+    },
+    {
+      "time": 15.1,
+      "duration": 0.6222083333333334,
+      "name": "KO wait"
+    },
+    {
+      "time": 16.85,
+      "duration": 1.4879791666666666,
+      "name": "KO cry"
+    },
+    {
+      "time": 19.15,
+      "duration": 1.905625,
+      "name": "KO cta"
+    },
+    {
+      "time": 0.55,
+      "duration": 1.9895833333333333,
+      "name": "EN news"
+    },
+    {
+      "time": 3.4,
+      "duration": 1.2439791666666666,
+      "name": "EN who"
+    },
+    {
+      "time": 5.75,
+      "duration": 1.872125,
+      "name": "EN friends"
+    },
+    {
+      "time": 9.3,
+      "duration": 2.3962916666666665,
+      "name": "EN see"
+    },
+    {
+      "time": 15.1,
+      "duration": 0.6212916666666667,
+      "name": "EN wait"
+    },
+    {
+      "time": 16.85,
+      "duration": 1.4879791666666666,
+      "name": "EN cry"
+    },
+    {
+      "time": 19.15,
+      "duration": 1.4294791666666666,
+      "name": "EN cta"
+    }
+  ]
+}

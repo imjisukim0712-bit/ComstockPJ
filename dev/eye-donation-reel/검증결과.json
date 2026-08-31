@@ -1,0 +1,87 @@
+{
+  "videos": {
+    "KO": {
+      "file": "Comstock_EyeDonation_KO_1080x1920.mp4",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "frames": 690,
+      "duration": 23.0,
+      "video_codec": "H.264",
+      "pixel_format": "yuv420p",
+      "audio_codec": "AAC",
+      "audio_channels": 2,
+      "sample_rate": 48000,
+      "bytes": 3219098,
+      "sha256": "1cb1d32101e3b30aef97ba6fb29056db672de57f3c7f2804c53f9cd802104708",
+      "decode_errors": 0,
+      "loudness_lufs": "-16.87",
+      "true_peak_dbtp": "-3.88",
+      "ending_seconds": 4.3
+    },
+    "EN": {
+      "file": "Comstock_EyeDonation_EN_1080x1920.mp4",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "frames": 690,
+      "duration": 23.0,
+      "video_codec": "H.264",
+      "pixel_format": "yuv420p",
+      "audio_codec": "AAC",
+      "audio_channels": 2,
+      "sample_rate": 48000,
+      "bytes": 3236714,
+      "sha256": "64d9446424b6a60dd51e92a0d910a01a0bf8d2aad1130509c626dbf06468643b",
+      "decode_errors": 0,
+      "loudness_lufs": "-17.34",
+      "true_peak_dbtp": "-3.91",
+      "ending_seconds": 4.3
+    }
+  },
+  "timeline": [
+    [
+      0,
+      3.35,
+      "기증 소식"
+    ],
+    [
+      3.35,
+      5.6,
+      "기증자 질문"
+    ],
+    [
+      5.6,
+      8,
+      "좀비의 시선 회피"
+    ],
+    [
+      8,
+      8.8,
+      "시간 경과"
+    ],
+    [
+      8.8,
+      12,
+      "붕대 공개"
+    ],
+    [
+      12,
+      15,
+      "외눈 좀비 반전"
+    ],
+    [
+      15,
+      18.7,
+      "컴스톡의 반응"
+    ],
+    [
+      18.7,
+      23,
+      "다운로드 엔딩"
+    ]
+  ],
+  "text_bounds_passed": true,
+  "voice_slots_passed": true,
+  "reference_visual_inspected": true
+}

@@ -1,0 +1,20 @@
+{
+  "KO": [
+    {"id":"news","start":0.55,"end":3.25,"text":"얘들아! 나 눈 기증 받는대!","role":"robot"},
+    {"id":"who","start":3.40,"end":5.45,"text":"근데, 누가 기증한 거야?","role":"robot"},
+    {"id":"friends","start":5.75,"end":7.85,"text":"글쎄? 수술 잘 받고 와!","role":"zombie"},
+    {"id":"see","start":9.30,"end":11.80,"text":"보인다! 얘들아, 나 보여!","role":"robot"},
+    {"id":"wait","start":15.10,"end":16.60,"text":"얘들아?","role":"robot"},
+    {"id":"cry","start":16.85,"end":18.45,"text":"얘들아아아!","role":"robot"},
+    {"id":"cta","start":19.15,"end":22.45,"text":"좀비보다 먼저 다운로드하세요.","role":"narrator"}
+  ],
+  "EN": [
+    {"id":"news","start":0.55,"end":3.25,"text":"Guys! I'm getting new eyes!","role":"robot"},
+    {"id":"who","start":3.40,"end":5.45,"text":"Wait, who's the donor?","role":"robot"},
+    {"id":"friends","start":5.75,"end":7.85,"text":"Who knows? Good luck!","role":"zombie"},
+    {"id":"see","start":9.30,"end":11.80,"text":"I can see! Guys, I can see!","role":"robot"},
+    {"id":"wait","start":15.10,"end":16.60,"text":"Guys?","role":"robot"},
+    {"id":"cry","start":16.85,"end":18.45,"text":"Guys!","role":"robot"},
+    {"id":"cta","start":19.15,"end":22.45,"text":"Download before the zombies do.","role":"narrator"}
+  ]
+}
