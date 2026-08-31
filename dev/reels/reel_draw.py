@@ -103,30 +103,35 @@ def hit_state(t, slot, nslots):
     """시각 t에서 이 칸이 얼마나 찌그러져 있는지와, 몇 번째 히트에 맞았는지.
 
     돌려주는 `s`는 1이 최대 압축, 0이 평상시이고 부호가 바뀌며 잦아든다(감쇠 스프링).
-    ★ 히트 간격으로 정규화하지 않는다 - 그래야 8분음표("디디")가 앞 여운을 잘라먹으면서
+    ★ 히트 간격으로 정규화하지 않는다 - 그래야 엇박 8분음표가 앞 여운을 잘라먹으면서
     실제 드럼처럼 촘촘해진다.
+
+    ★ 센 박과 엇박을 다르게 쓴다 - 음악이 그렇게 생겼기 때문이다.
+    **센 박(4분음표)**: 얼굴이 4개 이하면 한 칸씩 주고받고, 12개면 다 같이 물결로 튄다.
+    **엇박(8분음표)**: 주고받기 없이 **전원이 작게** 튄다. 그래야 리드가 박을 주고받는
+    동안에도 화면 전체가 음악에 붙어 있다.
     """
     cur = None
-    for ht, n, b, k in HITS:
+    for ht, n, b, k, w in HITS:
         if ht <= t + 1e-6:
-            cur = (ht, n)
+            cur = (ht, n, w)
         else:
             break
     if cur is None:
         return 0.0, -1
 
-    ht, n = cur
-    # 칸이 4개 이하면 "주고받기"(히트마다 한 칸씩), 그보다 많으면 다 같이 튀되 물결로 늦춘다.
-    if nslots <= 4:
+    ht, n, w = cur
+    strong = w >= 0.9
+    if strong and nslots <= 4:
         if n % nslots != slot:
             return 0.0, n
         u = t - ht
     else:
-        u = t - ht - slot * 0.012
+        u = t - ht - slot * (0.012 if nslots > 4 else 0.0)
         if u < 0:
             return 0.0, n
 
-    s = math.exp(-u * 9.0) * math.cos(u * 22.0)
+    s = w * math.exp(-u * 9.0) * math.cos(u * 22.0)
     return s, n
 
 

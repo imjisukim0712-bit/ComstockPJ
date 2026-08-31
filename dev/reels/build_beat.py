@@ -17,7 +17,7 @@ import wave
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from reel_common import (RES, CACHE, OUT, DUR, BAR, BARS, BEAT, HITS,
-                         ENDCARD_BAR, ffmpeg_exe)
+                         AUDIO_OFFSET, ENDCARD_BAR, ffmpeg_exe)
 
 SR = 48000
 N = int(SR * DUR)
@@ -129,30 +129,30 @@ def build():
     random.seed(7)
     buf = array.array("d", bytes(8 * N))
 
-    # 드럼 - 영상과 같은 히트 격자를 그대로 쓴다.
-    for t, n, b, k in HITS:
-        if k in (0, 1):
+    # 드럼 - 영상과 같은 히트 격자를 그대로 쓴다. 센 박은 킥, 엇박은 하이햇.
+    for t, n, b, k, w in HITS:
+        if w >= 0.9:
             kick(buf, t, 1.0)
         else:
-            hat(buf, t, 1.25 if k in (2, 4) else 0.95)
+            hat(buf, t, 1.2)
     # 클랩은 매 마디 3번째 박(스네어 자리).
     for b in range(BARS):
-        clap(buf, b * BAR + 2 * BEAT, 1.0)
+        clap(buf, AUDIO_OFFSET + b * BAR + 2 * BEAT, 1.0)
 
     # 베이스 + 아르페지오
     eighth = BEAT / 2.0
     for b in range(BARS):
         root, notes = CHORDS[b]
         for j in range(8):
-            t = b * BAR + j * eighth
+            t = AUDIO_OFFSET + b * BAR + j * eighth
             blip(buf, t, notes[ARP[j]], eighth * 0.9, gain=0.85, duty=0.25)
             if j % 2 == 0:
                 blip(buf, t, root, eighth * 1.6, gain=1.15, duty=0.5)
 
     # 강조: 얼굴이 불어나는 마디마다 클릭, 제목 카드가 꽂힐 때 레벨업.
     for b in (2, 4, 6):
-        sfx(buf, "UI_Click.wav", b * BAR, 0.7)
-    sfx(buf, "LevelUp.wav", ENDCARD_BAR * BAR, 0.85)
+        sfx(buf, "UI_Click.wav", AUDIO_OFFSET + b * BAR, 0.7)
+    sfx(buf, "LevelUp.wav", AUDIO_OFFSET + ENDCARD_BAR * BAR, 0.85)
 
     # 마지막 0.25초 페이드아웃(루프될 때 뚝 끊기지 않게).
     fade = int(0.25 * SR)

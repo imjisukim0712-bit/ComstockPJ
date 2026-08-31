@@ -20,6 +20,10 @@ HEADS = os.path.join(RES, "Heads")
 FONTS = os.path.join(ROOT, "Assets", "Fonts")
 OUT = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.path.join(OUT, "_cache")
+# ★ 외부 음원을 두는 곳. **깃에 올리지 않는다**(.gitignore) - 남의 저작물이라
+# 저장소로 재배포하면 안 된다. 렌더할 사람이 각자 여기에 파일을 놓는다.
+MUSIC = os.path.join(OUT, "music")
+MUSIC_FILE = os.path.join(MUSIC, "meme_source.mp3")
 
 # ---------------------------------------------------------------- 화면
 # 릴스/틱톡 표준. 세로 9:16, 30fps.
@@ -34,25 +38,38 @@ BG = (255, 255, 255)
 INK = (26, 26, 30)
 
 # ---------------------------------------------------------------- 비트
-# "담담 디디디디" = 한 마디에 4분음표 2번 + 8분음표 4번.
-BPM = 128.0
-BEAT = 60.0 / BPM          # 0.46875초
-BAR = BEAT * 4             # 1.875초
-BARS = 8
-DUR = BAR * BARS           # 15.000초
-NFRAMES = int(round(DUR * FPS))   # 450
+# ★ 이 값들은 지어낸 게 아니라 **원본 음원을 재서** 넣은 것이다(`analyze_audio.py`).
+# 온셋 피크 69개가 전부 8분음표 격자에 붙었고(평균 오차 36ms), 8마디가 음원 길이
+# 17.461초와 거의 정확히 맞아떨어졌다 - 즉 이 클립은 109.855BPM 8마디짜리다.
+# 음원을 바꾸면 `analyze_audio.py`를 다시 돌려 이 세 값만 갈아 끼운다.
+BPM = 109.855
+AUDIO_OFFSET = 0.036       # 음원에서 첫 박이 나오는 시각. 여기서 마디 0이 시작한다.
 
-# 마디 안에서 얼굴이 튀는 시각(4분음표 단위). 이게 "담-담-디디-디디"다.
-HITS_IN_BAR = (0.0, 1.0, 2.0, 2.5, 3.0, 3.5)
+BEAT = 60.0 / BPM          # 0.54617초
+BAR = BEAT * 4             # 2.18470초
+BARS = 8
+DUR = AUDIO_OFFSET + BAR * BARS   # 17.514초
+NFRAMES = int(round(DUR * FPS))   # 525
+
+# 마디 안에서 얼굴이 튀는 시각(4분음표 단위)과 세기.
+# ★ 원본 음원의 마디 안 세기 분포를 그대로 옮긴 것이다 - 4분음표 4개가 세고(1.0),
+# 그 사이 8분음표가 중간(0.55), 16분음표 자리는 거의 비어 있었다.
+# (처음엔 "담담 디디디디"로 짐작해 (0,1,2,2.5,3,3.5)을 썼는데, 실제로 재 보니
+#  네 박이 고르게 세고 엇박이 받쳐 주는 형태였다. 짐작을 측정으로 교체했다.)
+STRONG, WEAK = 1.0, 0.55
+HITS_IN_BAR = (
+    (0.0, STRONG), (0.5, WEAK), (1.0, STRONG), (1.5, WEAK),
+    (2.0, STRONG), (2.5, WEAK), (3.0, STRONG), (3.5, WEAK),
+)
 
 
 def hit_times():
-    """전체 히트 시각을 (절대초, 통짜 인덱스, 마디, 마디 안 순번)으로 돌려준다."""
+    """전체 히트를 (절대초, 통짜 인덱스, 마디, 마디 안 순번, 세기)로 돌려준다."""
     out = []
     n = 0
     for b in range(BARS):
-        for k, off in enumerate(HITS_IN_BAR):
-            out.append((b * BAR + off * BEAT, n, b, k))
+        for k, (off, w) in enumerate(HITS_IN_BAR):
+            out.append((AUDIO_OFFSET + b * BAR + off * BEAT, n, b, k, w))
             n += 1
     return out
 

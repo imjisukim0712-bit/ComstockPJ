@@ -19,7 +19,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import reel_draw as D
 from reel_common import (W, H, FPS, DUR, BAR, BARS, NFRAMES, BG, INK, LANG,
                          FACES_PER_BAR, ENDCARD_BAR, HEAD_ORDER, OUT, CACHE,
-                         SAFE_TOP, SAFE_BOTTOM, ffmpeg_exe, run)
+                         SAFE_TOP, SAFE_BOTTOM, AUDIO_OFFSET, HITS_IN_BAR,
+                         MUSIC_FILE, ffmpeg_exe, run)
 
 FF = ffmpeg_exe()
 
@@ -49,7 +50,8 @@ def endcard_layer(lang):
 
 def render_frame(i, lang, card):
     t = i / FPS
-    bar = min(BARS - 1, int(t / BAR))
+    # ★ 마디는 음원의 첫 박(AUDIO_OFFSET)부터 센다. 그 앞 0.036초는 마디 0의 정지 화면이다.
+    bar = min(BARS - 1, max(0, int((t - AUDIO_OFFSET) / BAR)))
     cast = CAST[bar]
     n = len(cast)
     slots = D.layout(n)
@@ -58,9 +60,9 @@ def render_frame(i, lang, card):
 
     # 히트에서 나오는 압축량. 슬롯 0 것을 화면 전체 펄스와 방사선에도 재활용한다.
     s0, hit_n = D.hit_state(t, 0, 1)
-    k = hit_n % 6 if hit_n >= 0 else -1
-    # "담"(4분음표)에서만, 그리고 화면이 얼굴로 꽉 차지 않은 마디에서만 방사선을 켠다.
-    if k in (0, 1) and n <= 4:
+    # 센 박(4분음표 = 마디 안 짝수 번째 히트)에서만, 그리고 화면이 얼굴로 꽉 차지 않은
+    # 마디에서만 방사선을 켠다.
+    if hit_n >= 0 and hit_n % len(HITS_IN_BAR) % 2 == 0 and n <= 4:
         D.speed_lines(frame, s0, {1: 430, 2: 380, 4: 470}[n])
 
     zoom = D.camera_pulse(t)
@@ -80,7 +82,7 @@ def render_frame(i, lang, card):
         D.text_center(frame, L["caption"], D.font(L["font_caption"], 54), 178)
     else:
         # 마지막 마디: 제목 카드가 크게 나타나 자리를 잡는다(슬램).
-        u = t - ENDCARD_BAR * BAR
+        u = t - (AUDIO_OFFSET + ENDCARD_BAR * BAR)
         p = min(1.0, u / 0.22)
         sc = max(0.5, 1.0 + 1.15 * (1.0 - p) ** 2.2)
         lay = card if abs(sc - 1.0) < 0.01 else card.resize(
@@ -117,32 +119,47 @@ def render_silent(lang):
     return tmp
 
 
-def mux(video, lang, beat):
+SUFFIX = {"silent": "", "beat": "_beat", "music": "_music"}
+
+
+def mux(video, lang, mode):
     """이미 인코딩된 영상에 오디오만 갈아 붙인다(`-c:v copy`라 다시 렌더하지 않는다)."""
-    out = os.path.join(OUT, "Comstock_Reel_%s%s.mp4" % (lang.upper(), "_beat" if beat else ""))
-    if beat:
+    out = os.path.join(OUT, "Comstock_Reel_%s%s.mp4" % (lang.upper(), SUFFIX[mode]))
+    afilter = None
+    if mode == "beat":
         import build_beat
         audio_in = ["-i", build_beat.build()]
         bitrate = "192k"
+    elif mode == "music":
+        if not os.path.exists(MUSIC_FILE):
+            raise SystemExit("음원이 없다: %s\n(남의 저작물이라 깃에 안 올린다 - 직접 놓을 것)"
+                             % MUSIC_FILE)
+        audio_in = ["-i", MUSIC_FILE]
+        bitrate = "192k"
+        # 음원(17.461초)이 영상(17.514초)보다 아주 조금 짧다. 뒤를 무음으로 채우고,
+        # 끝에서 딸깍 소리가 나지 않게 짧게 페이드아웃한다.
+        afilter = ["-af", "apad,afade=t=out:st=%.3f:d=0.18" % (DUR - 0.22)]
     else:
         # ★ 무음이라도 오디오 트랙은 넣는다 - 트랙이 아예 없는 mp4를 거부하는 업로더가 있다.
         audio_in = ["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"]
         bitrate = "64k"
+    # ★ 길이는 `-shortest`가 아니라 `-t`로 못 박는다.
+    # `anullsrc`/`apad`는 무한 스트림이라 `-c:v copy`와 같이 쓰면 `-shortest`가 안 먹고
+    # ffmpeg이 무음을 영원히 인코딩한다(실제로 14분간 안 끝나서 죽여야 했다).
+    # `-t`는 어떤 오디오 소스든 정확히 영상 길이에서 끊어 준다.
     run([FF, "-y", "-hide_banner", "-loglevel", "error", "-i", video] + audio_in
-        + ["-shortest", "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy",
+        + (afilter or [])
+        + ["-t", "%.3f" % DUR, "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy",
            "-c:a", "aac", "-b:a", bitrate, "-ac", "2", "-ar", "48000",
            "-movflags", "+faststart", out])
     print("완료:", out, "%.1fMB" % (os.path.getsize(out) / 1e6))
     return out
 
 
-def build_video(lang, beat=False):
-    """무음판을 항상 만들고, `beat`면 비트판까지 같은 영상으로 하나 더 뽑는다."""
+def build_video(lang, modes=("silent",)):
+    """영상은 언어당 한 번만 인코딩하고, 요청한 오디오 종류만큼 갈아 붙인다."""
     video = render_silent(lang)
-    outs = [mux(video, lang, False)]
-    if beat:
-        outs.append(mux(video, lang, True))
-    return outs
+    return [mux(video, lang, m) for m in modes]
 
 
 def preview(lang, times):
@@ -159,9 +176,12 @@ def preview(lang, times):
 
 
 def main():
-    args = [a for a in sys.argv[1:]]
-    beat = "--beat" in args
-    args = [a for a in args if a != "--beat"]
+    args = list(sys.argv[1:])
+    modes = ["silent"]
+    for flag, m in (("--beat", "beat"), ("--music", "music")):
+        if flag in args:
+            modes.append(m)
+            args = [a for a in args if a != flag]
     if "--preview" in args:
         j = args.index("--preview")
         lang = args[0] if j > 0 else "en"
@@ -170,8 +190,8 @@ def main():
     which = (args[0] if args else "all").lower()
     langs = ["en", "ko"] if which == "all" else [which]
     for lg in langs:
-        print("[%s] 렌더 시작 (%d프레임 / %.2f초)" % (lg, NFRAMES, DUR))
-        build_video(lg, beat=beat)
+        print("[%s] 렌더 시작 (%d프레임 / %.3f초)" % (lg, NFRAMES, DUR))
+        build_video(lg, modes)
 
 
 if __name__ == "__main__":
