@@ -1,0 +1,8 @@
+# 생성물 - 스크립트로 25초면 다시 만든다
+*.mp4
+*.m4a
+*.wav
+contact.png
+frame_*.png
+.cache/
+__pycache__/
