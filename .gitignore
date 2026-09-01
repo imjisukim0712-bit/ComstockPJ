@@ -108,3 +108,8 @@ InitTestScene*.unity*
 # ===== External assets (never commit) =====
 /[Aa]ssets/ExternalAssets/
 /[Aa]ssets/ExternalAssets.meta
+
+# ===== 파이썬 도구(dev/) 바이트코드 캐시 =====
+# dev/pv, dev/web-ui 등의 스크립트를 실행하면 생긴다. 산출물이라 커밋하지 않는다.
+__pycache__/
+*.py[cod]
