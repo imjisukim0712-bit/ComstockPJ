@@ -1,6 +1,6 @@
 결과: Succeeded
 오류: 0
 경고: 0
-용량: 105334282
-소요: 00:00:03.5942292
+용량: 105286239
+소요: 00:00:02.7120087
 폴더: C:\Project\ComstockPJ\Builds\ComstockWebUI
