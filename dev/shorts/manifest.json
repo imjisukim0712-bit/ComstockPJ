@@ -1,0 +1,25 @@
+{
+  "title": "ANKARA COMSTOCK",
+  "source_url": "https://www.youtube.com/watch?v=AlnHNi0hdO0",
+  "output": "output/Ankara_Comstock_FullHead_1080x1920.mp4",
+  "width": 1080,
+  "height": 1920,
+  "fps": 23.976,
+  "duration_seconds": 26.49,
+  "video_codec": "H.264 High",
+  "audio_codec": "AAC-LC 44100Hz stereo 128kbps",
+  "audio_mode": "bitstream copy from source; no audio editing",
+  "source_audio_md5": "1e6fe99b956595d104f87f1d767cc7a0",
+  "output_audio_md5": "1e6fe99b956595d104f87f1d767cc7a0",
+  "output_sha256": "202192939C86E9DDDC5CF7BD94B965D33DD02D15E1C89BF203477192D73F42AD",
+  "output_bytes": 16843517,
+  "previews": [
+    "output/Ankara_Comstock_FullHead_Close_1080x1920.png",
+    "output/Ankara_Comstock_FullHead_Dribble_1080x1920.png",
+    "output/Ankara_Comstock_FullHead_Goal_1080x1920.png"
+  ],
+  "movement_preview": "output/Ankara_Comstock_FullHead_MovementPreview_1080x1920.mp4",
+  "tracking": "per-frame optical-flow head pose with a separate lagging dead-zone camera",
+  "head_asset": "../../Assets/Resources/Heads/ComstockMk01.png",
+  "head_composite": "complete original RGBA silhouette preserved; pose and source-light modulation only"
+}
